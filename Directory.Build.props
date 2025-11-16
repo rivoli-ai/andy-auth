@@ -10,7 +10,7 @@
     <Authors>Rivoli AI</Authors>
     <Company>Rivoli AI</Company>
     <Copyright>Copyright © Rivoli AI $(Year)</Copyright>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/rivoli-ai/andy-auth</PackageProjectUrl>
     <RepositoryUrl>https://github.com/rivoli-ai/andy-auth</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

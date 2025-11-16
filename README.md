@@ -112,7 +112,7 @@ See the [docs](./docs) folder for detailed documentation.
 
 ## License
 
-MIT
+Apache 2.0
 
 ## Contributing
 
