@@ -1,0 +1,46 @@
+name: Publish to GitHub Packages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0-beta)'
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Pack
+      run: dotnet pack src/Andy.Auth/Andy.Auth.csproj --no-build --configuration Release --output ./nupkg
+
+    - name: Publish to GitHub Packages
+      run: |
+        dotnet nuget add source https://nuget.pkg.github.com/rivoli-ai/index.json \
+          --name github \
+          --username ${{ github.repository_owner }} \
+          --password ${{ secrets.GITHUB_TOKEN }} \
+          --store-password-in-clear-text
+        dotnet nuget push ./nupkg/*.nupkg \
+          --source github \
+          --api-key ${{ secrets.GITHUB_TOKEN }} \
+          --skip-duplicate
