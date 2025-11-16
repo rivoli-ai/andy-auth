@@ -1,239 +1,682 @@
 # Andy Auth - Implementation Roadmap
 
-## Current Status: Testing & UI Enhancement Phase
+## Executive Summary
 
-### ✅ Completed (Sprint 1)
-- Andy.Auth library with multi-provider support (AndyAuth, Azure AD, Clerk)
-- Andy.Auth.Server with OpenIddict OAuth/OIDC implementation
-- Database setup with PostgreSQL
-- User authentication (login, registration, logout)
-- OAuth client seeding (lexipro-api, wagram-web, claude-desktop)
-- Comprehensive test suite (77/81 tests passing - 95%)
-- HTTPS configuration for local development
-- OpenID Discovery endpoint
+Andy.Auth.Server is an OAuth 2.0 / OpenID Connect authentication server built on OpenIddict. This roadmap outlines the path from current state (development) → UAT → Production → Post-Production enhancements.
 
-### 🏃 Current Sprint (Sprint 2) - UI & Integration
+**Current Status:** Core MVP complete, 80% admin UI complete, 95% tests passing
 
-#### Story #5: Admin Dashboard UI ⏳ IN PROGRESS
-**Goal:** Provide authenticated users with dashboard to manage OAuth clients and users
-
-**Tasks:**
-1. ✅ Create GitHub issue #5
-2. ⏳ Create admin dashboard home page
-3. ⏳ Add OAuth clients listing
-4. ⏳ Add users listing
-5. ⏳ Add navigation and user profile menu
-
-**Acceptance Criteria:**
-- Dashboard shows system statistics
-- OAuth clients can be viewed
-- Users can be viewed
-- Clean, responsive UI matching login page design
-
-**Priority:** Medium (UX improvement)
-**Story Points:** 5
-**Estimated Time:** 1-2 days
+**Goal:** Replace Clerk with self-hosted OAuth for AI assistants (ChatGPT, Claude Desktop, Cline, Roo)
 
 ---
 
-#### Story #1: Complete Testing Suite ⏳ IN PROGRESS (87% complete)
-**Goal:** Achieve 70%+ test coverage with all critical flows tested
+## Phase Overview
+
+| Phase | Timeline | Focus | Issues |
+|-------|----------|-------|--------|
+| **Pre-UAT** | 3-5 days | Complete MVP, testing, security | #1, #4, #5 |
+| **UAT** | 1 week | Deploy, test multi-assistant compat | #3, #7, #2 |
+| **Production** | 1 week | Deploy production, monitoring | #8 |
+| **Post-Production** | Ongoing | Enterprise features, Azure AD | #6, #10-16, #9 |
+
+**Total to Production:** ~3 weeks
+
+---
+
+## ✅ Completed Features
+
+### Core OAuth/OIDC (Sprint 1)
+- Andy.Auth library with multi-provider support
+- Andy.Auth.Server with OpenIddict
+- Authorization Code Flow with PKCE
+- Client Credentials Flow
+- Refresh Token Flow
+- OpenID Discovery endpoint (/.well-known/openid-configuration)
+- JWT token issuance, introspection, revocation
+- UserInfo endpoint
+- PostgreSQL database with Entity Framework migrations
+- ASP.NET Core Identity user management
+- HTTPS development certificates
+- OAuth client seeding (lexipro-api, wagram-web, claude-desktop)
+
+### Admin UI (Sprint 2 - Just Completed!)
+- Dashboard home with statistics
+- OAuth clients viewing
+- Users management (view, paginate, suspend, set expiration, delete)
+- Audit logging for all administrative actions
+- Audit logs viewing page
+- Clean Lexipro-style UI (no gradients, SVG icons, Inter font)
+- User email/password authentication
+
+### Testing (95% Complete)
+- 77/81 tests passing
+- DbSeeder tests (9/9)
+- AccountController tests (16/16)
+- Integration tests (3/7 - 4 need env fixes)
+- Test project structure with xUnit + Moq
+
+---
+
+## 🏃 Pre-UAT Phase (Week 1)
+
+**Goal:** Production-ready MVP
+
+### Issue #1: Complete Testing Suite (HIGH) - 2 days
+**Status:** 95% complete (77/81 tests passing)
 
 **Remaining Tasks:**
-1. Add AuthorizationController unit tests
-2. Fix integration test environment configuration
-3. Add end-to-end OAuth flow tests
+- [ ] Add AuthorizationController unit tests (10-15 tests)
+- [ ] Fix 4 integration tests (HTTPS + in-memory DB config)
+- [ ] Add end-to-end OAuth flow tests
+- [ ] Achieve ≥70% code coverage
 
-**Current Status:**
-- ✅ 25 tests completed (DbSeeder + AccountController)
-- ⏳ 4 integration tests need environment setup
-- ⏳ AuthorizationController tests pending
+**Acceptance Criteria:**
+- All 85+ tests passing
+- Code coverage ≥70%
+- CI/CD pipeline green
 
-**Priority:** High (Quality assurance)
-**Story Points:** 3 (remaining)
-**Estimated Time:** 1 day
+**Priority:** HIGH - Quality gate before UAT
 
 ---
 
-### 📋 Next Sprint (Sprint 3) - Integration & Deployment
-
-#### Story #2: Lexipro.Api Integration
-**Goal:** Replace Clerk with Andy.Auth in Lexipro.Api
+### Issue #4: Security Hardening (CRITICAL) - 2-3 days
+**Status:** Not started
 
 **Tasks:**
-1. Update Lexipro.Api to reference Andy.Auth library
-2. Configure AndyAuth provider
-3. Remove Clerk dependencies
-4. Update MCP metadata
-5. Test OAuth flow with Claude Desktop
-6. Test ChatGPT MCP discovery
-7. Test VS Code Roo integration
+- [ ] Add rate limiting middleware (AspNetCoreRateLimit)
+  - Authentication: 5 attempts/min
+  - Token endpoint: 10 requests/min
+  - Registration: 3 attempts/hour
+- [ ] Configure security headers
+  - HSTS (Strict-Transport-Security)
+  - CSP (Content-Security-Policy)
+  - X-Frame-Options: DENY
+  - X-Content-Type-Options: nosniff
+- [ ] Brute force protection (lock after 5 failed attempts)
+- [ ] Account lockout policies (30-minute lockout)
+- [ ] CSRF protection verification
+- [ ] SQL injection testing
+- [ ] XSS protection testing
 
 **Acceptance Criteria:**
-- Lexipro.Api authenticates with Andy.Auth.Server
-- MCP discovery works
-- ChatGPT can connect
-- VS Code Roo can connect
-- No authorization loops
+- Rate limiting active on all sensitive endpoints
+- Security headers configured
+- Account lockout working
+- No critical vulnerabilities
+- Security audit documented
 
-**Priority:** High (Critical path)
-**Story Points:** 8
-**Estimated Time:** 2-3 days
+**Priority:** CRITICAL - Must complete before UAT
 
 ---
 
-#### Story #3: Railway UAT Deployment
-**Goal:** Deploy Andy.Auth.Server to Railway for UAT testing
+### Issue #5: Admin Dashboard UI (MEDIUM) - Remaining Work
+**Status:** 80% complete (just finished core features!)
+
+**Completed:**
+- ✅ Dashboard home with stats
+- ✅ OAuth clients viewing
+- ✅ Users viewing/management
+- ✅ Audit logs page
+- ✅ Clean UI design
+
+**Remaining Tasks:**
+- [ ] Create/Edit/Delete OAuth clients (#14)
+- [ ] Regenerate client secrets (#14)
+- [ ] Search users by email/name
+- [ ] View user's active sessions (depends on #11)
+
+**Note:** Core admin UI is done. Remaining features moved to #14 (post-production).
+
+**Priority:** MEDIUM - Nice to have, not blocking UAT
+
+---
+
+## 🧪 UAT Phase (Week 2)
+
+**Goal:** Deploy to Railway UAT, validate with all AI assistants
+
+### Issue #3: Railway UAT Deployment (HIGH) - 1 day
+**Status:** Not started
 
 **Tasks:**
-1. Create Railway project
-2. Add PostgreSQL database
-3. Configure environment variables
-4. Set up custom domain (auth-uat.rivoli.ai)
-5. Run migrations and seed data
-6. Test HTTPS/SSL
-7. Monitor logs and performance
+- [ ] Create Railway project for Andy.Auth.Server
+- [ ] Provision PostgreSQL database with backups
+- [ ] Configure environment variables (UAT)
+- [ ] Set up custom domain (auth-uat.rivoli.ai)
+- [ ] Configure SSL/TLS certificates
+- [ ] Run database migrations
+- [ ] Seed OAuth clients (lexipro-api, wagram-web, claude-desktop)
+- [ ] Test OpenID Discovery endpoint
+- [ ] Monitor logs and performance
+
+**Environment Variables:**
+```
+ConnectionStrings__DefaultConnection
+ASPNETCORE_ENVIRONMENT=UAT
+OpenIddict__Server__EncryptionKey
+OpenIddict__Server__SigningKey
+Mcp__ServerUrl=https://auth-uat.rivoli.ai
+```
 
 **Acceptance Criteria:**
-- Server accessible at https://auth-uat.rivoli.ai
-- Database migrations applied
+- Server deployed at https://auth-uat.rivoli.ai
+- Database migrations applied successfully
 - OAuth clients seeded
 - OpenID Discovery working
-- Health checks passing
+- Health checks passing (basic)
+- Logs accessible in Railway dashboard
 
-**Priority:** Medium (UAT enabler)
-**Story Points:** 5
-**Estimated Time:** 1 day
+**Priority:** HIGH - Enables UAT testing
 
 ---
 
-### 🔐 Future Sprint (Sprint 4) - Security & Hardening
+### Issue #7: Multi-Assistant Compatibility Testing (CRITICAL) - 3-4 days
+**Status:** Not started
 
-#### Story #4: Security Hardening
-**Goal:** Production-ready security measures
+**Goal:** Ensure ALL AI assistants work correctly
+
+**Platforms to Test:**
+1. **ChatGPT** - OpenAI's assistant with MCP
+2. **Cline** (formerly Claude Dev) - VS Code extension
+3. **Claude Desktop** - Anthropic's desktop app
+4. **Roo** - VS Code extension for Claude
+5. **Continue.dev** (bonus if applicable)
 
 **Tasks:**
-1. Implement rate limiting middleware
-2. Add security headers (HSTS, CSP, X-Frame-Options)
-3. CSRF protection verification
-4. SQL injection testing
-5. Brute force protection
-6. Account lockout policies
-7. Audit logging
+- [ ] Add OAuth clients for each assistant
+- [ ] Test ChatGPT MCP discovery and OAuth flow
+- [ ] Test Cline authentication flow
+- [ ] Test Claude Desktop (resolve previous auth loops!)
+- [ ] Test Roo authentication
+- [ ] Test concurrent sessions across assistants
+- [ ] Test token refresh for all assistants
+- [ ] Document setup for each platform
 
 **Acceptance Criteria:**
-- Rate limiting active on all endpoints
-- Security headers configured
-- No critical vulnerabilities
-- Security audit complete
+- All 4 assistants can successfully authenticate
+- NO authorization loops occur
+- Tokens work and refresh correctly
+- MCP discovery works from all platforms
+- All assistants can access Lexipro.Api protected endpoints
+- Comprehensive documentation for each platform
 
-**Priority:** High (Production blocker)
-**Story Points:** 8
-**Estimated Time:** 3-4 days
-
----
-
-## Implementation Order (Clean Path)
-
-### Phase 1: Foundation ✅ COMPLETE
-- Andy.Auth library
-- Andy.Auth.Server
-- Database & migrations
-- Basic authentication
-
-### Phase 2: Testing & UI ⏳ CURRENT
-**Order:**
-1. **Issue #5** - Admin Dashboard UI (improves dev experience)
-2. **Issue #1** - Complete test suite (quality gate)
-
-### Phase 3: Integration 📅 NEXT
-**Order:**
-1. **Issue #3** - Railway UAT deployment (infrastructure)
-2. **Issue #2** - Lexipro.Api integration (validation)
-
-### Phase 4: Production 🔮 FUTURE
-**Order:**
-1. **Issue #4** - Security hardening
-2. Production deployment
-3. Migration from Clerk
+**Priority:** CRITICAL - This is the core use case!
 
 ---
 
-## Dependencies Graph
+### Issue #2: Lexipro.Api Integration (HIGH) - 2-3 days
+**Status:** Not started
+
+**Tasks:**
+- [ ] Update Lexipro.Api to reference Andy.Auth NuGet package
+- [ ] Configure AndyAuth provider in Lexipro.Api
+- [ ] Remove Clerk dependencies from Lexipro.Api
+- [ ] Update MCP metadata to point to auth-uat.rivoli.ai
+- [ ] Test OAuth Authorization Code Flow
+- [ ] Test token validation
+- [ ] Test user claims extraction
+- [ ] Test with all AI assistants
+- [ ] Verify all Lexipro.Api functionality works
+
+**Acceptance Criteria:**
+- Lexipro.Api successfully authenticates with Andy.Auth.Server
+- MCP discovery endpoint works
+- All AI assistants can connect
+- All existing Lexipro.Api functionality works
+- No regression in Lexipro features
+
+**Priority:** HIGH - Validates the entire system
+
+---
+
+## 🚀 Production Phase (Week 3)
+
+### Issue #8: Production Deployment to Railway (CRITICAL) - 2-3 days
+**Status:** Not started
+
+**Prerequisites:**
+- ✅ UAT deployment successful (#3)
+- ✅ All tests passing (#1)
+- ✅ Security hardening complete (#4)
+- ✅ Multi-assistant testing complete (#7)
+
+**Tasks:**
+
+**Railway Configuration:**
+- [ ] Create Railway production project
+- [ ] Provision production PostgreSQL with backups enabled
+- [ ] Configure custom domain (auth.rivoli.ai)
+- [ ] Set up environment variables (PROD)
+- [ ] Configure SSL/TLS certificates
+- [ ] Enable automatic deployments from main branch
+- [ ] Configure resource limits and scaling
+
+**Database:**
+- [ ] Run migrations on production database
+- [ ] Seed production OAuth clients
+- [ ] Configure database connection pooling
+- [ ] Enable automated daily backups
+- [ ] Set up backup retention policy (30 days)
+- [ ] Test database restore procedure
+
+**Monitoring & Observability:**
+- [ ] Set up Railway logging
+- [ ] Configure log retention
+- [ ] Add health check endpoints (/health, /ready)
+- [ ] Set up uptime monitoring (UptimeRobot / Pingdom)
+- [ ] Configure error tracking (Sentry / App Insights)
+- [ ] Set up custom metrics dashboards
+
+**Alerting:**
+- [ ] Alert on service downtime
+- [ ] Alert on high error rates
+- [ ] Alert on database failures
+- [ ] Alert on certificate expiration (30 days warning)
+
+**Documentation:**
+- [ ] Document deployment process
+- [ ] Create runbook for common issues
+- [ ] Document rollback procedures
+- [ ] Document scaling procedures
+- [ ] Create disaster recovery plan
+- [ ] Create incident response plan
+
+**Go-Live:**
+- [ ] All tests pass in production
+- [ ] Security audit complete
+- [ ] Backup/restore tested
+- [ ] Monitoring active
+- [ ] Alerts configured
+- [ ] Update Lexipro.Api to point to auth.rivoli.ai
+- [ ] Update all OAuth client configurations
+- [ ] Migrate from Clerk
+
+**Acceptance Criteria:**
+- Service deployed at https://auth.rivoli.ai
+- All OAuth flows working
+- All AI assistants can authenticate
+- Monitoring and alerts active
+- Backups running daily
+- Documentation complete
+- Zero downtime deployment configured
+- Clerk migration successful
+
+**Priority:** CRITICAL - Final production deployment
+
+---
+
+## 📈 Post-Production Enhancements (Ongoing)
+
+### Priority 1: Enterprise Features
+
+#### Issue #6: Azure AD / Microsoft Entra ID Integration (HIGH) - 3-4 days
+**Why:** Enterprise SSO, leverage existing Azure AD identities
+
+**Tasks:**
+- [ ] Install Microsoft.Identity.Web NuGet package
+- [ ] Configure Azure AD authentication
+- [ ] Add "Sign in with Microsoft" button
+- [ ] Handle external authentication callbacks
+- [ ] Link external accounts to local accounts
+- [ ] Map Azure AD claims
+- [ ] Add external provider info to user profile
+- [ ] Test Azure AD sign-in flow
+- [ ] Document Azure AD app registration
+
+**Acceptance Criteria:**
+- Users can sign in with Azure AD accounts
+- Claims properly mapped
+- Account linking works
+- Works across dev/uat/prod
+
+**Priority:** HIGH - Important for enterprise adoption
+
+---
+
+#### Issue #11: Session Management + Back-Channel Logout (HIGH) - 4-5 days
+**Why:** Track sessions, notify clients on logout
+
+**Tasks:**
+- [ ] Create UserSessions table
+- [ ] Track sessions on login
+- [ ] Add "Active Sessions" page in user profile
+- [ ] Add session revocation
+- [ ] Configure concurrent session limits
+- [ ] Implement session timeout
+- [ ] Implement back-channel logout
+- [ ] Send logout notifications to OAuth clients
+
+**Acceptance Criteria:**
+- Sessions tracked in database
+- Users can view/revoke sessions
+- Concurrent limits enforced
+- Back-channel logout works
+
+**Priority:** HIGH - Important for production security
+
+---
+
+#### Issue #12: Two-Factor Authentication (2FA) (HIGH) - 3-4 days
+**Why:** Enhanced security, enterprise requirement
+
+**Tasks:**
+- [ ] Add 2FA setup page with QR code
+- [ ] Support TOTP (Google Authenticator, etc.)
+- [ ] Generate recovery codes
+- [ ] Add 2FA login flow
+- [ ] Support "Remember this device"
+- [ ] Add 2FA status to admin UI
+- [ ] Allow admin to disable 2FA
+
+**Acceptance Criteria:**
+- Users can enable 2FA with authenticator apps
+- Recovery codes work
+- "Remember device" works
+- Admin can manage 2FA
+
+**Priority:** HIGH - Important for production
+
+---
+
+### Priority 2: Admin & Operations
+
+#### Issue #10: User Consent Management (MEDIUM) - 3-4 days
+**Why:** GDPR compliance, user trust, security
+
+**Tasks:**
+- [ ] Create consent screen UI
+- [ ] Show requested scopes to users
+- [ ] Store consent decisions
+- [ ] Add consent revocation in user profile
+- [ ] Skip consent if previously granted
+- [ ] Add audit logging for consents
+
+**Acceptance Criteria:**
+- First-time authorization shows consent screen
+- Users can revoke consents
+- Consent screen works with all flows
+
+**Priority:** MEDIUM - Important for production, GDPR
+
+---
+
+#### Issue #14: OAuth Client CRUD in Admin UI (MEDIUM) - 3-4 days
+**Why:** Self-service client management
+
+**Tasks:**
+- [ ] Add "Create OAuth Client" page
+- [ ] Add client editing
+- [ ] Add client deletion with confirmation
+- [ ] Add client secret regeneration
+- [ ] Validate redirect URIs
+- [ ] Log all operations in audit
+
+**Acceptance Criteria:**
+- Admins can create/edit/delete clients via UI
+- Client secrets shown only once
+- All operations logged
+
+**Priority:** MEDIUM - Enhances operations
+
+---
+
+### Priority 3: Advanced Features (Future)
+
+#### Issue #13: Reference Tokens (MEDIUM-LOW) - 2-3 days
+**Why:** Better revocation, audit trail
+
+**Tasks:**
+- [ ] Configure OpenIddict for reference tokens
+- [ ] Add client-level token type configuration
+- [ ] Implement token introspection
+- [ ] Add immediate revocation
+- [ ] Add token cleanup job
+
+**Priority:** MEDIUM-LOW - Nice to have
+
+---
+
+#### Issue #15: Advanced OAuth Flows (LOW) - 5-7 days
+**Flows:** Device Flow, PAR, DPoP, CIBA
+
+**Priority:** LOW - Advanced use cases
+
+---
+
+#### Issue #16: Dynamic Client Registration (LOW) - 3-4 days
+**Why:** Self-service client registration via API
+
+**Priority:** LOW - Future enhancement
+
+---
+
+#### Issue #9: Duende Feature Parity Analysis (ONGOING)
+**Purpose:** Strategic planning, track feature gaps
+
+**Priority:** ONGOING - Documentation
+
+---
+
+## 📊 Dependencies & Critical Path
 
 ```
-Issue #1 (Tests) ─────┐
-                      │
-Issue #5 (Admin UI) ──┤
-                      ├──> Issue #3 (Railway) ──> Issue #2 (Lexipro) ──> Issue #4 (Security) ──> PRODUCTION
-                      │
+Foundation (Complete) ✅
+    │
+    ├──> Issue #1 (Tests) ──────┐
+    │                            │
+    ├──> Issue #4 (Security) ────┤
+    │                            ├──> Issue #3 (UAT Deploy)
+    ├──> Issue #5 (Admin UI) ────┘            │
+    │                                          │
+    │                                          ├──> Issue #7 (Multi-Assistant Test)
+    │                                          │            │
+    │                                          ├──> Issue #2 (Lexipro Integration)
+    │                                          │            │
+    │                                          └────────────┴──> Issue #8 (Production Deploy)
+    │                                                                      │
+    └──────────────────────────────────────────────────────────────> Issue #6 (Azure AD)
+                                                                           │
+                                                                     Issue #11 (Sessions)
+                                                                           │
+                                                                     Issue #12 (2FA)
+                                                                           │
+                                                                     Issue #10 (Consent)
+                                                                           │
+                                                                     Issue #14 (Client CRUD)
+                                                                           │
+                                                                     Issue #13 (Reference Tokens)
+                                                                           │
+                                                                     Issue #15 (Advanced Flows)
+                                                                           │
+                                                                     Issue #16 (DCR)
 ```
 
-**Notes:**
-- Issues #1 and #5 can run in parallel (current sprint)
-- Issue #3 must complete before #2 (need UAT server for testing)
-- Issue #4 must complete before production deployment
-- All issues should be substantially complete before production cutover
+**Critical Path:** #1 → #4 → #3 → #7 → #2 → #8
+
+**Blockers:**
+- #3 (UAT Deploy) blocks #7 (Multi-Assistant Testing)
+- #7 blocks #2 (Lexipro Integration)
+- #1, #4, #7, #2 block #8 (Production)
 
 ---
 
-## Success Metrics
+## 🎯 Success Metrics
 
-### Sprint 2 (Current)
-- [ ] Admin UI functional and usable
-- [ ] 28+ tests passing for Andy.Auth.Server
-- [ ] Test coverage ≥ 70%
+### Pre-UAT
+- [x] Core OAuth flows implemented
+- [x] Admin UI functional (80%)
+- [ ] 85+ tests passing (currently 77/81)
+- [ ] Security hardening complete
+- [ ] Code coverage ≥70%
 
-### Sprint 3
-- [ ] Lexipro.Api successfully authenticates via Andy.Auth
-- [ ] All MCP clients can connect (Claude, ChatGPT, Roo)
+### UAT
+- [ ] Deployed to auth-uat.rivoli.ai
+- [ ] All 4 AI assistants authenticate successfully
+- [ ] NO authorization loops
+- [ ] Lexipro.Api integration successful
 - [ ] UAT environment stable
 
-### Sprint 4
+### Production
+- [ ] Deployed to auth.rivoli.ai
+- [ ] All AI assistants work in production
+- [ ] Monitoring and alerts active
+- [ ] Backups running
 - [ ] Security audit passed
-- [ ] Rate limiting verified
-- [ ] Production deployment successful
 - [ ] Clerk migration complete
 
----
-
-## Risk Management
-
-### High Risk
-- **OAuth loop issues** (from previous Clerk implementation)
-  - Mitigation: Comprehensive integration testing in Issue #2
-
-- **MCP discovery failures**
-  - Mitigation: Test with all MCP clients before production
-
-### Medium Risk
-- **Railway deployment issues**
-  - Mitigation: Document deployment process, test thoroughly in UAT
-
-- **Database migration complexity**
-  - Mitigation: Practice migrations in UAT first
-
-### Low Risk
-- **UI/UX issues**
-  - Mitigation: Iterative development, user feedback
+### Post-Production
+- [ ] Azure AD integration live
+- [ ] Session management active
+- [ ] 2FA available
+- [ ] User consent screens working
 
 ---
 
-## Timeline Estimate
+## ⚠️ Risk Management
 
-- **Sprint 2 (Current):** 2-3 days
-- **Sprint 3:** 3-4 days
-- **Sprint 4:** 4-5 days
+### Critical Risks
 
-**Total to Production:** ~10-12 days (2 weeks)
+**1. Multi-Assistant Compatibility (#7)**
+- **Risk:** AI assistants may have auth loops or compatibility issues
+- **Impact:** HIGH - This is the core use case
+- **Mitigation:** Thorough testing in UAT, document each platform
+- **Owner:** Issue #7
+
+**2. Security Vulnerabilities (#4)**
+- **Risk:** Missing security hardening could expose production
+- **Impact:** CRITICAL - Could lead to breaches
+- **Mitigation:** Complete #4 before UAT, security audit
+- **Owner:** Issue #4
+
+**3. Railway Deployment Issues (#3, #8)**
+- **Risk:** Infrastructure problems, database migrations fail
+- **Impact:** MEDIUM-HIGH - Blocks testing/production
+- **Mitigation:** Practice in UAT first, document runbooks
+- **Owner:** Issues #3, #8
+
+### Medium Risks
+
+**4. MCP Discovery Failures (#2, #7)**
+- **Risk:** AI assistants may not discover auth server
+- **Impact:** MEDIUM - Blocks assistant usage
+- **Mitigation:** Test with all assistants, verify discovery endpoint
+- **Owner:** Issues #2, #7
+
+**5. Token Refresh Issues**
+- **Risk:** Refresh tokens may not work correctly
+- **Impact:** MEDIUM - Poor UX, frequent re-auth
+- **Mitigation:** Integration tests for refresh flow
+- **Owner:** Issue #1
+
+### Low Risks
+
+**6. Performance Under Load**
+- **Risk:** Server may be slow with many users
+- **Impact:** LOW-MEDIUM - Fixable with scaling
+- **Mitigation:** Load testing, Railway auto-scaling
+- **Owner:** Issue #8
+
+**7. UI/UX Issues (#5, #14)**
+- **Risk:** Admin UI may have bugs or poor UX
+- **Impact:** LOW - Admin tool, fixable iteratively
+- **Mitigation:** User testing, iterative improvements
+- **Owner:** Issues #5, #14
 
 ---
 
-## Next Actions
+## 📅 Timeline Summary
 
-1. ✅ Complete admin dashboard UI (Issue #5)
-2. ✅ Finish remaining tests (Issue #1)
-3. Deploy to Railway UAT (Issue #3)
-4. Test Lexipro.Api integration (Issue #2)
-5. Security hardening (Issue #4)
-6. Production deployment
+| Phase | Duration | Issues | Key Milestones |
+|-------|----------|--------|----------------|
+| **Pre-UAT** | 3-5 days | #1, #4, #5 | Tests passing, security hardened |
+| **UAT** | 5-7 days | #3, #7, #2 | UAT deployed, all assistants tested |
+| **Production** | 2-3 days | #8 | Production deployed, Clerk migrated |
+| **Post-Production** | 2-4 weeks | #6, #11, #12, #10, #14 | Azure AD, 2FA, sessions, consent |
+| **Future** | Ongoing | #13, #15, #16 | Advanced features as needed |
+
+**Total to Production:** ~2-3 weeks
+**Total to Enterprise-Ready:** ~6-8 weeks
+
+---
+
+## 🚦 Current Status & Next Actions
+
+### ✅ Just Completed
+- Admin UI core features (#5 - 80% done)
+- User management (suspend, expire, delete)
+- Audit logging
+- Clean Lexipro-style design
+
+### 🏃 In Progress
+- None currently running
+
+### 📋 Next Up (Immediate)
+
+**This Week:**
+1. **Issue #1** - Complete remaining tests (2 days)
+2. **Issue #4** - Security hardening (2-3 days)
+
+**Next Week:**
+3. **Issue #3** - Deploy to Railway UAT (1 day)
+4. **Issue #7** - Multi-assistant compatibility testing (3-4 days)
+5. **Issue #2** - Lexipro.Api integration (2-3 days)
+
+**Week 3:**
+6. **Issue #8** - Production deployment (2-3 days)
+
+**Post-Production:**
+7. **Issue #6** - Azure AD integration (HIGH priority)
+8. **Issue #11** - Session management
+9. **Issue #12** - Two-factor authentication
+10. **Issue #10** - User consent screens
+
+---
+
+## 📚 Documentation Status
+
+- [x] README.md (setup instructions)
+- [x] TESTING-REVIEW.md (test coverage analysis)
+- [x] ROADMAP.md (this file)
+- [ ] DEPLOYMENT.md (Railway deployment guide)
+- [ ] SECURITY.md (security audit results)
+- [ ] API-DOCUMENTATION.md (OAuth endpoints)
+- [ ] ASSISTANT-SETUP.md (ChatGPT, Cline, Claude, Roo setup)
+
+---
+
+## 🎓 Lessons Learned (To Be Updated)
+
+### What Went Well
+- OpenIddict integration smooth
+- ASP.NET Core Identity works great
+- Railway database setup easy
+- Test coverage achieved quickly
+
+### What Could Be Improved
+- Integration test environment setup complex
+- Need better documentation for OAuth flows
+- Should have planned security hardening earlier
+
+### What's Next
+- Focus on multi-assistant compatibility
+- Prioritize security before UAT
+- Document everything for operations team
+
+---
+
+## 📞 Support & Escalation
+
+**For Issues/Questions:**
+- GitHub Issues: https://github.com/rivoli-ai/andy-auth/issues
+- Documentation: https://github.com/rivoli-ai/andy-auth
+
+**Priority Escalation:**
+- **P0 (Production Down):** Immediate
+- **P1 (Security Issue):** Within 4 hours
+- **P2 (Feature Bug):** Within 24 hours
+- **P3 (Enhancement):** Backlog
+
+---
+
+**Last Updated:** 2025-11-16 (Post Admin UI completion)
+**Next Review:** After UAT deployment (Issue #3)
