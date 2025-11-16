@@ -1,0 +1,24 @@
+@{
+    ViewData["Title"] = "Home";
+}
+
+<div class="card home-card">
+    <h2>Welcome to Andy Auth</h2>
+    <p>
+        Andy Auth is your secure, self-hosted authentication server powered by OpenIddict.
+        Manage users, applications, and authentication flows all in one place.
+    </p>
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <p>You are logged in as <strong>@User.Identity.Name</strong></p>
+        <form asp-controller="Account" asp-action="Logout" method="post">
+            <button type="submit" class="btn btn-secondary">Logout</button>
+        </form>
+    }
+    else
+    {
+        <a asp-controller="Account" asp-action="Login" class="btn btn-primary">Login</a>
+        <a asp-controller="Account" asp-action="Register" class="btn btn-secondary">Register</a>
+    }
+</div>

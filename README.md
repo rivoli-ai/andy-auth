@@ -106,9 +106,44 @@ public class MyService
 }
 ```
 
+## Andy Auth Server
+
+This repository also includes **Andy.Auth.Server** - a complete self-hosted OAuth/OIDC server built with OpenIddict.
+
+### Local Development
+
+```bash
+# Start PostgreSQL
+docker-compose up -d
+
+# Run the server
+cd src/Andy.Auth.Server
+dotnet run
+```
+
+Server runs at: https://localhost:5001
+
+**Test credentials:**
+- Email: `test@andy.local`
+- Password: `Test123!`
+
+See [LOCAL-SETUP.md](./LOCAL-SETUP.md) for detailed instructions.
+
+### Deployment
+
+Deploy to Railway with the included configuration:
+- `railway.json` - Railway deployment config
+- `nixpacks.toml` - Nixpacks build configuration
+
+See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for production deployment guide.
+
 ## Documentation
 
-See the [docs](./docs) folder for detailed documentation.
+- [LOCAL-SETUP.md](./LOCAL-SETUP.md) - Local development setup
+- [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) - Production deployment guide
+- [docs/PASSKEYS.md](./docs/PASSKEYS.md) - WebAuthn/FIDO2 passkey support
+- [docs/testing.md](./docs/testing.md) - Testing guide
+- [PROJECT-SUMMARY.md](./PROJECT-SUMMARY.md) - Complete project overview
 
 ## License
 
