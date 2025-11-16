@@ -1,0 +1,348 @@
+@model List<Andy.Auth.Server.Data.AuditLog>
+@{
+    ViewData["Title"] = "Audit Logs";
+    var currentPage = ViewBag.CurrentPage;
+    var totalPages = ViewBag.TotalPages;
+    var totalLogs = ViewBag.TotalLogs;
+}
+
+<div class="admin-page">
+    <div class="page-header">
+        <div>
+            <h1>Audit Logs</h1>
+            <p class="subtitle">Total: @totalLogs entries</p>
+        </div>
+        <a asp-action="Index" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Back to Dashboard
+        </a>
+    </div>
+
+    @if (Model.Any())
+    {
+        <div class="audit-logs-container">
+            <table class="audit-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Action</th>
+                        <th>Performed By</th>
+                        <th>Target User</th>
+                        <th>Details</th>
+                        <th>IP Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in Model)
+                    {
+                        var actionClass = log.Action switch
+                        {
+                            "UserSuspended" => "action-warning",
+                            "UserDeleted" => "action-danger",
+                            "UserUnsuspended" => "action-success",
+                            "UserExpirationSet" => "action-info",
+                            _ => "action-default"
+                        };
+
+                        <tr>
+                            <td>
+                                <div class="timestamp">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M8 5V8L10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                    </svg>
+                                    @log.PerformedAt.ToString("MMM dd, yyyy HH:mm:ss")
+                                </div>
+                            </td>
+                            <td>
+                                <span class="action-badge @actionClass">@log.Action</span>
+                            </td>
+                            <td>
+                                <div class="user-info">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M2 14C2 11.7909 4.68629 10 8 10C11.3137 10 14 11.7909 14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                    </svg>
+                                    <div>
+                                        <div class="user-email">@log.PerformedByEmail</div>
+                                        <div class="user-id">ID: @log.PerformedById.Substring(0, Math.Min(8, log.PerformedById.Length))...</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(log.TargetUserEmail))
+                                {
+                                    <div class="user-info">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/>
+                                            <path d="M2 14C2 11.7909 4.68629 10 8 10C11.3137 10 14 11.7909 14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                        </svg>
+                                        <div>
+                                            <div class="user-email">@log.TargetUserEmail</div>
+                                            <div class="user-id">ID: @(log.TargetUserId?.Substring(0, Math.Min(8, log.TargetUserId.Length)) ?? "")...</div>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">N/A</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(log.Details))
+                                {
+                                    <span class="details-text">@log.Details</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(log.IpAddress))
+                                {
+                                    <code class="ip-address">@log.IpAddress</code>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (totalPages > 1)
+        {
+            <div class="pagination">
+                @if (currentPage > 1)
+                {
+                    <a asp-action="AuditLogs" asp-route-page="@(currentPage - 1)" class="btn btn-sm">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Previous
+                    </a>
+                }
+
+                <span class="page-info">Page @currentPage of @totalPages</span>
+
+                @if (currentPage < totalPages)
+                {
+                    <a asp-action="AuditLogs" asp-route-page="@(currentPage + 1)" class="btn btn-sm">
+                        Next
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </a>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <div class="empty-state">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="12" y="12" width="40" height="40" rx="4" stroke="currentColor" stroke-width="2"/>
+                <path d="M20 24H44" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M20 32H44" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M20 40H36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <p>No audit logs found.</p>
+        </div>
+    }
+</div>
+
+<style>
+:root {
+    --primary: #0066CC;
+    --success: #28A745;
+    --danger: #DC3545;
+    --warning: #FFC107;
+    --info: #00A4DC;
+    --text: #212529;
+    --text-muted: #6C757D;
+    --border: #DEE2E6;
+    --surface: #FFFFFF;
+    --surface-2: #F1F3F5;
+}
+
+.subtitle {
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+.audit-logs-container {
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow-x: auto;
+}
+
+.audit-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1000px;
+}
+
+.audit-table thead {
+    background: var(--surface-2);
+}
+
+.audit-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text);
+    border-bottom: 2px solid var(--border);
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.audit-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+}
+
+.audit-table tbody tr:hover {
+    background: var(--surface-2);
+}
+
+.timestamp {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.timestamp svg {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.action-badge {
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.action-default {
+    background: rgba(108, 117, 125, 0.1);
+    color: var(--text-muted);
+}
+
+.action-success {
+    background: rgba(40, 167, 69, 0.1);
+    color: var(--success);
+}
+
+.action-warning {
+    background: rgba(255, 193, 7, 0.1);
+    color: #856404;
+}
+
+.action-danger {
+    background: rgba(220, 53, 69, 0.1);
+    color: var(--danger);
+}
+
+.action-info {
+    background: rgba(0, 164, 220, 0.1);
+    color: var(--info);
+}
+
+.user-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.user-info svg {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+}
+
+.user-email {
+    font-weight: 500;
+    color: var(--text);
+    font-size: 0.9rem;
+}
+
+.user-id {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: 'Courier New', monospace;
+}
+
+.details-text {
+    color: var(--text);
+    font-size: 0.9rem;
+    max-width: 300px;
+    display: block;
+}
+
+.ip-address {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    background: var(--surface-2);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    color: var(--text);
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.page-info {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.btn-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+}
+
+.empty-state svg {
+    margin-bottom: 1rem;
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+.empty-state p {
+    font-size: 1.1rem;
+}
+</style>

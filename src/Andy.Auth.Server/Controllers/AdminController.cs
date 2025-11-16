@@ -91,6 +91,120 @@ public class AdminController : Controller
         return View(users);
     }
 
+    [HttpPost]
+    public async Task<IActionResult> SuspendUser(string userId, string reason)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+            return NotFound();
+
+        user.IsSuspended = true;
+        user.SuspensionReason = reason;
+        user.SuspendedAt = DateTime.UtcNow;
+
+        await _userManager.UpdateAsync(user);
+        await LogAuditAsync("UserSuspended", user.Id, user.Email, $"Reason: {reason}");
+
+        TempData["SuccessMessage"] = $"User {user.Email} has been suspended.";
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> UnsuspendUser(string userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+            return NotFound();
+
+        user.IsSuspended = false;
+        user.SuspensionReason = null;
+        user.SuspendedAt = null;
+
+        await _userManager.UpdateAsync(user);
+        await LogAuditAsync("UserUnsuspended", user.Id, user.Email);
+
+        TempData["SuccessMessage"] = $"User {user.Email} has been unsuspended.";
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SetExpiration(string userId, DateTime? expiresAt)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+            return NotFound();
+
+        user.ExpiresAt = expiresAt;
+
+        await _userManager.UpdateAsync(user);
+
+        var details = expiresAt.HasValue
+            ? $"Expires: {expiresAt.Value:yyyy-MM-dd HH:mm}"
+            : "Expiration removed";
+        await LogAuditAsync("UserExpirationSet", user.Id, user.Email, details);
+
+        TempData["SuccessMessage"] = expiresAt.HasValue
+            ? $"Expiration date set for {user.Email}."
+            : $"Expiration date removed for {user.Email}.";
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> DeleteUser(string userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+            return NotFound();
+
+        // Soft delete
+        user.DeletedAt = DateTime.UtcNow;
+        user.IsActive = false;
+
+        await _userManager.UpdateAsync(user);
+        await LogAuditAsync("UserDeleted", user.Id, user.Email);
+
+        TempData["SuccessMessage"] = $"User {user.Email} has been deleted.";
+        return RedirectToAction(nameof(Users));
+    }
+
+    public async Task<IActionResult> AuditLogs(int page = 1, int pageSize = 50)
+    {
+        var totalLogs = await _context.AuditLogs.CountAsync();
+        var logs = await _context.AuditLogs
+            .OrderByDescending(l => l.PerformedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        ViewBag.CurrentPage = page;
+        ViewBag.TotalPages = (int)Math.Ceiling(totalLogs / (double)pageSize);
+        ViewBag.TotalLogs = totalLogs;
+
+        return View(logs);
+    }
+
+    private async Task LogAuditAsync(string action, string? targetUserId = null, string? targetUserEmail = null, string? details = null)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return;
+
+        var auditLog = new AuditLog
+        {
+            Action = action,
+            PerformedById = currentUser.Id,
+            PerformedByEmail = currentUser.Email ?? "Unknown",
+            TargetUserId = targetUserId,
+            TargetUserEmail = targetUserEmail,
+            Details = details,
+            PerformedAt = DateTime.UtcNow,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+        };
+
+        _context.AuditLogs.Add(auditLog);
+        await _context.SaveChangesAsync();
+    }
+
     public class ClientViewModel
     {
         public string ClientId { get; set; } = string.Empty;

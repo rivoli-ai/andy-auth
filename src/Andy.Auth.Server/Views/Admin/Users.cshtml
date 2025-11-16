@@ -12,8 +12,24 @@
             <h1>Users</h1>
             <p class="subtitle">Total: @totalUsers users</p>
         </div>
-        <a asp-action="Index" class="btn btn-secondary">← Back to Dashboard</a>
+        <a asp-action="Index" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Back to Dashboard
+        </a>
     </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18Z" stroke="currentColor" stroke-width="2"/>
+                <path d="M7 10L9 12L13 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            @TempData["SuccessMessage"]
+        </div>
+    }
 
     @if (Model.Any())
     {
@@ -24,24 +40,39 @@
                         <th>Email</th>
                         <th>Full Name</th>
                         <th>Status</th>
+                        <th>Expiration</th>
                         <th>Created</th>
                         <th>Last Login</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var user in Model)
                     {
-                        <tr>
+                        <tr class="@(user.DeletedAt.HasValue ? "deleted-row" : "")">
                             <td>
                                 <strong>@user.Email</strong>
                                 @if (user.EmailConfirmed)
                                 {
-                                    <span class="badge badge-success">✓ Verified</span>
+                                    <span class="badge badge-verified">
+                                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        Verified
+                                    </span>
                                 }
                             </td>
                             <td>@(user.FullName ?? "-")</td>
                             <td>
-                                @if (user.IsActive)
+                                @if (user.DeletedAt.HasValue)
+                                {
+                                    <span class="status-badge deleted">Deleted</span>
+                                }
+                                else if (user.IsSuspended)
+                                {
+                                    <span class="status-badge suspended" title="@user.SuspensionReason">Suspended</span>
+                                }
+                                else if (user.IsActive)
                                 {
                                     <span class="status-badge active">Active</span>
                                 }
@@ -50,8 +81,70 @@
                                     <span class="status-badge inactive">Inactive</span>
                                 }
                             </td>
+                            <td>
+                                @if (user.ExpiresAt.HasValue)
+                                {
+                                    var isExpired = user.ExpiresAt.Value < DateTime.UtcNow;
+                                    <span class="expiration-badge @(isExpired ? "expired" : "")">
+                                        @user.ExpiresAt.Value.ToString("MMM dd, yyyy")
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Never</span>
+                                }
+                            </td>
                             <td>@user.CreatedAt.ToString("MMM dd, yyyy")</td>
                             <td>@(user.LastLoginAt?.ToString("MMM dd, yyyy HH:mm") ?? "Never")</td>
+                            <td>
+                                <div class="action-buttons">
+                                    @if (!user.DeletedAt.HasValue)
+                                    {
+                                        @if (user.IsSuspended)
+                                        {
+                                            <button class="btn-action btn-success" onclick="unsuspendUser('@user.Id', '@user.Email')" title="Unsuspend User">
+                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z" stroke="currentColor" stroke-width="1.5"/>
+                                                    <path d="M6 8L7.5 9.5L10 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn-action btn-warning" onclick="showSuspendModal('@user.Id', '@user.Email')" title="Suspend User">
+                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z" stroke="currentColor" stroke-width="1.5"/>
+                                                    <path d="M8 5V8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                                    <circle cx="8" cy="10.5" r="0.5" fill="currentColor"/>
+                                                </svg>
+                                            </button>
+                                        }
+
+                                        <button class="btn-action btn-info" onclick="showExpirationModal('@user.Id', '@user.Email', '@(user.ExpiresAt?.ToString("yyyy-MM-dd") ?? "")')" title="Set Expiration">
+                                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                                <path d="M2 6H14" stroke="currentColor" stroke-width="1.5"/>
+                                                <path d="M5 2V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                                <path d="M11 2V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                            </svg>
+                                        </button>
+
+                                        <button class="btn-action btn-danger" onclick="showDeleteModal('@user.Id', '@user.Email')" title="Delete User">
+                                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M2 4H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                                <path d="M6 2H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                                <path d="M12.5 4V13C12.5 13.8284 11.8284 14.5 11 14.5H5C4.17157 14.5 3.5 13.8284 3.5 13V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                                <path d="M6.5 7V11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                                <path d="M9.5 7V11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                            </svg>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Deleted</span>
+                                    }
+                                </div>
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -63,14 +156,24 @@
             <div class="pagination">
                 @if (currentPage > 1)
                 {
-                    <a asp-action="Users" asp-route-page="@(currentPage - 1)" class="btn btn-sm">← Previous</a>
+                    <a asp-action="Users" asp-route-page="@(currentPage - 1)" class="btn btn-sm">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Previous
+                    </a>
                 }
 
                 <span class="page-info">Page @currentPage of @totalPages</span>
 
                 @if (currentPage < totalPages)
                 {
-                    <a asp-action="Users" asp-route-page="@(currentPage + 1)" class="btn btn-sm">Next →</a>
+                    <a asp-action="Users" asp-route-page="@(currentPage + 1)" class="btn btn-sm">
+                        Next
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </a>
                 }
             </div>
         }
@@ -83,16 +186,113 @@
     }
 </div>
 
+<!-- Suspend User Modal -->
+<div id="suspendModal" class="modal">
+    <div class="modal-content">
+        <h3>Suspend User</h3>
+        <p>Suspending <strong id="suspendUserEmail"></strong></p>
+        <form id="suspendForm" method="post" asp-action="SuspendUser">
+            <input type="hidden" name="userId" id="suspendUserId" />
+            <div class="form-group">
+                <label for="suspendReason">Reason for suspension:</label>
+                <textarea name="reason" id="suspendReason" class="form-control" rows="3" required></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('suspendModal')">Cancel</button>
+                <button type="submit" class="btn btn-warning">Suspend User</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Expiration Modal -->
+<div id="expirationModal" class="modal">
+    <div class="modal-content">
+        <h3>Set Account Expiration</h3>
+        <p>Setting expiration for <strong id="expirationUserEmail"></strong></p>
+        <form id="expirationForm" method="post" asp-action="SetExpiration">
+            <input type="hidden" name="userId" id="expirationUserId" />
+            <div class="form-group">
+                <label for="expiresAt">Expiration Date (leave empty to remove):</label>
+                <input type="date" name="expiresAt" id="expiresAt" class="form-control" />
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('expirationModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Set Expiration</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete User Modal -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content modal-danger">
+        <h3>Delete User</h3>
+        <p>Are you sure you want to delete <strong id="deleteUserEmail"></strong>?</p>
+        <p class="warning-text">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18Z" stroke="currentColor" stroke-width="2"/>
+                <path d="M10 6V10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="10" cy="13" r="1" fill="currentColor"/>
+            </svg>
+            This action cannot be undone. The user will be soft-deleted.
+        </p>
+        <form id="deleteForm" method="post" asp-action="DeleteUser">
+            <input type="hidden" name="userId" id="deleteUserId" />
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('deleteModal')">Cancel</button>
+                <button type="submit" class="btn btn-danger">Delete User</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Unsuspend Form (hidden) -->
+<form id="unsuspendForm" method="post" asp-action="UnsuspendUser" style="display: none;">
+    <input type="hidden" name="userId" id="unsuspendUserId" />
+</form>
+
 <style>
+:root {
+    --primary: #0066CC;
+    --primary-light: #3385DB;
+    --success: #28A745;
+    --danger: #DC3545;
+    --warning: #FFC107;
+    --info: #00A4DC;
+    --text: #212529;
+    --text-muted: #6C757D;
+    --border: #DEE2E6;
+    --surface: #FFFFFF;
+    --surface-2: #F1F3F5;
+    --background: #F8F9FA;
+}
+
 .subtitle {
-    color: #6b7280;
+    color: var(--text-muted);
     margin-top: 0.25rem;
 }
 
+.alert {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border: 1px solid;
+}
+
+.alert-success {
+    background: rgba(40, 167, 69, 0.1);
+    border-color: rgba(40, 167, 69, 0.3);
+    color: var(--success);
+}
+
 .users-table-container {
-    background: white;
+    background: var(--surface);
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border);
     overflow: hidden;
 }
 
@@ -102,28 +302,36 @@
 }
 
 .users-table thead {
-    background: #f3f4f6;
+    background: var(--surface-2);
 }
 
 .users-table th {
     padding: 1rem;
     text-align: left;
     font-weight: 600;
-    color: #374151;
-    border-bottom: 2px solid #e5e7eb;
+    color: var(--text);
+    border-bottom: 2px solid var(--border);
+    font-size: 0.9rem;
 }
 
 .users-table td {
     padding: 1rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
 }
 
 .users-table tbody tr:hover {
-    background: #f9fafb;
+    background: var(--surface-2);
+}
+
+.users-table tbody tr.deleted-row {
+    opacity: 0.6;
 }
 
 .badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
     font-size: 0.75rem;
@@ -131,9 +339,9 @@
     margin-left: 0.5rem;
 }
 
-.badge-success {
-    background: #d1fae5;
-    color: #065f46;
+.badge-verified {
+    background: rgba(40, 167, 69, 0.1);
+    color: var(--success);
 }
 
 .status-badge {
@@ -145,13 +353,98 @@
 }
 
 .status-badge.active {
-    background: #d1fae5;
-    color: #065f46;
+    background: rgba(40, 167, 69, 0.1);
+    color: var(--success);
 }
 
 .status-badge.inactive {
-    background: #fee2e2;
-    color: #991b1b;
+    background: rgba(108, 117, 125, 0.1);
+    color: var(--text-muted);
+}
+
+.status-badge.suspended {
+    background: rgba(255, 193, 7, 0.1);
+    color: #856404;
+}
+
+.status-badge.deleted {
+    background: rgba(220, 53, 69, 0.1);
+    color: var(--danger);
+}
+
+.expiration-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    background: rgba(0, 164, 220, 0.1);
+    color: var(--info);
+}
+
+.expiration-badge.expired {
+    background: rgba(220, 53, 69, 0.1);
+    color: var(--danger);
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-action:hover {
+    transform: translateY(-1px);
+}
+
+.btn-action.btn-success {
+    color: var(--success);
+}
+
+.btn-action.btn-success:hover {
+    background: rgba(40, 167, 69, 0.1);
+    border-color: var(--success);
+}
+
+.btn-action.btn-warning {
+    color: #856404;
+}
+
+.btn-action.btn-warning:hover {
+    background: rgba(255, 193, 7, 0.1);
+    border-color: #FFC107;
+}
+
+.btn-action.btn-info {
+    color: var(--info);
+}
+
+.btn-action.btn-info:hover {
+    background: rgba(0, 164, 220, 0.1);
+    border-color: var(--info);
+}
+
+.btn-action.btn-danger {
+    color: var(--danger);
+}
+
+.btn-action.btn-danger:hover {
+    background: rgba(220, 53, 69, 0.1);
+    border-color: var(--danger);
 }
 
 .pagination {
@@ -163,12 +456,139 @@
 }
 
 .page-info {
-    color: #6b7280;
+    color: var(--text-muted);
     font-weight: 500;
 }
 
 .btn-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     padding: 0.5rem 1rem;
     font-size: 0.9rem;
 }
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content h3 {
+    margin: 0 0 1rem 0;
+    color: var(--text);
+}
+
+.modal-content p {
+    margin-bottom: 1.5rem;
+    color: var(--text-muted);
+}
+
+.modal-danger {
+    border-top: 4px solid var(--danger);
+}
+
+.warning-text {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: rgba(220, 53, 69, 0.1);
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    border-radius: 8px;
+    color: var(--danger);
+    font-weight: 500;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+    font-weight: 500;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.3s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
 </style>
+
+<script>
+function showSuspendModal(userId, email) {
+    document.getElementById('suspendUserId').value = userId;
+    document.getElementById('suspendUserEmail').textContent = email;
+    document.getElementById('suspendReason').value = '';
+    document.getElementById('suspendModal').classList.add('active');
+}
+
+function showExpirationModal(userId, email, currentExpiration) {
+    document.getElementById('expirationUserId').value = userId;
+    document.getElementById('expirationUserEmail').textContent = email;
+    document.getElementById('expiresAt').value = currentExpiration;
+    document.getElementById('expirationModal').classList.add('active');
+}
+
+function showDeleteModal(userId, email) {
+    document.getElementById('deleteUserId').value = userId;
+    document.getElementById('deleteUserEmail').textContent = email;
+    document.getElementById('deleteModal').classList.add('active');
+}
+
+function unsuspendUser(userId, email) {
+    if (confirm(`Are you sure you want to unsuspend ${email}?`)) {
+        document.getElementById('unsuspendUserId').value = userId;
+        document.getElementById('unsuspendForm').submit();
+    }
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.classList.remove('active');
+    }
+});
+</script>

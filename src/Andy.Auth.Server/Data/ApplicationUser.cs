@@ -31,4 +31,29 @@ public class ApplicationUser : IdentityUser
     /// Whether the user account is active.
     /// </summary>
     public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// Whether the user account is suspended.
+    /// </summary>
+    public bool IsSuspended { get; set; }
+
+    /// <summary>
+    /// Reason for account suspension.
+    /// </summary>
+    public string? SuspensionReason { get; set; }
+
+    /// <summary>
+    /// Date when the account was suspended.
+    /// </summary>
+    public DateTime? SuspendedAt { get; set; }
+
+    /// <summary>
+    /// Account expiration date. User cannot login after this date.
+    /// </summary>
+    public DateTime? ExpiresAt { get; set; }
+
+    /// <summary>
+    /// Date when the account was deleted (soft delete).
+    /// </summary>
+    public DateTime? DeletedAt { get; set; }
 }
