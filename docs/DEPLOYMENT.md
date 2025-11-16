@@ -1,243 +1,48 @@
-# Andy Auth Deployment Guide
+# Deployment Guide
 
-Complete guide for deploying Andy Auth Server and integrating with your applications.
+Production deployment guide for Andy Auth Server.
 
-## Architecture Overview
+## Overview
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    PRODUCTION/UAT                            │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Railway: auth.rivoli.ai (Andy.Auth.Server)                 │
-│    ├─ OpenIddict OAuth/OIDC server                          │
-│    ├─ PostgreSQL database                                   │
-│    └─ Issues JWT tokens                                     │
-│                          ↓                                   │
-│  Railway: lexipro-api.rivoli.ai (Lexipro.Api)              │
-│    ├─ Uses Andy.Auth NuGet package                          │
-│    ├─ Validates tokens from Andy.Auth.Server                │
-│    └─ MCP server endpoints                                  │
-│                          ↓                                   │
-│  Vercel: wagram.ai (Angular Frontend)                       │
-│    └─ Redirects to auth.rivoli.ai for login                 │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
+Andy Auth Server is deployed to **Railway** with PostgreSQL database.
 
-## Phase 1: Local Development Setup
+**Environments:**
+- **UAT**: auth-uat.rivoli.ai (Issue #3)
+- **Production**: auth.rivoli.ai (Issue #8)
 
-### Step 1: Complete Andy.Auth.Server Implementation
+## Prerequisites
 
-The server structure exists but needs OpenIddict implementation.
+- GitHub repository: `rivoli-ai/andy-auth`
+- Railway account with project created
+- PostgreSQL database (Railway provides)
+- Domain DNS access (Cloudflare)
 
-**Option A: Use OpenIddict Templates (Fastest)**
+## Railway Deployment
 
-```bash
-cd /Users/samibengrine/Devel/rivoli-ai/andy-auth
-
-# Install OpenIddict templates
-dotnet new install OpenIddict.Templates
-
-# Generate server files into a temp directory
-mkdir temp-openiddict
-cd temp-openiddict
-dotnet new openiddict-server -n TempServer --framework net8.0
-
-# Copy relevant files to Andy.Auth.Server
-# - Controllers/
-# - Data/
-# - Models/
-# - Views/
-# - appsettings.json structure
-
-cd ..
-rm -rf temp-openiddict
-```
-
-**Option B: Manual Implementation (More Control)**
-
-I can implement this for you - it involves:
-- Database context with OpenIddict entities
-- Authorization controller
-- Token endpoint
-- User management
-- Login/consent UI
-
-### Step 2: Local Database Setup
-
-**Using SQLite (Development):**
-
-```bash
-cd src/Andy.Auth.Server
-
-# Add SQLite package
-dotnet add package Microsoft.EntityFrameworkCore.Sqlite
-
-# Update appsettings.Development.json
-```
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Data Source=andy-auth.db"
-  },
-  "OpenIddict": {
-    "Server": {
-      "EncryptionKey": "YOUR-DEV-ENCRYPTION-KEY-32-CHARS",
-      "SigningKey": "YOUR-DEV-SIGNING-KEY-32-CHARS"
-    }
-  }
-}
-```
-
-**Using PostgreSQL (Matches Production):**
-
-```bash
-# Install PostgreSQL locally
-brew install postgresql  # macOS
-# or use Docker
-docker run --name andy-auth-postgres -e POSTGRES_PASSWORD=devpass -p 5432:5432 -d postgres
-
-# Add PostgreSQL package
-dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL
-
-# Connection string
-"DefaultConnection": "Host=localhost;Database=andy_auth_dev;Username=postgres;Password=devpass"
-```
-
-### Step 3: Run Andy.Auth.Server Locally
-
-```bash
-cd src/Andy.Auth.Server
-
-# Run migrations
-dotnet ef database update
-
-# Run server (will be at https://localhost:7156 by default)
-dotnet run
-
-# Server endpoints will be available:
-# - https://localhost:7156/.well-known/openid-configuration
-# - https://localhost:7156/connect/authorize
-# - https://localhost:7156/connect/token
-# - https://localhost:7156/connect/register
-```
-
-### Step 4: Update Lexipro.Api to Use Andy.Auth
-
-**Install Andy.Auth Package:**
-
-```bash
-cd /Users/samibengrine/Devel/rivoli-ai/lexipro/src/Lexipro.Api
-
-# For local testing, reference the local project
-dotnet add reference /Users/samibengrine/Devel/rivoli-ai/andy-auth/src/Andy.Auth/Andy.Auth.csproj
-
-# Or use the published NuGet package (once published)
-dotnet add package Andy.Auth --version 1.0.0-beta
-```
-
-**Update Lexipro.Api/appsettings.Development.json:**
-
-```json
-{
-  "AndyAuth": {
-    "Provider": "AndyAuth",
-    "Authority": "https://localhost:7156",
-    "Audience": "lexipro-api",
-    "RequireHttpsMetadata": false
-  },
-  "Mcp": {
-    "ServerUrl": "https://localhost:7001",
-    "McpPath": "/mcp"
-  }
-}
-```
-
-**Update Lexipro.Api/Program.cs:**
-
-```csharp
-using Andy.Auth.Extensions;
-
-// REMOVE these sections:
-// - All JWT Bearer configuration
-// - Clerk authentication setup
-// - ClerkOAuthTokenHandler registration
-// - Policy scheme configuration
-
-// REPLACE with:
-builder.Services.AddAndyAuth(builder.Configuration);
-
-// Keep MCP configuration as is:
-builder.Services
-    .AddMcpServer()
-    .WithHttpTransport()
-    .WithToolsFromAssembly()
-    // ... rest of MCP config
-
-// Update MCP metadata to point to Andy Auth:
-.AddMcp(options =>
-{
-    var serverUrl = builder.Configuration["Mcp:ServerUrl"] ?? "https://localhost:7001";
-    options.ResourceMetadata = new()
-    {
-        Resource = new Uri($"{serverUrl}/mcp"),
-        AuthorizationServers = { new Uri("https://localhost:7156") }, // Andy.Auth.Server
-        ScopesSupported = ["openid", "profile", "email"]
-    };
-});
-```
-
-**Remove these files from Lexipro.Api:**
-- `Authentication/ClerkOAuthTokenHandler.cs`
-- `Controllers/DynamicClientRegistrationController.cs`
-
-**Keep CurrentUserService.cs or replace with Andy.Auth's version.**
-
-### Step 5: Test Locally
-
-**Terminal 1 - Run Andy.Auth.Server:**
-```bash
-cd /Users/samibengrine/Devel/rivoli-ai/andy-auth/src/Andy.Auth.Server
-dotnet run
-```
-
-**Terminal 2 - Run Lexipro.Api:**
-```bash
-cd /Users/samibengrine/Devel/rivoli-ai/lexipro/src/Lexipro.Api
-dotnet run
-```
-
-**Terminal 3 - Run Angular Frontend:**
-```bash
-cd /Users/samibengrine/Devel/rivoli-ai/lexipro/client
-npm start
-```
-
-**Test Authentication:**
-1. Navigate to http://localhost:4200
-2. Click login → redirects to https://localhost:7156/login
-3. Enter credentials
-4. Redirects back with access token
-5. Frontend calls Lexipro.Api with token
-6. API validates token with Andy.Auth.Server
-
----
-
-## Phase 2: Railway Deployment
-
-### Step 1: Create Railway Project for Andy.Auth.Server
-
-**Railway Setup:**
+### 1. Create Railway Project
 
 1. Go to https://railway.app
-2. Create new project: "andy-auth-uat"
+2. Create new project
 3. Add PostgreSQL database
-4. Add service from GitHub: `rivoli-ai/andy-auth`
+4. Add service from GitHub → `rivoli-ai/andy-auth`
 
-**railway.json** (create in andy-auth repo root):
+### 2. Configure Build
 
+Railway uses **Nixpacks** to detect and build .NET applications automatically.
+
+**nixpacks.toml** (in repo root):
+```toml
+[phases.setup]
+nixPkgs = ["dotnet-sdk_8"]
+
+[phases.build]
+cmds = ["dotnet publish src/Andy.Auth.Server/Andy.Auth.Server.csproj -c Release -o out"]
+
+[phases.start]
+cmd = "dotnet out/Andy.Auth.Server.dll"
+```
+
+**railway.json** (optional, for advanced config):
 ```json
 {
   "$schema": "https://railway.app/railway.schema.json",
@@ -253,294 +58,372 @@ npm start
 }
 ```
 
-**nixpacks.toml** (for Railway .NET deployment):
+### 3. Environment Variables
 
-```toml
-[phases.setup]
-nixPkgs = ["dotnet-sdk_8"]
+Configure in Railway dashboard → Variables:
 
-[phases.build]
-cmds = ["dotnet publish src/Andy.Auth.Server/Andy.Auth.Server.csproj -c Release -o out"]
-
-[phases.start]
-cmd = "dotnet out/Andy.Auth.Server.dll"
-```
-
-### Step 2: Configure Environment Variables in Railway
-
-**For Andy.Auth.Server:**
-
+**Required:**
 ```bash
-# Database (automatically set by Railway PostgreSQL)
-DATABASE_URL=postgres://user:pass@host:5432/dbname
+# Database (Railway sets this automatically)
+DATABASE_URL=postgresql://user:pass@host:port/db
 
-# Connection string (formatted from DATABASE_URL)
+# Connection string (format Railway's DATABASE_URL)
 ConnectionStrings__DefaultConnection=${{Postgres.DATABASE_URL}}
 
-# Server URLs
-ASPNETCORE_URLS=http://0.0.0.0:${{PORT}}
-Mcp__ServerUrl=https://auth-uat.rivoli.ai
-
-# Security keys (generate with: openssl rand -base64 32)
-OpenIddict__Server__EncryptionKey=<your-encryption-key>
-OpenIddict__Server__SigningKey=<your-signing-key>
-
-# Environment
-ASPNETCORE_ENVIRONMENT=UAT
-```
-
-### Step 3: Set Up Custom Domain
-
-In Railway:
-1. Go to Settings → Domains
-2. Add custom domain: `auth-uat.rivoli.ai`
-3. Update DNS:
-   ```
-   Type: CNAME
-   Name: auth-uat
-   Value: <railway-generated-url>
-   ```
-
-### Step 4: Deploy Lexipro.Api to Railway
-
-**Update Lexipro.Api Environment Variables:**
-
-```bash
-# Andy Auth configuration
-AndyAuth__Provider=AndyAuth
-AndyAuth__Authority=https://auth-uat.rivoli.ai
-AndyAuth__Audience=lexipro-api
-AndyAuth__RequireHttpsMetadata=true
-
-# MCP configuration
-Mcp__ServerUrl=https://lexipro-api-uat.rivoli.ai
-Mcp__McpPath=/mcp
-
-# Keep existing Lexipro variables
-# (Database, ElevenLabs, MinIO, etc.)
-```
-
-### Step 5: Update Angular Frontend (Vercel)
-
-**Update environment files:**
-
-**`client/src/environments/environment.uat.ts`:**
-```typescript
-export const environment = {
-  production: false,
-  apiUrl: 'https://lexipro-api-uat.rivoli.ai',
-  authUrl: 'https://auth-uat.rivoli.ai',
-  clientId: 'lexipro-web',
-  redirectUri: 'https://wagram-uat.vercel.app/callback'
-};
-```
-
-**Update Vercel environment variables:**
-```bash
-VITE_AUTH_URL=https://auth-uat.rivoli.ai
-VITE_API_URL=https://lexipro-api-uat.rivoli.ai
-```
-
----
-
-## Phase 3: Production Deployment
-
-### Production Environment Variables
-
-**Andy.Auth.Server (Railway):**
-```bash
-ConnectionStrings__DefaultConnection=${{Postgres.DATABASE_URL}}
-ASPNETCORE_URLS=http://0.0.0.0:${{PORT}}
+# ASP.NET Core
 ASPNETCORE_ENVIRONMENT=Production
-Mcp__ServerUrl=https://auth.rivoli.ai
-OpenIddict__Server__EncryptionKey=<prod-encryption-key>
-OpenIddict__Server__SigningKey=<prod-signing-key>
+ASPNETCORE_URLS=http://0.0.0.0:${{PORT}}
+
+# OpenIddict Signing Keys (generate with: openssl rand -base64 32)
+OpenIddict__Server__EncryptionKey=<32-char-encryption-key>
+OpenIddict__Server__SigningKey=<32-char-signing-key>
 ```
 
-**Lexipro.Api (Railway):**
+**Optional:**
 ```bash
-AndyAuth__Provider=AndyAuth
-AndyAuth__Authority=https://auth.rivoli.ai
-AndyAuth__Audience=lexipro-api
-AndyAuth__RequireHttpsMetadata=true
-Mcp__ServerUrl=https://lexipro-api.rivoli.ai
+# Logging
+Logging__LogLevel__Default=Information
+Logging__LogLevel__Microsoft.AspNetCore=Warning
+
+# Rate Limiting (defaults in appsettings.json)
+IpRateLimiting__EnableEndpointRateLimiting=true
 ```
 
-**Frontend (Vercel):**
+### 4. Custom Domain
+
+In Railway → Settings → Domains:
+
+1. Add custom domain: `auth-uat.rivoli.ai` (UAT) or `auth.rivoli.ai` (Production)
+2. Copy CNAME target from Railway
+3. Update DNS records in Cloudflare:
+
+**Cloudflare DNS:**
+```
+Type: CNAME
+Name: auth-uat (or auth)
+Target: <railway-generated-url>
+Proxy: On (orange cloud)
+```
+
+### 5. Deploy
+
+Railway deploys automatically on git push to main branch.
+
+**Manual deploy:**
+1. Railway Dashboard → Deployments
+2. Click "Deploy" → select commit/branch
+
+**Monitor deployment:**
+- Watch build logs in Railway
+- Check for errors
+- Verify health check passes
+
+## Database Migration
+
+Migrations run automatically on application startup (Program.cs:136).
+
+**Manual migration (if needed):**
 ```bash
-VITE_AUTH_URL=https://auth.rivoli.ai
-VITE_API_URL=https://lexipro-api.rivoli.ai
+# SSH into Railway container (not available in Hobby plan)
+railway run dotnet ef database update
+
+# Or deploy with migrations in startup
+# (already configured in Program.cs)
 ```
 
----
+## Health Checks
 
-## Deployment Checklist
+**Endpoints:**
+- `https://auth.rivoli.ai/.well-known/openid-configuration` - OpenID Discovery
+- `https://auth.rivoli.ai/Account/Login` - Login page
+- `https://auth.rivoli.ai/Admin` - Admin dashboard
 
-### UAT Deployment
-- [ ] Deploy Andy.Auth.Server to Railway (auth-uat.rivoli.ai)
-- [ ] Run database migrations
-- [ ] Publish Andy.Auth NuGet package (v1.0.0-beta)
-- [ ] Update Lexipro.Api to use Andy.Auth
-- [ ] Deploy Lexipro.Api to Railway (lexipro-api-uat.rivoli.ai)
-- [ ] Update Angular frontend environment variables
-- [ ] Deploy frontend to Vercel (wagram-uat.vercel.app)
-- [ ] Test login flow end-to-end
-- [ ] Test MCP authentication (Claude Desktop)
-- [ ] Verify token validation
-
-### Production Deployment
-- [ ] Publish Andy.Auth v1.0.0 (stable)
-- [ ] Deploy Andy.Auth.Server to Railway (auth.rivoli.ai)
-- [ ] Run production migrations
-- [ ] Update Lexipro.Api production config
-- [ ] Deploy Lexipro.Api to Railway
-- [ ] Deploy frontend to Vercel (wagram.ai)
-- [ ] Update DNS records
-- [ ] Monitor logs and performance
-- [ ] Set up alerting
-
----
-
-## Monitoring & Troubleshooting
-
-### Health Checks
-
-**Andy.Auth.Server:**
+**Test OAuth flow:**
 ```bash
-curl https://auth-uat.rivoli.ai/.well-known/openid-configuration
-curl https://auth-uat.rivoli.ai/health
+curl -I https://auth.rivoli.ai/.well-known/openid-configuration
+# Should return: 200 OK
 ```
 
-**Lexipro.Api:**
-```bash
-curl https://lexipro-api-uat.rivoli.ai/health
-curl https://lexipro-api-uat.rivoli.ai/.well-known/oauth-protected-resource
-```
+## Security Configuration
 
-### Common Issues
+### Production Certificates
 
-**"Invalid issuer" errors:**
-- Check `AndyAuth__Authority` matches Andy.Auth.Server URL
-- Verify SSL certificate is valid
-- Check `RequireHttpsMetadata` setting
-
-**"Token validation failed":**
-- Verify signing keys match between environments
-- Check clock sync between servers
-- Validate audience claim
-
-**"Redirect URI mismatch":**
-- Check registered redirect URIs in database
-- Verify client configuration
-- Check URL encoding
-
-### Logs
-
-**Railway logs:**
-```bash
-# View logs in Railway dashboard
-# Or use Railway CLI
-railway logs --service andy-auth-server
-railway logs --service lexipro-api
-```
-
-**Application Insights (optional):**
-Add to Andy.Auth.Server and Lexipro.Api for advanced monitoring.
-
----
-
-## Security Considerations
-
-### Keys and Secrets
+In production, Andy Auth uses proper signing/encryption keys from environment variables.
 
 **Generate secure keys:**
 ```bash
-# Encryption key (32 bytes)
+# Encryption key
 openssl rand -base64 32
 
-# Signing key (32 bytes)
+# Signing key
 openssl rand -base64 32
 ```
 
 **Store in Railway environment variables** - never commit to git!
 
-### HTTPS/TLS
+### HTTPS
 
-- Railway provides automatic HTTPS
-- Ensure `RequireHttpsMetadata: true` in production
-- Use HTTPS for all redirect URIs
+Railway provides automatic HTTPS with Let's Encrypt certificates.
+
+**Verify:**
+- `RequireHttpsMetadata: true` in production (Program.cs)
+- All redirect URIs use HTTPS
+- HSTS enabled (Program.cs:114)
+
+### Security Headers
+
+All security headers are configured (Program.cs:127-137):
+- X-Frame-Options: DENY
+- X-Content-Type-Options: nosniff
+- X-XSS-Protection: 1; mode=block
+- Referrer-Policy: no-referrer
+- Content-Security-Policy
 
 ### Rate Limiting
 
-Add to Andy.Auth.Server:
-```csharp
-builder.Services.AddRateLimiter(options =>
-{
-    options.AddFixedWindowLimiter("auth", opt =>
-    {
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.PermitLimit = 10;
-    });
-});
+Configured in appsettings.json:
+- Login: 5/minute
+- Register: 3/hour
+- Token: 10/minute
+- Global: 60/minute
+
+## Monitoring
+
+### Railway Dashboard
+
+- CPU usage
+- Memory usage
+- Request count
+- Error rate
+- Deployment status
+
+### Application Logs
+
+View in Railway → Logs tab:
+```bash
+# Or via CLI
+railway logs --service andy-auth
 ```
 
----
+### Audit Logs
 
-## Migration Strategy
+View in Admin UI:
+- Navigate to `/Admin/AuditLogs`
+- Filter by date, action, user
+- Monitor suspicious activity
 
-### From Clerk to Andy.Auth
+## Client Configuration
 
-**Phase 1: Side-by-side (Keep Clerk working)**
-1. Deploy Andy.Auth.Server
-2. Update Lexipro.Api to use Andy.Auth library
-3. Configure `Provider: "Clerk"` initially
-4. Test everything works
+After deployment, update OAuth clients to use production URLs.
 
-**Phase 2: Switch providers**
-1. Change config to `Provider: "AndyAuth"`
-2. Update frontend to use auth.rivoli.ai
-3. Test authentication flow
-4. Monitor for issues
+### Lexipro API (Railway)
 
-**Phase 3: Remove Clerk**
-1. Export users from Clerk (if needed)
-2. Import to Andy.Auth.Server
-3. Remove Clerk configuration
-4. Cancel Clerk subscription
+**Environment Variables:**
+```bash
+AndyAuth__Authority=https://auth.rivoli.ai
+AndyAuth__Audience=lexipro-api
+AndyAuth__RequireHttpsMetadata=true
+```
 
----
+### Wagram Frontend (Vercel)
+
+**Environment Variables:**
+```bash
+VITE_AUTH_URL=https://auth.rivoli.ai
+VITE_API_URL=https://lexipro-api.rivoli.ai
+```
+
+**Update auth config:**
+```typescript
+export const environment = {
+  authUrl: 'https://auth.rivoli.ai',
+  clientId: 'wagram-web',
+  redirectUri: 'https://wagram.ai/callback'
+};
+```
+
+### Claude Desktop MCP
+
+Claude Desktop should autodiscover OAuth settings via:
+```
+https://lexipro-api.rivoli.ai/.well-known/oauth-protected-resource
+```
+
+## Troubleshooting
+
+### Deployment Fails
+
+**Check:**
+- Build logs in Railway
+- .NET SDK version (8.0)
+- Project file path is correct
+- All dependencies are restored
+
+**Common issues:**
+- Missing DATABASE_URL → Add PostgreSQL service
+- Build command incorrect → Check nixpacks.toml
+- Port binding error → Use `${{PORT}}` not hardcoded port
+
+### Database Connection Error
+
+**Check:**
+- DATABASE_URL is set
+- ConnectionStrings__DefaultConnection format is correct
+- PostgreSQL service is running
+- Database migrations completed
+
+**Fix:**
+```bash
+# Verify connection string format
+postgresql://user:pass@host:port/dbname
+
+# Check Railway PostgreSQL service status
+```
+
+### OAuth Errors
+
+**"Invalid redirect_uri":**
+- Update OAuth client redirect URIs in database
+- Ensure URLs match exactly (including https://)
+- Check for trailing slashes
+
+**"Invalid issuer":**
+- Verify `Authority` URL matches deployed server
+- Check HTTPS is enforced
+- Confirm OpenID Discovery is accessible
+
+**"Token validation failed":**
+- Verify signing keys match between environments
+- Check clock sync
+- Validate audience claim
+
+### Rate Limiting Issues
+
+If legitimate users are being rate-limited:
+
+1. Review rate limiting config in appsettings.json
+2. Adjust limits based on actual usage
+3. Consider implementing user-based rate limiting
+4. Check for bot traffic in audit logs
+
+## Rollback
+
+If deployment fails:
+
+1. Railway Dashboard → Deployments
+2. Find previous working deployment
+3. Click "Redeploy"
+
+Or revert git commit and push:
+```bash
+git revert HEAD
+git push origin main
+```
+
+## Backup & Recovery
+
+### Database Backups
+
+Railway PostgreSQL includes automatic backups:
+- Daily backups retained for 7 days
+- Point-in-time recovery available
+
+**Manual backup:**
+```bash
+# Export database
+railway run pg_dump > backup.sql
+
+# Restore
+railway run psql < backup.sql
+```
+
+### Configuration Backup
+
+Export environment variables regularly:
+```bash
+railway variables --json > env-backup.json
+```
 
 ## Cost Estimate
 
-**UAT Environment:**
-- Railway Andy.Auth.Server: $5/month (Hobby plan)
-- Railway PostgreSQL: $5/month
-- Lexipro.Api: Already running
-- Vercel: Free (current plan)
-- **Total: ~$10/month**
+**Railway (Hobby Plan):**
+- Web service: $5/month
+- PostgreSQL: $5/month
+- Total: ~$10/month
 
-**Production:**
-- Railway Andy.Auth.Server: $20/month (Pro)
-- Railway PostgreSQL: $10/month
-- Higher traffic costs
-- **Total: ~$30-50/month**
+**Railway (Pro Plan - Production):**
+- Web service: $20/month
+- PostgreSQL: $10/month
+- Total: ~$30/month
 
-**Savings:**
-- Clerk: $25-100+/month (depending on MAU)
-- **ROI: Positive after 1-2 months**
+**Additional costs:**
+- Domain: Free (using existing)
+- SSL: Free (Let's Encrypt via Railway)
+- Monitoring: Included in Railway
 
----
+## Deployment Checklist
+
+### Pre-Deployment
+- [ ] All tests passing (77/81 minimum)
+- [ ] Security hardening complete (Issue #4)
+- [ ] Documentation up to date
+- [ ] Environment variables prepared
+- [ ] Signing keys generated
+
+### Deployment
+- [ ] Railway project created
+- [ ] PostgreSQL added
+- [ ] GitHub repository connected
+- [ ] Environment variables configured
+- [ ] Custom domain configured
+- [ ] DNS records updated
+
+### Post-Deployment
+- [ ] Health checks passing
+- [ ] OpenID Discovery accessible
+- [ ] Test user can login
+- [ ] OAuth flow works end-to-end
+- [ ] Audit logs working
+- [ ] Rate limiting active
+- [ ] Security headers present
+
+### Client Integration
+- [ ] Lexipro API updated
+- [ ] Wagram frontend updated
+- [ ] Claude Desktop tested
+- [ ] All OAuth clients working
 
 ## Next Steps
 
-1. **I can implement Andy.Auth.Server with OpenIddict** - takes ~1-2 hours
-2. **Test locally** with all three services running
-3. **Deploy to Railway UAT** for testing
-4. **Migrate Lexipro.Api** to use Andy.Auth
-5. **Production deployment** after UAT validation
+After successful deployment:
 
-Would you like me to:
-1. Implement the Andy.Auth.Server with OpenIddict now?
-2. Create the Railway configuration files?
-3. Update Lexipro.Api to use Andy.Auth?
-4. All of the above?
+1. **UAT Testing** (Issue #7)
+   - Test with Claude Desktop
+   - Test with Cline
+   - Test with ChatGPT/Roo
+   - Verify no authorization loops
+
+2. **Production Deployment** (Issue #8)
+   - Same process as UAT
+   - Use auth.rivoli.ai domain
+   - Update all clients to production URLs
+   - Monitor closely for first 24 hours
+
+3. **Post-Production**
+   - Implement monitoring alerts
+   - Set up log aggregation
+   - Configure automated backups
+   - Plan for scale (if needed)
+
+## References
+
+- [Railway Docs](https://docs.railway.app/)
+- [Nixpacks .NET](https://nixpacks.com/docs/providers/dotnet)
+- [ASP.NET Core Deployment](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/)
+- [OpenIddict Deployment](https://documentation.openiddict.com/)
+
+---
+
+**Last Updated:** 2025-11-16
+**Current Environment:** Local Development
+**Next Deployment:** UAT (Issue #3)
