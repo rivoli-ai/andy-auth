@@ -1,0 +1,139 @@
+@model List<Andy.Auth.Server.Controllers.AdminController.ClientViewModel>
+@{
+    ViewData["Title"] = "OAuth Clients";
+}
+
+<div class="admin-page">
+    <div class="page-header">
+        <h1>OAuth Clients</h1>
+        <a asp-action="Index" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+
+    @if (Model.Any())
+    {
+        <div class="clients-grid">
+            @foreach (var client in Model)
+            {
+                <div class="client-card">
+                    <div class="client-header">
+                        <h3>@client.DisplayName</h3>
+                        <span class="client-id">@client.ClientId</span>
+                    </div>
+                    <div class="client-details">
+                        <div class="detail-section">
+                            <strong>Redirect URIs:</strong>
+                            @if (client.RedirectUris.Any())
+                            {
+                                <ul class="uri-list">
+                                    @foreach (var uri in client.RedirectUris)
+                                    {
+                                        <li><code>@uri</code></li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p class="text-muted">No redirect URIs configured</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <p>No OAuth clients configured yet.</p>
+        </div>
+    }
+</div>
+
+<style>
+.admin-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.clients-grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.client-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #7c3aed;
+}
+
+.client-header {
+    margin-bottom: 1rem;
+}
+
+.client-header h3 {
+    margin: 0 0 0.5rem 0;
+    color: #1f2937;
+}
+
+.client-id {
+    display: inline-block;
+    background: #f3f4f6;
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+.client-details {
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.detail-section strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #4b5563;
+}
+
+.uri-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.uri-list li {
+    padding: 0.5rem 0;
+}
+
+.uri-list code {
+    background: #f9fafb;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: #7c3aed;
+}
+
+.text-muted {
+    color: #9ca3af;
+    font-style: italic;
+}
+
+.empty-state {
+    background: white;
+    border-radius: 12px;
+    padding: 3rem;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+</style>

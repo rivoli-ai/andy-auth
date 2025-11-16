@@ -1,0 +1,168 @@
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    var stats = ViewBag.Stats;
+}
+
+<div class="admin-dashboard">
+    <h1>Admin Dashboard</h1>
+    <p class="subtitle">Welcome back, <strong>@User.Identity?.Name</strong></p>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-content">
+                <div class="stat-value">@stats.TotalUsers</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-content">
+                <div class="stat-value">@stats.ActiveUsers</div>
+                <div class="stat-label">Active Users</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">🔑</div>
+            <div class="stat-content">
+                <div class="stat-value">@stats.TotalClients</div>
+                <div class="stat-label">OAuth Clients</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="recent-activity">
+        <h2>Recent Login Activity</h2>
+        @if (stats.RecentLogins.Count > 0)
+        {
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Last Login</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var login in stats.RecentLogins)
+                    {
+                        <tr>
+                            <td>@login.Email</td>
+                            <td>@login.LastLoginAt?.ToString("MMM dd, yyyy HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>No recent login activity.</p>
+        }
+    </div>
+
+    <div class="quick-actions">
+        <h2>Quick Actions</h2>
+        <div class="action-buttons">
+            <a asp-action="Clients" class="btn btn-primary">
+                <span>🔑</span> Manage OAuth Clients
+            </a>
+            <a asp-action="Users" class="btn btn-primary">
+                <span>👥</span> Manage Users
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.admin-dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.subtitle {
+    color: #6b7280;
+    margin-bottom: 2rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #7c3aed;
+}
+
+.stat-label {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.recent-activity, .quick-actions {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.admin-table th {
+    background: #f3f4f6;
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.admin-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.admin-table tr:hover {
+    background: #f9fafb;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+.action-buttons .btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.action-buttons .btn span {
+    font-size: 1.2rem;
+}
+</style>

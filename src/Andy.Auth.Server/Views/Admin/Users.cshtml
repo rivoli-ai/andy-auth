@@ -1,0 +1,174 @@
+@model List<Andy.Auth.Server.Data.ApplicationUser>
+@{
+    ViewData["Title"] = "Users";
+    var currentPage = ViewBag.CurrentPage;
+    var totalPages = ViewBag.TotalPages;
+    var totalUsers = ViewBag.TotalUsers;
+}
+
+<div class="admin-page">
+    <div class="page-header">
+        <div>
+            <h1>Users</h1>
+            <p class="subtitle">Total: @totalUsers users</p>
+        </div>
+        <a asp-action="Index" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+
+    @if (Model.Any())
+    {
+        <div class="users-table-container">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Full Name</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Last Login</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@user.Email</strong>
+                                @if (user.EmailConfirmed)
+                                {
+                                    <span class="badge badge-success">✓ Verified</span>
+                                }
+                            </td>
+                            <td>@(user.FullName ?? "-")</td>
+                            <td>
+                                @if (user.IsActive)
+                                {
+                                    <span class="status-badge active">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="status-badge inactive">Inactive</span>
+                                }
+                            </td>
+                            <td>@user.CreatedAt.ToString("MMM dd, yyyy")</td>
+                            <td>@(user.LastLoginAt?.ToString("MMM dd, yyyy HH:mm") ?? "Never")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (totalPages > 1)
+        {
+            <div class="pagination">
+                @if (currentPage > 1)
+                {
+                    <a asp-action="Users" asp-route-page="@(currentPage - 1)" class="btn btn-sm">← Previous</a>
+                }
+
+                <span class="page-info">Page @currentPage of @totalPages</span>
+
+                @if (currentPage < totalPages)
+                {
+                    <a asp-action="Users" asp-route-page="@(currentPage + 1)" class="btn btn-sm">Next →</a>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <div class="empty-state">
+            <p>No users found.</p>
+        </div>
+    }
+</div>
+
+<style>
+.subtitle {
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+
+.users-table-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.users-table thead {
+    background: #f3f4f6;
+}
+
+.users-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.users-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.users-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+.badge-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-badge.active {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge.inactive {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.page-info {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+</style>

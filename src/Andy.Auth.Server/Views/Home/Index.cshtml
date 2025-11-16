@@ -1,5 +1,12 @@
 @{
     ViewData["Title"] = "Home";
+
+    // Redirect authenticated users to admin dashboard
+    if (User.Identity?.IsAuthenticated == true)
+    {
+        Context.Response.Redirect("/Admin");
+        return;
+    }
 }
 
 <div class="card home-card">
@@ -9,16 +16,8 @@
         Manage users, applications, and authentication flows all in one place.
     </p>
 
-    @if (User.Identity?.IsAuthenticated == true)
-    {
-        <p>You are logged in as <strong>@User.Identity.Name</strong></p>
-        <form asp-controller="Account" asp-action="Logout" method="post">
-            <button type="submit" class="btn btn-secondary">Logout</button>
-        </form>
-    }
-    else
-    {
+    <div class="auth-actions">
         <a asp-controller="Account" asp-action="Login" class="btn btn-primary">Login</a>
         <a asp-controller="Account" asp-action="Register" class="btn btn-secondary">Register</a>
-    }
+    </div>
 </div>
