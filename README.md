@@ -40,6 +40,29 @@ Server runs at: **https://localhost:7088**
 
 See [docs/LOCAL-SETUP.md](./docs/LOCAL-SETUP.md) for detailed setup instructions.
 
+## Andy.Auth Client Library
+
+In addition to the OAuth server, this repository includes **Andy.Auth**, a NuGet library for easy integration with ASP.NET Core APIs.
+
+**Installation:**
+```bash
+dotnet add package Andy.Auth
+```
+
+**Usage:**
+```csharp
+// Add to Program.cs
+builder.Services.AddAndyAuth(builder.Configuration);
+```
+
+**Benefits:**
+- 🚀 **One-line integration** - Configure authentication with a single method call
+- 🎭 **Multi-provider support** - Andy Auth, Azure AD, Clerk, or custom OAuth
+- 📦 **ICurrentUserService** - Easy access to authenticated user claims
+- ⚡ **95% less code** - Reduces ~50 lines of JWT configuration to 1 line
+
+See [docs/LIBRARY.md](./docs/LIBRARY.md) for complete documentation and [examples/LexiproIntegration/](./examples/LexiproIntegration/) for integration guide.
+
 ## What's Included
 
 ### OAuth/OIDC Server
