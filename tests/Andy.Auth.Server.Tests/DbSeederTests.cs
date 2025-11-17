@@ -15,6 +15,7 @@ namespace Andy.Auth.Server.Tests;
 public class DbSeederTests
 {
     private readonly Mock<IOpenIddictApplicationManager> _mockAppManager;
+    private readonly Mock<IOpenIddictScopeManager> _mockScopeManager;
     private readonly Mock<UserManager<ApplicationUser>> _mockUserManager;
     private readonly Mock<ILogger<DbSeeder>> _mockLogger;
     private readonly IServiceProvider _serviceProvider;
@@ -23,12 +24,14 @@ public class DbSeederTests
     {
         // Setup mocks
         _mockAppManager = new Mock<IOpenIddictApplicationManager>();
+        _mockScopeManager = new Mock<IOpenIddictScopeManager>();
         _mockUserManager = MockUserManager();
         _mockLogger = new Mock<ILogger<DbSeeder>>();
 
         // Setup service provider
         var services = new ServiceCollection();
         services.AddSingleton(_mockAppManager.Object);
+        services.AddSingleton(_mockScopeManager.Object);
         services.AddSingleton(_mockUserManager.Object);
         _serviceProvider = services.BuildServiceProvider();
     }
