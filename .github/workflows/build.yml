@@ -10,6 +10,21 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: andy_auth_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
     - uses: actions/checkout@v4
 
@@ -26,6 +41,8 @@ jobs:
 
     - name: Test
       run: dotnet test --no-build --configuration Release --verbosity normal
+      env:
+        ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=andy_auth_test;Username=postgres;Password=postgres_test_password"
 
     - name: Pack
       run: dotnet pack src/Andy.Auth/Andy.Auth.csproj --no-build --configuration Release --output ./nupkg
