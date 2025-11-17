@@ -10,6 +10,15 @@ var builder = WebApplication.CreateBuilder(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
+// Configure forwarded headers for Railway's HTTPS proxy
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
+                               Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 // Add services to the container
 builder.Services.AddControllersWithViews();
 
@@ -160,6 +169,9 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Use forwarded headers - must be first
+app.UseForwardedHeaders();
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
