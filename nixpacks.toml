@@ -5,7 +5,7 @@ nixPkgs = ["dotnet-sdk_8"]
 cmds = ["dotnet restore src/Andy.Auth.Server/Andy.Auth.Server.csproj"]
 
 [phases.build]
-cmds = ["dotnet publish src/Andy.Auth.Server/Andy.Auth.Server.csproj -c Release -o out --no-restore"]
+cmds = ["dotnet publish src/Andy.Auth.Server/Andy.Auth.Server.csproj -c Release -o out --no-restore --self-contained true -r linux-x64"]
 
 [start]
-cmd = "dotnet out/Andy.Auth.Server.dll"
+cmd = "./out/Andy.Auth.Server"
