@@ -108,6 +108,31 @@ builder.Services.AddAuthentication(options =>
 // Configure authorization
 builder.Services.AddAuthorization();
 
+// Configure CORS to allow frontend applications
+var allowedOrigins = builder.Configuration.GetSection("CorsOrigins:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowWebClients", policy =>
+    {
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        }
+        else
+        {
+            // Fallback: Allow localhost for development if no origins configured
+            policy.SetIsOriginAllowed(origin => origin.StartsWith("http://localhost:") || origin.StartsWith("https://localhost:"))
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        }
+    });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
@@ -140,6 +165,8 @@ app.Use(async (context, next) =>
 app.UseIpRateLimiting();
 
 app.UseRouting();
+
+app.UseCors("AllowWebClients");
 
 app.UseAuthentication();
 app.UseAuthorization();
