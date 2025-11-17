@@ -68,20 +68,35 @@ builder.Services.AddOpenIddict()
             .AllowClientCredentialsFlow();
 
         // Register encryption and signing keys
-        // Use ephemeral keys for development (avoids macOS keychain issues)
-        // For production, use proper certificates or key management
-        if (builder.Environment.IsDevelopment())
+        // Use ephemeral keys for development and staging/UAT (avoids certificate management complexity)
+        // TODO: For true production, use proper certificates from key vault
+        if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Staging") || builder.Environment.IsEnvironment("UAT"))
         {
             options.AddEphemeralEncryptionKey()
                    .AddEphemeralSigningKey()
                    .DisableAccessTokenEncryption();  // Access tokens are signed JWT (industry standard), ID tokens remain encrypted
         }
-        else
+        else if (builder.Environment.IsProduction())
         {
-            // Production: Load certificates from configuration or key vault
-            throw new InvalidOperationException(
-                "Production environment detected. Please configure proper signing and encryption certificates. " +
-                "See docs/DEPLOYMENT.md for instructions.");
+            // Check if running in Railway/Cloud with ephemeral keys flag
+            var useEphemeralKeys = builder.Configuration.GetValue<bool>("OpenIddict:UseEphemeralKeys", false);
+
+            if (useEphemeralKeys)
+            {
+                // Use ephemeral keys for cloud deployments (Railway, etc.)
+                // WARNING: These keys will change on restart, invalidating all tokens
+                options.AddEphemeralEncryptionKey()
+                       .AddEphemeralSigningKey()
+                       .DisableAccessTokenEncryption();
+            }
+            else
+            {
+                // Production: Load certificates from configuration or key vault
+                throw new InvalidOperationException(
+                    "Production environment detected. Please configure proper signing and encryption certificates " +
+                    "or set OpenIddict:UseEphemeralKeys=true for UAT deployments. " +
+                    "See docs/DEPLOYMENT.md for instructions.");
+            }
         }
 
         // Register scopes
