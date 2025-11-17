@@ -4,7 +4,18 @@
     <TargetFramework>net8.0</TargetFramework>
     <Description>Multi-provider authentication library for ASP.NET Core supporting Andy Auth, Azure AD, Clerk, and custom OAuth providers</Description>
     <PackageId>Andy.Auth</PackageId>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>1.0.0</Version>
+    <Authors>Rivoli AI</Authors>
+    <Company>Rivoli AI</Company>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/rivoli-ai/andy-auth</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/rivoli-ai/andy-auth</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>authentication;oauth;jwt;aspnetcore;openidconnect</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>andy_auth_icon.png</PackageIcon>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +25,11 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\assets\andy_auth_icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
