@@ -102,11 +102,17 @@ builder.Services.AddOpenIddict()
         // Register scopes
         options.RegisterScopes("openid", "profile", "email", "roles", "offline_access");
 
-        // Register the ASP.NET Core host
-        options.UseAspNetCore()
+        // Register the ASP.NET Core host and configure based on environment
+        var aspNetCoreBuilder = options.UseAspNetCore()
             .EnableAuthorizationEndpointPassthrough()
             .EnableTokenEndpointPassthrough()
             .EnableStatusCodePagesIntegration();
+
+        // Allow HTTP for local development and testing (CI environment)
+        if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Staging") || builder.Environment.IsEnvironment("UAT"))
+        {
+            aspNetCoreBuilder.DisableTransportSecurityRequirement();
+        }
     })
     // Register the OpenIddict validation components
     .AddValidation(options =>
