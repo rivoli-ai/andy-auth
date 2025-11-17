@@ -30,7 +30,7 @@ public class AndyAuthProvider : IAuthProvider
             {
                 ValidateIssuer = true,
                 ValidIssuer = options.Authority,
-                ValidateAudience = !string.IsNullOrEmpty(options.Audience),
+                ValidateAudience = !string.IsNullOrEmpty(options.Audience),  // Validate audience when configured
                 ValidAudience = options.Audience,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,

@@ -100,6 +100,18 @@ public class AuthorizationController : ControllerBase
             case ConsentTypes.Explicit when authorizations.Any():
                 var principal = await CreateClaimsPrincipalAsync(user, request.GetScopes());
 
+                // Add requested resources to the principal (for audience claims)
+                var requestedResource = request.GetParameter("resource")?.ToString();
+                if (!string.IsNullOrEmpty(requestedResource))
+                {
+                    var currentResources = principal.GetResources().ToList();
+                    if (!currentResources.Contains(requestedResource))
+                    {
+                        currentResources.Add(requestedResource);
+                    }
+                    principal.SetResources(currentResources);
+                }
+
                 // Signing in with the OpenIddict authentiction scheme trigger OpenIddict to issue a code
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
 
@@ -161,6 +173,18 @@ public class AuthorizationController : ControllerBase
             }
 
             var principal = await CreateClaimsPrincipalAsync(user, result.Principal.GetScopes());
+
+            // Add requested resources to the principal (for audience claims)
+            var requestedResource = request.GetParameter("resource")?.ToString();
+            if (!string.IsNullOrEmpty(requestedResource))
+            {
+                var currentResources = principal.GetResources().ToList();
+                if (!currentResources.Contains(requestedResource))
+                {
+                    currentResources.Add(requestedResource);
+                }
+                principal.SetResources(currentResources);
+            }
 
             // Update last login time
             user.LastLoginAt = DateTime.UtcNow;

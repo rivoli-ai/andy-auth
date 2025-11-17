@@ -158,4 +158,48 @@ public class AccountController : Controller
     {
         return View();
     }
+
+    /// <summary>
+    /// Test-only login endpoint that bypasses anti-forgery validation.
+    /// Only available in Development environment.
+    /// </summary>
+    [HttpPost("~/Account/TestLogin")]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> TestLogin([FromForm] string email, [FromForm] string password, [FromForm] string? returnUrl = null)
+    {
+        // Only allow in development environment
+        var env = HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>();
+        if (!env.IsDevelopment())
+        {
+            return NotFound();
+        }
+
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user == null || !user.IsActive)
+        {
+            return BadRequest(new { error = "Invalid credentials or inactive account" });
+        }
+
+        var result = await _signInManager.PasswordSignInAsync(
+            user,
+            password,
+            isPersistent: false,
+            lockoutOnFailure: false);
+
+        if (result.Succeeded)
+        {
+            _logger.LogInformation("User {Email} logged in via test endpoint.", email);
+            user.LastLoginAt = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+
+            return Ok(new { success = true });
+        }
+
+        return BadRequest(new { error = "Invalid credentials" });
+    }
 }

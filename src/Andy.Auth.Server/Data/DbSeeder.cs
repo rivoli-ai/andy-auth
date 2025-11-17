@@ -21,8 +21,30 @@ public class DbSeeder
 
     public async Task SeedAsync()
     {
+        await SeedScopesAsync();
         await SeedClientsAsync();
         await SeedTestUserAsync();
+    }
+
+    private async Task SeedScopesAsync()
+    {
+        var manager = _serviceProvider.GetRequiredService<IOpenIddictScopeManager>();
+
+        // Register the lexipro-api resource scope
+        if (await manager.FindByNameAsync("urn:lexipro-api") == null)
+        {
+            await manager.CreateAsync(new OpenIddictScopeDescriptor
+            {
+                Name = "urn:lexipro-api",
+                DisplayName = "Lexipro API",
+                Resources =
+                {
+                    "urn:lexipro-api"
+                }
+            });
+
+            _logger.LogInformation("Created API resource scope: urn:lexipro-api");
+        }
     }
 
     private async Task SeedClientsAsync()
@@ -73,7 +95,8 @@ public class DbSeeder
         }
 
         // Wagram Web Client
-        if (await manager.FindByClientIdAsync("wagram-web") == null)
+        var wagramClient = await manager.FindByClientIdAsync("wagram-web");
+        if (wagramClient == null)
         {
             await manager.CreateAsync(new OpenIddictApplicationDescriptor
             {
@@ -92,6 +115,7 @@ public class DbSeeder
                     OpenIddictConstants.Permissions.Scopes.Email,
                     OpenIddictConstants.Permissions.Scopes.Profile,
                     OpenIddictConstants.Permissions.Scopes.Roles,
+                    "scp:urn:lexipro-api",  // Permission to request lexipro-api resource
 
                     OpenIddictConstants.Permissions.ResponseTypes.Code
                 },
@@ -110,6 +134,20 @@ public class DbSeeder
             });
 
             _logger.LogInformation("Created OAuth client: wagram-web");
+        }
+        else
+        {
+            // Update existing client to add permission for urn:lexipro-api resource
+            var descriptor = new OpenIddictApplicationDescriptor();
+            await manager.PopulateAsync(descriptor, wagramClient);
+
+            const string lexiproPermission = "scp:urn:lexipro-api";
+            if (!descriptor.Permissions.Contains(lexiproPermission))
+            {
+                descriptor.Permissions.Add(lexiproPermission);
+                await manager.UpdateAsync(wagramClient, descriptor);
+                _logger.LogInformation("Updated OAuth client: wagram-web - added urn:lexipro-api permission");
+            }
         }
 
         // Claude Desktop Client (for MCP)

@@ -73,7 +73,8 @@ builder.Services.AddOpenIddict()
         if (builder.Environment.IsDevelopment())
         {
             options.AddEphemeralEncryptionKey()
-                   .AddEphemeralSigningKey();
+                   .AddEphemeralSigningKey()
+                   .DisableAccessTokenEncryption();  // Access tokens are signed JWT (industry standard), ID tokens remain encrypted
         }
         else
         {
