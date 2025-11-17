@@ -100,14 +100,14 @@ public class AuthorizationController : ControllerBase
             case ConsentTypes.Explicit when authorizations.Any():
                 var principal = await CreateClaimsPrincipalAsync(user, request.GetScopes());
 
-                // Add requested resources to the principal (for audience claims)
-                var requestedResource = request.GetParameter("resource")?.ToString();
-                if (!string.IsNullOrEmpty(requestedResource))
+                // Always include lexipro-api audience for wagram-web client
+                if (request.ClientId == "wagram-web")
                 {
                     var currentResources = principal.GetResources().ToList();
-                    if (!currentResources.Contains(requestedResource))
+                    const string lexiproApiResource = "urn:lexipro-api";
+                    if (!currentResources.Contains(lexiproApiResource))
                     {
-                        currentResources.Add(requestedResource);
+                        currentResources.Add(lexiproApiResource);
                     }
                     principal.SetResources(currentResources);
                 }
@@ -174,14 +174,14 @@ public class AuthorizationController : ControllerBase
 
             var principal = await CreateClaimsPrincipalAsync(user, result.Principal.GetScopes());
 
-            // Add requested resources to the principal (for audience claims)
-            var requestedResource = request.GetParameter("resource")?.ToString();
-            if (!string.IsNullOrEmpty(requestedResource))
+            // Always include lexipro-api audience for wagram-web client
+            if (request.ClientId == "wagram-web")
             {
                 var currentResources = principal.GetResources().ToList();
-                if (!currentResources.Contains(requestedResource))
+                const string lexiproApiResource = "urn:lexipro-api";
+                if (!currentResources.Contains(lexiproApiResource))
                 {
-                    currentResources.Add(requestedResource);
+                    currentResources.Add(lexiproApiResource);
                 }
                 principal.SetResources(currentResources);
             }
