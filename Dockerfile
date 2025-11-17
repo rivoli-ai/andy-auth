@@ -15,8 +15,4 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# Set environment variable for port
-ENV ASPNETCORE_HTTP_PORTS=8080
-EXPOSE 8080
-
 ENTRYPOINT ["dotnet", "Andy.Auth.Server.dll"]
