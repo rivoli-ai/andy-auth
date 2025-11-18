@@ -249,6 +249,8 @@ public class DbSeeder
             else
             {
                 // Ensure existing user has Admin role and IsSystemUser flag
+                bool needsUpdate = false;
+
                 if (!await userManager.IsInRoleAsync(existingUser, "Admin"))
                 {
                     await userManager.AddToRoleAsync(existingUser, "Admin");
@@ -258,8 +260,22 @@ public class DbSeeder
                 if (!existingUser.IsSystemUser)
                 {
                     existingUser.IsSystemUser = true;
-                    await userManager.UpdateAsync(existingUser);
+                    needsUpdate = true;
                     _logger.LogInformation("Marked user as system user: {Email}", userInfo.Email);
+                }
+
+                // Clear any lockout for system users
+                if (existingUser.AccessFailedCount > 0 || existingUser.LockoutEnd != null)
+                {
+                    existingUser.AccessFailedCount = 0;
+                    existingUser.LockoutEnd = null;
+                    needsUpdate = true;
+                    _logger.LogInformation("Cleared lockout for system user: {Email}", userInfo.Email);
+                }
+
+                if (needsUpdate)
+                {
+                    await userManager.UpdateAsync(existingUser);
                 }
             }
         }
