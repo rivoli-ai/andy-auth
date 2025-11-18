@@ -273,6 +273,19 @@ public class DbSeeder
                     _logger.LogInformation("Cleared lockout for system user: {Email}", userInfo.Email);
                 }
 
+                // Reset password for system users to ensure it matches the expected password
+                var passwordResetToken = await userManager.GeneratePasswordResetTokenAsync(existingUser);
+                var passwordResetResult = await userManager.ResetPasswordAsync(existingUser, passwordResetToken, userInfo.Password);
+                if (passwordResetResult.Succeeded)
+                {
+                    _logger.LogInformation("Reset password for system user: {Email}", userInfo.Email);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to reset password for system user {Email}: {Errors}",
+                        userInfo.Email, string.Join(", ", passwordResetResult.Errors.Select(e => e.Description)));
+                }
+
                 if (needsUpdate)
                 {
                     await userManager.UpdateAsync(existingUser);
