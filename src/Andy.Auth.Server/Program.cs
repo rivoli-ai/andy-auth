@@ -30,9 +30,19 @@ builder.Services.AddInMemoryRateLimiting();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
 // Configure PostgreSQL database
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Normalize PostgreSQL connection string (convert URI format to key=value format)
+if (!string.IsNullOrWhiteSpace(connectionString) &&
+    (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
+     connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)))
+{
+    connectionString = NormalizePostgresConnectionString(connectionString);
+}
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.UseNpgsql(connectionString);
     options.UseOpenIddict();
 });
 
@@ -237,6 +247,58 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+// Helper function to convert PostgreSQL URI format to key=value connection string format
+static string NormalizePostgresConnectionString(string connectionString)
+{
+    try
+    {
+        // Parse the URI
+        var uri = new Uri(connectionString);
+
+        // Extract components
+        var host = uri.Host;
+        var port = uri.Port > 0 ? uri.Port : 5432;
+        var database = uri.AbsolutePath.TrimStart('/');
+        var userInfo = uri.UserInfo.Split(':');
+        var username = userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : "postgres";
+        var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+
+        // Build key=value connection string
+        var builder = new System.Text.StringBuilder();
+        builder.Append($"Host={host};");
+        builder.Append($"Port={port};");
+        builder.Append($"Database={database};");
+        builder.Append($"Username={username};");
+        if (!string.IsNullOrEmpty(password))
+        {
+            builder.Append($"Password={password};");
+        }
+
+        // Add common parameters from query string if present
+        var query = uri.Query;
+        if (!string.IsNullOrEmpty(query))
+        {
+            // Remove leading '?' and parse manually
+            var queryString = query.TrimStart('?');
+            var pairs = queryString.Split('&');
+            foreach (var pair in pairs)
+            {
+                var keyValue = pair.Split('=');
+                if (keyValue.Length == 2)
+                {
+                    builder.Append($"{Uri.UnescapeDataString(keyValue[0])}={Uri.UnescapeDataString(keyValue[1])};");
+                }
+            }
+        }
+
+        return builder.ToString().TrimEnd(';');
+    }
+    catch (Exception ex)
+    {
+        throw new InvalidOperationException($"Failed to parse PostgreSQL URI: {ex.Message}", ex);
+    }
+}
 
 // Make Program class accessible for integration tests
 public partial class Program { }
