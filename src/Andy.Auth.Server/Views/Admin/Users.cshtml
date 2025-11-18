@@ -31,6 +31,18 @@
         </div>
     }
 
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-error">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18Z" stroke="currentColor" stroke-width="2"/>
+                <path d="M10 6V10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="10" cy="13" r="1" fill="currentColor"/>
+            </svg>
+            @TempData["ErrorMessage"]
+        </div>
+    }
+
     @if (Model.Any())
     {
         <div class="users-table-container">
@@ -126,6 +138,22 @@
                                                 <path d="M2 6H14" stroke="currentColor" stroke-width="1.5"/>
                                                 <path d="M5 2V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                                                 <path d="M11 2V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                            </svg>
+                                        </button>
+
+                                        <button class="btn-action btn-primary" onclick="showEditNameModal('@user.Id', '@user.Email', '@(user.FullName?.Replace("'", "\\'") ?? "")')" title="Edit Name">
+                                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M11.3333 2L14 4.66667L8.66667 10H6V7.33333L11.3333 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <path d="M10 3.33333L12.6667 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <path d="M10.6667 10H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                            </svg>
+                                        </button>
+
+                                        <button class="btn-action btn-secondary" onclick="showResetPasswordModal('@user.Id', '@user.Email')" title="Reset Password">
+                                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M12 7H4C3.44772 7 3 7.44772 3 8V13C3 13.5523 3.44772 14 4 14H12C12.5523 14 13 13.5523 13 13V8C13 7.44772 12.5523 7 12 7Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <path d="M5 7V4C5 3.20435 5.31607 2.44129 5.87868 1.87868C6.44129 1.31607 7.20435 1 8 1C8.79565 1 9.55871 1.31607 10.1213 1.87868C10.6839 2.44129 11 3.20435 11 4V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <circle cx="8" cy="10.5" r="1" fill="currentColor"/>
                                             </svg>
                                         </button>
 
@@ -247,6 +275,47 @@
     </div>
 </div>
 
+<!-- Edit Name Modal -->
+<div id="editNameModal" class="modal">
+    <div class="modal-content">
+        <h3>Edit User Name</h3>
+        <p>Editing name for <strong id="editNameUserEmail"></strong></p>
+        <form id="editNameForm" method="post" asp-action="UpdateUserName">
+            <input type="hidden" name="userId" id="editNameUserId" />
+            <div class="form-group">
+                <label for="newName">Full Name:</label>
+                <input type="text" name="newName" id="newName" class="form-control" required />
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editNameModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Name</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="resetPasswordModal" class="modal">
+    <div class="modal-content">
+        <h3>Reset Password</h3>
+        <p>Resetting password for <strong id="resetPasswordUserEmail"></strong></p>
+        <form id="resetPasswordForm" method="post" asp-action="ResetPassword">
+            <input type="hidden" name="userId" id="resetPasswordUserId" />
+            <div class="form-group">
+                <label for="newPassword">New Password:</label>
+                <input type="password" name="newPassword" id="newPassword" class="form-control" required minlength="8" />
+                <small style="color: var(--text-muted); display: block; margin-top: 0.5rem;">
+                    Password must be at least 8 characters with uppercase, lowercase, and numbers.
+                </small>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('resetPasswordModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Reset Password</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Unsuspend Form (hidden) -->
 <form id="unsuspendForm" method="post" asp-action="UnsuspendUser" style="display: none;">
     <input type="hidden" name="userId" id="unsuspendUserId" />
@@ -287,6 +356,12 @@
     background: rgba(40, 167, 69, 0.1);
     border-color: rgba(40, 167, 69, 0.3);
     color: var(--success);
+}
+
+.alert-error {
+    background: rgba(220, 53, 69, 0.1);
+    border-color: rgba(220, 53, 69, 0.3);
+    color: var(--danger);
 }
 
 .users-table-container {
@@ -447,6 +522,24 @@
     border-color: var(--danger);
 }
 
+.btn-action.btn-primary {
+    color: var(--primary);
+}
+
+.btn-action.btn-primary:hover {
+    background: rgba(0, 102, 204, 0.1);
+    border-color: var(--primary);
+}
+
+.btn-action.btn-secondary {
+    color: var(--text-muted);
+}
+
+.btn-action.btn-secondary:hover {
+    background: rgba(108, 117, 125, 0.1);
+    border-color: var(--text-muted);
+}
+
 .pagination {
     display: flex;
     align-items: center;
@@ -572,6 +665,20 @@ function showDeleteModal(userId, email) {
     document.getElementById('deleteUserId').value = userId;
     document.getElementById('deleteUserEmail').textContent = email;
     document.getElementById('deleteModal').classList.add('active');
+}
+
+function showEditNameModal(userId, email, currentName) {
+    document.getElementById('editNameUserId').value = userId;
+    document.getElementById('editNameUserEmail').textContent = email;
+    document.getElementById('newName').value = currentName;
+    document.getElementById('editNameModal').classList.add('active');
+}
+
+function showResetPasswordModal(userId, email) {
+    document.getElementById('resetPasswordUserId').value = userId;
+    document.getElementById('resetPasswordUserEmail').textContent = email;
+    document.getElementById('newPassword').value = '';
+    document.getElementById('resetPasswordModal').classList.add('active');
 }
 
 function unsuspendUser(userId, email) {
