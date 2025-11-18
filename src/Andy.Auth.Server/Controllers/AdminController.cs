@@ -168,6 +168,36 @@ public class AdminController : Controller
     }
 
     [HttpPost]
+    public async Task<IActionResult> UpdateUserName(string userId, string newName)
+    {
+        if (string.IsNullOrWhiteSpace(newName))
+        {
+            TempData["ErrorMessage"] = "Name cannot be empty.";
+            return RedirectToAction(nameof(Users));
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+            return NotFound();
+
+        var oldName = user.FullName;
+        user.FullName = newName.Trim();
+
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            TempData["ErrorMessage"] = $"Failed to update name: {errors}";
+            return RedirectToAction(nameof(Users));
+        }
+
+        await LogAuditAsync("UserNameUpdated", user.Id, user.Email, $"Name changed from '{oldName}' to '{newName}'");
+
+        TempData["SuccessMessage"] = $"Name updated successfully for {user.Email}.";
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpPost]
     public async Task<IActionResult> ResetPassword(string userId, string newPassword)
     {
         if (string.IsNullOrWhiteSpace(newPassword))
