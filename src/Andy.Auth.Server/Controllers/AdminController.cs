@@ -167,6 +167,56 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Users));
     }
 
+    [HttpPost]
+    public async Task<IActionResult> ResetPassword(string userId, string newPassword)
+    {
+        if (string.IsNullOrWhiteSpace(newPassword))
+        {
+            TempData["ErrorMessage"] = "Password cannot be empty.";
+            return RedirectToAction(nameof(Users));
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+            return NotFound();
+
+        // Validate password strength
+        var passwordValidator = new PasswordValidator<ApplicationUser>();
+        var validationResult = await passwordValidator.ValidateAsync(_userManager, user, newPassword);
+
+        if (!validationResult.Succeeded)
+        {
+            var errors = string.Join(", ", validationResult.Errors.Select(e => e.Description));
+            TempData["ErrorMessage"] = $"Password validation failed: {errors}";
+            return RedirectToAction(nameof(Users));
+        }
+
+        // Remove existing password and set new one
+        var removeResult = await _userManager.RemovePasswordAsync(user);
+        if (!removeResult.Succeeded)
+        {
+            var errors = string.Join(", ", removeResult.Errors.Select(e => e.Description));
+            TempData["ErrorMessage"] = $"Failed to reset password: {errors}";
+            return RedirectToAction(nameof(Users));
+        }
+
+        var addResult = await _userManager.AddPasswordAsync(user, newPassword);
+        if (!addResult.Succeeded)
+        {
+            var errors = string.Join(", ", addResult.Errors.Select(e => e.Description));
+            TempData["ErrorMessage"] = $"Failed to set new password: {errors}";
+            return RedirectToAction(nameof(Users));
+        }
+
+        // Update security stamp to invalidate existing tokens
+        await _userManager.UpdateSecurityStampAsync(user);
+
+        await LogAuditAsync("PasswordReset", user.Id, user.Email, "Password reset by admin");
+
+        TempData["SuccessMessage"] = $"Password reset successfully for {user.Email}.";
+        return RedirectToAction(nameof(Users));
+    }
+
     public async Task<IActionResult> AuditLogs(int page = 1, int pageSize = 50)
     {
         var totalLogs = await _context.AuditLogs.CountAsync();
