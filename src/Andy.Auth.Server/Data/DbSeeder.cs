@@ -21,9 +21,29 @@ public class DbSeeder
 
     public async Task SeedAsync()
     {
+        await SeedRolesAsync();
         await SeedScopesAsync();
         await SeedClientsAsync();
         await SeedTestUserAsync();
+    }
+
+    private async Task SeedRolesAsync()
+    {
+        var roleManager = _serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+        // Create Admin role
+        if (!await roleManager.RoleExistsAsync("Admin"))
+        {
+            await roleManager.CreateAsync(new IdentityRole("Admin"));
+            _logger.LogInformation("Created role: Admin");
+        }
+
+        // Create User role (default for all users)
+        if (!await roleManager.RoleExistsAsync("User"))
+        {
+            await roleManager.CreateAsync(new IdentityRole("User"));
+            _logger.LogInformation("Created role: User");
+        }
     }
 
     private async Task SeedScopesAsync()
@@ -189,32 +209,78 @@ public class DbSeeder
     {
         var userManager = _serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-        // Create test user only in development
-        var isDevelopment = _configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Development";
-        if (!isDevelopment)
-            return;
+        // Create admin users (sam@rivoli.ai and ty@rivoli.ai)
+        var adminEmails = new[] { "sam@rivoli.ai", "ty@rivoli.ai" };
 
-        const string testEmail = "test@andy.local";
-        if (await userManager.FindByEmailAsync(testEmail) == null)
+        foreach (var email in adminEmails)
         {
-            var testUser = new ApplicationUser
+            var existingUser = await userManager.FindByEmailAsync(email);
+            if (existingUser == null)
             {
-                UserName = testEmail,
-                Email = testEmail,
-                EmailConfirmed = true,
-                FullName = "Test User",
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow
-            };
+                var adminUser = new ApplicationUser
+                {
+                    UserName = email,
+                    Email = email,
+                    EmailConfirmed = true,
+                    FullName = email == "sam@rivoli.ai" ? "Sam Ben Grine" : "Ty Morrow",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
 
-            var result = await userManager.CreateAsync(testUser, "Test123!");
-            if (result.Succeeded)
-            {
-                _logger.LogInformation("Created test user: {Email} with password 'Test123!'", testEmail);
+                // Create user with a secure default password
+                // Admins should change this on first login
+                var result = await userManager.CreateAsync(adminUser, "Admin123!ChangeMe");
+                if (result.Succeeded)
+                {
+                    // Assign Admin role
+                    await userManager.AddToRoleAsync(adminUser, "Admin");
+                    _logger.LogInformation("Created admin user: {Email} with Admin role", email);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to create admin user {Email}: {Errors}",
+                        email, string.Join(", ", result.Errors.Select(e => e.Description)));
+                }
             }
             else
             {
-                _logger.LogWarning("Failed to create test user: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
+                // Ensure existing user has Admin role
+                if (!await userManager.IsInRoleAsync(existingUser, "Admin"))
+                {
+                    await userManager.AddToRoleAsync(existingUser, "Admin");
+                    _logger.LogInformation("Added Admin role to existing user: {Email}", email);
+                }
+            }
+        }
+
+        // Create test user only in development
+        var isDevelopment = _configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Development";
+        if (isDevelopment)
+        {
+            const string testEmail = "test@andy.local";
+            if (await userManager.FindByEmailAsync(testEmail) == null)
+            {
+                var testUser = new ApplicationUser
+                {
+                    UserName = testEmail,
+                    Email = testEmail,
+                    EmailConfirmed = true,
+                    FullName = "Test User",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var result = await userManager.CreateAsync(testUser, "Test123!");
+                if (result.Succeeded)
+                {
+                    // Assign User role to test user (not Admin)
+                    await userManager.AddToRoleAsync(testUser, "User");
+                    _logger.LogInformation("Created test user: {Email} with password 'Test123!'", testEmail);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to create test user: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
+                }
             }
         }
     }
