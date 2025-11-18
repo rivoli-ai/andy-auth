@@ -4,6 +4,28 @@
     var currentPage = ViewBag.CurrentPage;
     var totalPages = ViewBag.TotalPages;
     var totalLogs = ViewBag.TotalLogs;
+    var search = ViewBag.Search as string;
+    var action = ViewBag.Action as string;
+    var sortBy = ViewBag.SortBy as string ?? "PerformedAt";
+    var sortOrder = ViewBag.SortOrder as string ?? "desc";
+    var distinctActions = ViewBag.DistinctActions as List<string> ?? new List<string>();
+}
+
+@functions {
+    string GetSortUrl(string column)
+    {
+        var newSortOrder = (sortBy == column && sortOrder == "desc") ? "asc" : "desc";
+        var url = $"?page={currentPage}&sortBy={column}&sortOrder={newSortOrder}";
+        if (!string.IsNullOrWhiteSpace(search)) url += $"&search={System.Web.HttpUtility.UrlEncode(search)}";
+        if (!string.IsNullOrWhiteSpace(action)) url += $"&action={System.Web.HttpUtility.UrlEncode(action)}";
+        return url;
+    }
+
+    string GetSortIcon(string column)
+    {
+        if (sortBy != column) return "⇅";
+        return sortOrder == "asc" ? "↑" : "↓";
+    }
 }
 
 <div class="admin-page">
@@ -22,15 +44,36 @@
 
     @if (Model.Any())
     {
+        <!-- Search and Filter -->
+        <form method="get" asp-action="AuditLogs" class="filters-form">
+            <div class="filters-container">
+                <input type="text" name="search" value="@search" placeholder="Search by email or details..." class="search-input" />
+                <select name="action" class="filter-select">
+                    <option value="">All Actions</option>
+                    @foreach (var act in distinctActions)
+                    {
+                        <option value="@act" selected="@(act == action)">@act</option>
+                    }
+                </select>
+                <input type="hidden" name="sortBy" value="@sortBy" />
+                <input type="hidden" name="sortOrder" value="@sortOrder" />
+                <button type="submit" class="btn btn-primary">Filter</button>
+                @if (!string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(action))
+                {
+                    <a asp-action="AuditLogs" class="btn btn-secondary">Clear</a>
+                }
+            </div>
+        </form>
+
         <div class="audit-logs-container">
             <table class="audit-table">
                 <thead>
                     <tr>
-                        <th>Timestamp</th>
-                        <th>Action</th>
-                        <th>Performed By</th>
-                        <th>Target User</th>
+                        <th><a href="@GetSortUrl("Action")" class="sort-header">Action @GetSortIcon("Action")</a></th>
+                        <th><a href="@GetSortUrl("PerformedByEmail")" class="sort-header">Performed By @GetSortIcon("PerformedByEmail")</a></th>
+                        <th><a href="@GetSortUrl("TargetUserEmail")" class="sort-header">Target User @GetSortIcon("TargetUserEmail")</a></th>
                         <th>Details</th>
+                        <th><a href="@GetSortUrl("PerformedAt")" class="sort-header">Date/Time @GetSortIcon("PerformedAt")</a></th>
                         <th>IP Address</th>
                     </tr>
                 </thead>
@@ -47,15 +90,6 @@
                         };
 
                         <tr>
-                            <td>
-                                <div class="timestamp">
-                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
-                                        <path d="M8 5V8L10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                    </svg>
-                                    @log.PerformedAt.ToString("MMM dd, yyyy HH:mm:ss")
-                                </div>
-                            </td>
                             <td>
                                 <span class="action-badge @actionClass">@log.Action</span>
                             </td>
@@ -101,6 +135,15 @@
                                 }
                             </td>
                             <td>
+                                <div class="timestamp">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M8 5V8L10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                    </svg>
+                                    @log.PerformedAt.ToString("MMM dd, yyyy HH:mm:ss")
+                                </div>
+                            </td>
+                            <td>
                                 @if (!string.IsNullOrEmpty(log.IpAddress))
                                 {
                                     <code class="ip-address">@log.IpAddress</code>
@@ -121,7 +164,7 @@
             <div class="pagination">
                 @if (currentPage > 1)
                 {
-                    <a asp-action="AuditLogs" asp-route-page="@(currentPage - 1)" class="btn btn-sm">
+                    <a asp-action="AuditLogs" asp-route-page="@(currentPage - 1)" asp-route-search="@search" asp-route-action="@action" asp-route-sortBy="@sortBy" asp-route-sortOrder="@sortOrder" class="btn btn-sm">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -133,7 +176,7 @@
 
                 @if (currentPage < totalPages)
                 {
-                    <a asp-action="AuditLogs" asp-route-page="@(currentPage + 1)" class="btn btn-sm">
+                    <a asp-action="AuditLogs" asp-route-page="@(currentPage + 1)" asp-route-search="@search" asp-route-action="@action" asp-route-sortBy="@sortBy" asp-route-sortOrder="@sortOrder" class="btn btn-sm">
                         Next
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -174,6 +217,57 @@
 .subtitle {
     color: var(--text-muted);
     margin-top: 0.25rem;
+}
+
+.filters-form {
+    margin-bottom: 1.5rem;
+}
+
+.filters-container {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-input {
+    flex: 1;
+    min-width: 250px;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.filter-select {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 1rem;
+    background: white;
+    min-width: 150px;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.sort-header {
+    color: var(--text);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.sort-header:hover {
+    color: var(--primary);
 }
 
 .audit-logs-container {

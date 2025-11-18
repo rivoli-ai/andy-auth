@@ -75,20 +75,53 @@ public class AdminController : Controller
         return View(clients);
     }
 
-    public async Task<IActionResult> Users(int page = 1, int pageSize = 20)
+    public async Task<IActionResult> Users(int page = 1, int pageSize = 20, string? search = null, string sortBy = "CreatedAt", string sortOrder = "desc")
     {
-        var totalUsers = await _userManager.Users.CountAsync();
-        var users = await _userManager.Users
-            .OrderByDescending(u => u.CreatedAt)
+        // Start with all users
+        var query = _userManager.Users.AsQueryable();
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var searchLower = search.ToLower();
+            query = query.Where(u =>
+                (u.Email != null && u.Email.ToLower().Contains(searchLower)) ||
+                (u.FullName != null && u.FullName.ToLower().Contains(searchLower))
+            );
+        }
+
+        // Apply sorting
+        query = sortBy switch
+        {
+            "Email" => sortOrder == "asc" ? query.OrderBy(u => u.Email) : query.OrderByDescending(u => u.Email),
+            "FullName" => sortOrder == "asc" ? query.OrderBy(u => u.FullName) : query.OrderByDescending(u => u.FullName),
+            "LastLogin" => sortOrder == "asc" ? query.OrderBy(u => u.LastLoginAt) : query.OrderByDescending(u => u.LastLoginAt),
+            "CreatedAt" => sortOrder == "asc" ? query.OrderBy(u => u.CreatedAt) : query.OrderByDescending(u => u.CreatedAt),
+            _ => query.OrderByDescending(u => u.CreatedAt)
+        };
+
+        var totalUsers = await query.CountAsync();
+        var users = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
+        // Get roles for each user
+        var usersWithRoles = new List<(ApplicationUser User, bool IsAdmin)>();
+        foreach (var user in users)
+        {
+            var isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
+            usersWithRoles.Add((user, isAdmin));
+        }
+
         ViewBag.CurrentPage = page;
         ViewBag.TotalPages = (int)Math.Ceiling(totalUsers / (double)pageSize);
         ViewBag.TotalUsers = totalUsers;
+        ViewBag.Search = search;
+        ViewBag.SortBy = sortBy;
+        ViewBag.SortOrder = sortOrder;
 
-        return View(users);
+        return View(usersWithRoles);
     }
 
     [HttpPost]
@@ -247,18 +280,59 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Users));
     }
 
-    public async Task<IActionResult> AuditLogs(int page = 1, int pageSize = 50)
+    public async Task<IActionResult> AuditLogs(int page = 1, int pageSize = 50, string? search = null, string? action = null, string sortBy = "PerformedAt", string sortOrder = "desc")
     {
-        var totalLogs = await _context.AuditLogs.CountAsync();
-        var logs = await _context.AuditLogs
-            .OrderByDescending(l => l.PerformedAt)
+        // Start with all audit logs
+        var query = _context.AuditLogs.AsQueryable();
+
+        // Apply search filter (email or details)
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var searchLower = search.ToLower();
+            query = query.Where(l =>
+                (l.PerformedByEmail != null && l.PerformedByEmail.ToLower().Contains(searchLower)) ||
+                (l.TargetUserEmail != null && l.TargetUserEmail.ToLower().Contains(searchLower)) ||
+                (l.Details != null && l.Details.ToLower().Contains(searchLower))
+            );
+        }
+
+        // Apply action filter
+        if (!string.IsNullOrWhiteSpace(action))
+        {
+            query = query.Where(l => l.Action == action);
+        }
+
+        // Apply sorting
+        query = sortBy switch
+        {
+            "Action" => sortOrder == "asc" ? query.OrderBy(l => l.Action) : query.OrderByDescending(l => l.Action),
+            "PerformedByEmail" => sortOrder == "asc" ? query.OrderBy(l => l.PerformedByEmail) : query.OrderByDescending(l => l.PerformedByEmail),
+            "TargetUserEmail" => sortOrder == "asc" ? query.OrderBy(l => l.TargetUserEmail) : query.OrderByDescending(l => l.TargetUserEmail),
+            "PerformedAt" => sortOrder == "asc" ? query.OrderBy(l => l.PerformedAt) : query.OrderByDescending(l => l.PerformedAt),
+            _ => query.OrderByDescending(l => l.PerformedAt)
+        };
+
+        var totalLogs = await query.CountAsync();
+        var logs = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .ToListAsync();
+
+        // Get distinct actions for filter dropdown
+        var distinctActions = await _context.AuditLogs
+            .Select(l => l.Action)
+            .Distinct()
+            .OrderBy(a => a)
             .ToListAsync();
 
         ViewBag.CurrentPage = page;
         ViewBag.TotalPages = (int)Math.Ceiling(totalLogs / (double)pageSize);
         ViewBag.TotalLogs = totalLogs;
+        ViewBag.Search = search;
+        ViewBag.Action = action;
+        ViewBag.SortBy = sortBy;
+        ViewBag.SortOrder = sortOrder;
+        ViewBag.DistinctActions = distinctActions;
 
         return View(logs);
     }

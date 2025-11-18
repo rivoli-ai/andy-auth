@@ -1,9 +1,27 @@
-@model List<Andy.Auth.Server.Data.ApplicationUser>
+@model List<(Andy.Auth.Server.Data.ApplicationUser User, bool IsAdmin)>
 @{
     ViewData["Title"] = "Users";
     var currentPage = ViewBag.CurrentPage;
     var totalPages = ViewBag.TotalPages;
     var totalUsers = ViewBag.TotalUsers;
+    var search = ViewBag.Search as string;
+    var sortBy = ViewBag.SortBy as string ?? "CreatedAt";
+    var sortOrder = ViewBag.SortOrder as string ?? "desc";
+}
+
+@functions {
+    string GetSortUrl(string column)
+    {
+        var newSortOrder = (sortBy == column && sortOrder == "desc") ? "asc" : "desc";
+        return $"?page={currentPage}&sortBy={column}&sortOrder={newSortOrder}" +
+               (string.IsNullOrWhiteSpace(search) ? "" : $"&search={System.Web.HttpUtility.UrlEncode(search)}");
+    }
+
+    string GetSortIcon(string column)
+    {
+        if (sortBy != column) return "⇅";
+        return sortOrder == "asc" ? "↑" : "↓";
+    }
 }
 
 <div class="admin-page">
@@ -43,23 +61,38 @@
         </div>
     }
 
+    <!-- Search and Filter -->
+    <form method="get" asp-action="Users" class="filters-form">
+        <div class="filters-container">
+            <input type="text" name="search" value="@search" placeholder="Search by email or name..." class="search-input" />
+            <input type="hidden" name="sortBy" value="@sortBy" />
+            <input type="hidden" name="sortOrder" value="@sortOrder" />
+            <button type="submit" class="btn btn-primary">Search</button>
+            @if (!string.IsNullOrWhiteSpace(search))
+            {
+                <a asp-action="Users" class="btn btn-secondary">Clear</a>
+            }
+        </div>
+    </form>
+
     @if (Model.Any())
     {
         <div class="users-table-container">
             <table class="users-table">
                 <thead>
                     <tr>
-                        <th>Email</th>
-                        <th>Full Name</th>
+                        <th><a href="@GetSortUrl("Email")" class="sort-header">Email @GetSortIcon("Email")</a></th>
+                        <th><a href="@GetSortUrl("FullName")" class="sort-header">Full Name @GetSortIcon("FullName")</a></th>
+                        <th>Role</th>
                         <th>Status</th>
                         <th>Expiration</th>
-                        <th>Created</th>
-                        <th>Last Login</th>
+                        <th><a href="@GetSortUrl("CreatedAt")" class="sort-header">Created @GetSortIcon("CreatedAt")</a></th>
+                        <th><a href="@GetSortUrl("LastLogin")" class="sort-header">Last Login @GetSortIcon("LastLogin")</a></th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var user in Model)
+                    @foreach (var (user, isAdmin) in Model)
                     {
                         <tr class="@(user.DeletedAt.HasValue ? "deleted-row" : "")">
                             <td>
@@ -75,6 +108,16 @@
                                 }
                             </td>
                             <td>@(user.FullName ?? "-")</td>
+                            <td>
+                                @if (isAdmin)
+                                {
+                                    <span class="badge badge-admin">Admin</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">User</span>
+                                }
+                            </td>
                             <td>
                                 @if (user.DeletedAt.HasValue)
                                 {
@@ -184,7 +227,7 @@
             <div class="pagination">
                 @if (currentPage > 1)
                 {
-                    <a asp-action="Users" asp-route-page="@(currentPage - 1)" class="btn btn-sm">
+                    <a asp-action="Users" asp-route-page="@(currentPage - 1)" asp-route-search="@search" asp-route-sortBy="@sortBy" asp-route-sortOrder="@sortOrder" class="btn btn-sm">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -196,7 +239,7 @@
 
                 @if (currentPage < totalPages)
                 {
-                    <a asp-action="Users" asp-route-page="@(currentPage + 1)" class="btn btn-sm">
+                    <a asp-action="Users" asp-route-page="@(currentPage + 1)" asp-route-search="@search" asp-route-sortBy="@sortBy" asp-route-sortOrder="@sortOrder" class="btn btn-sm">
                         Next
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -643,6 +686,47 @@
     display: flex;
     gap: 1rem;
     justify-content: flex-end;
+}
+
+.filters-form {
+    margin-bottom: 2rem;
+}
+
+.filters-container {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.search-input {
+    flex: 1;
+    max-width: 400px;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.sort-header {
+    color: var(--text);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sort-header:hover {
+    color: var(--primary);
+}
+
+.badge-admin {
+    background: rgba(0, 102, 204, 0.1);
+    color: var(--primary);
 }
 </style>
 
