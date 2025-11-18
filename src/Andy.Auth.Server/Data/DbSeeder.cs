@@ -209,46 +209,57 @@ public class DbSeeder
     {
         var userManager = _serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-        // Create admin users (sam@rivoli.ai and ty@rivoli.ai)
-        var adminEmails = new[] { "sam@rivoli.ai", "ty@rivoli.ai" };
-
-        foreach (var email in adminEmails)
+        // Create admin users (sam@rivoli.ai, ty@rivoli.ai, and admin@andy-auth.local)
+        var adminUsers = new[]
         {
-            var existingUser = await userManager.FindByEmailAsync(email);
+            new { Email = "sam@rivoli.ai", FullName = "Sam Ben Grine", Password = "REDACTED_ADMIN_PASSWORD" },
+            new { Email = "ty@rivoli.ai", FullName = "Ty Morrow", Password = "wonpic-bopjev-nuRgo2" },
+            new { Email = "admin@andy-auth.local", FullName = "System Administrator", Password = "Admin123!ChangeMe" }
+        };
+
+        foreach (var userInfo in adminUsers)
+        {
+            var existingUser = await userManager.FindByEmailAsync(userInfo.Email);
             if (existingUser == null)
             {
                 var adminUser = new ApplicationUser
                 {
-                    UserName = email,
-                    Email = email,
+                    UserName = userInfo.Email,
+                    Email = userInfo.Email,
                     EmailConfirmed = true,
-                    FullName = email == "sam@rivoli.ai" ? "Sam Ben Grine" : "Ty Morrow",
+                    FullName = userInfo.FullName,
                     IsActive = true,
+                    IsSystemUser = true, // Protected from deletion
                     CreatedAt = DateTime.UtcNow
                 };
 
-                // Create user with a secure default password
-                // Admins should change this on first login
-                var result = await userManager.CreateAsync(adminUser, "Admin123!ChangeMe");
+                var result = await userManager.CreateAsync(adminUser, userInfo.Password);
                 if (result.Succeeded)
                 {
                     // Assign Admin role
                     await userManager.AddToRoleAsync(adminUser, "Admin");
-                    _logger.LogInformation("Created admin user: {Email} with Admin role", email);
+                    _logger.LogInformation("Created system admin user: {Email} with Admin role", userInfo.Email);
                 }
                 else
                 {
                     _logger.LogWarning("Failed to create admin user {Email}: {Errors}",
-                        email, string.Join(", ", result.Errors.Select(e => e.Description)));
+                        userInfo.Email, string.Join(", ", result.Errors.Select(e => e.Description)));
                 }
             }
             else
             {
-                // Ensure existing user has Admin role
+                // Ensure existing user has Admin role and IsSystemUser flag
                 if (!await userManager.IsInRoleAsync(existingUser, "Admin"))
                 {
                     await userManager.AddToRoleAsync(existingUser, "Admin");
-                    _logger.LogInformation("Added Admin role to existing user: {Email}", email);
+                    _logger.LogInformation("Added Admin role to existing user: {Email}", userInfo.Email);
+                }
+
+                if (!existingUser.IsSystemUser)
+                {
+                    existingUser.IsSystemUser = true;
+                    await userManager.UpdateAsync(existingUser);
+                    _logger.LogInformation("Marked user as system user: {Email}", userInfo.Email);
                 }
             }
         }

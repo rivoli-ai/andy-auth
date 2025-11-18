@@ -56,4 +56,10 @@ public class ApplicationUser : IdentityUser
     /// Date when the account was deleted (soft delete).
     /// </summary>
     public DateTime? DeletedAt { get; set; }
+
+    /// <summary>
+    /// Indicates if this is a system user that cannot be deleted.
+    /// System users are automatically created and managed by the application.
+    /// </summary>
+    public bool IsSystemUser { get; set; }
 }

@@ -189,6 +189,13 @@ public class AdminController : Controller
         if (user == null)
             return NotFound();
 
+        // Prevent deletion of system users
+        if (user.IsSystemUser)
+        {
+            TempData["ErrorMessage"] = $"Cannot delete system user {user.Email}. System users are protected from deletion.";
+            return RedirectToAction(nameof(Users));
+        }
+
         // Soft delete
         user.DeletedAt = DateTime.UtcNow;
         user.IsActive = false;
