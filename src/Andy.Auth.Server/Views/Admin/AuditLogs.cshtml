@@ -11,22 +11,6 @@
     var distinctActions = ViewBag.DistinctActions as List<string> ?? new List<string>();
 }
 
-@functions {
-    string GetSortUrl(string column)
-    {
-        var newSortOrder = (sortBy == column && sortOrder == "desc") ? "asc" : "desc";
-        var url = $"?page={currentPage}&sortBy={column}&sortOrder={newSortOrder}";
-        if (!string.IsNullOrWhiteSpace(search)) url += $"&search={System.Web.HttpUtility.UrlEncode(search)}";
-        if (!string.IsNullOrWhiteSpace(action)) url += $"&action={System.Web.HttpUtility.UrlEncode(action)}";
-        return url;
-    }
-
-    string GetSortIcon(string column)
-    {
-        if (sortBy != column) return "⇅";
-        return sortOrder == "asc" ? "↑" : "↓";
-    }
-}
 
 <div class="admin-page">
     <div class="page-header">
@@ -69,11 +53,47 @@
             <table class="audit-table">
                 <thead>
                     <tr>
-                        <th><a href="@GetSortUrl("Action")" class="sort-header">Action @GetSortIcon("Action")</a></th>
-                        <th><a href="@GetSortUrl("PerformedByEmail")" class="sort-header">Performed By @GetSortIcon("PerformedByEmail")</a></th>
-                        <th><a href="@GetSortUrl("TargetUserEmail")" class="sort-header">Target User @GetSortIcon("TargetUserEmail")</a></th>
+                        <th>
+                            @{
+                                var actionSortOrder = (sortBy == "Action" && sortOrder == "desc") ? "asc" : "desc";
+                                var actionSortUrl = $"?page={currentPage}&sortBy=Action&sortOrder={actionSortOrder}";
+                                if (!string.IsNullOrWhiteSpace(search)) actionSortUrl += $"&search={System.Web.HttpUtility.UrlEncode(search)}";
+                                if (!string.IsNullOrWhiteSpace(action)) actionSortUrl += $"&action={System.Web.HttpUtility.UrlEncode(action)}";
+                                var actionSortIcon = sortBy != "Action" ? "⇅" : (sortOrder == "asc" ? "↑" : "↓");
+                            }
+                            <a href="@actionSortUrl" class="sort-header">Action @actionSortIcon</a>
+                        </th>
+                        <th>
+                            @{
+                                var performedBySortOrder = (sortBy == "PerformedByEmail" && sortOrder == "desc") ? "asc" : "desc";
+                                var performedBySortUrl = $"?page={currentPage}&sortBy=PerformedByEmail&sortOrder={performedBySortOrder}";
+                                if (!string.IsNullOrWhiteSpace(search)) performedBySortUrl += $"&search={System.Web.HttpUtility.UrlEncode(search)}";
+                                if (!string.IsNullOrWhiteSpace(action)) performedBySortUrl += $"&action={System.Web.HttpUtility.UrlEncode(action)}";
+                                var performedBySortIcon = sortBy != "PerformedByEmail" ? "⇅" : (sortOrder == "asc" ? "↑" : "↓");
+                            }
+                            <a href="@performedBySortUrl" class="sort-header">Performed By @performedBySortIcon</a>
+                        </th>
+                        <th>
+                            @{
+                                var targetUserSortOrder = (sortBy == "TargetUserEmail" && sortOrder == "desc") ? "asc" : "desc";
+                                var targetUserSortUrl = $"?page={currentPage}&sortBy=TargetUserEmail&sortOrder={targetUserSortOrder}";
+                                if (!string.IsNullOrWhiteSpace(search)) targetUserSortUrl += $"&search={System.Web.HttpUtility.UrlEncode(search)}";
+                                if (!string.IsNullOrWhiteSpace(action)) targetUserSortUrl += $"&action={System.Web.HttpUtility.UrlEncode(action)}";
+                                var targetUserSortIcon = sortBy != "TargetUserEmail" ? "⇅" : (sortOrder == "asc" ? "↑" : "↓");
+                            }
+                            <a href="@targetUserSortUrl" class="sort-header">Target User @targetUserSortIcon</a>
+                        </th>
                         <th>Details</th>
-                        <th><a href="@GetSortUrl("PerformedAt")" class="sort-header">Date/Time @GetSortIcon("PerformedAt")</a></th>
+                        <th>
+                            @{
+                                var performedAtSortOrder = (sortBy == "PerformedAt" && sortOrder == "desc") ? "asc" : "desc";
+                                var performedAtSortUrl = $"?page={currentPage}&sortBy=PerformedAt&sortOrder={performedAtSortOrder}";
+                                if (!string.IsNullOrWhiteSpace(search)) performedAtSortUrl += $"&search={System.Web.HttpUtility.UrlEncode(search)}";
+                                if (!string.IsNullOrWhiteSpace(action)) performedAtSortUrl += $"&action={System.Web.HttpUtility.UrlEncode(action)}";
+                                var performedAtSortIcon = sortBy != "PerformedAt" ? "⇅" : (sortOrder == "asc" ? "↑" : "↓");
+                            }
+                            <a href="@performedAtSortUrl" class="sort-header">Date/Time @performedAtSortIcon</a>
+                        </th>
                         <th>IP Address</th>
                     </tr>
                 </thead>

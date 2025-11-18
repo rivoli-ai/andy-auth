@@ -9,20 +9,6 @@
     var sortOrder = ViewBag.SortOrder as string ?? "desc";
 }
 
-@functions {
-    string GetSortUrl(string column)
-    {
-        var newSortOrder = (sortBy == column && sortOrder == "desc") ? "asc" : "desc";
-        return $"?page={currentPage}&sortBy={column}&sortOrder={newSortOrder}" +
-               (string.IsNullOrWhiteSpace(search) ? "" : $"&search={System.Web.HttpUtility.UrlEncode(search)}");
-    }
-
-    string GetSortIcon(string column)
-    {
-        if (sortBy != column) return "⇅";
-        return sortOrder == "asc" ? "↑" : "↓";
-    }
-}
 
 <div class="admin-page">
     <div class="page-header">
@@ -81,13 +67,41 @@
             <table class="users-table">
                 <thead>
                     <tr>
-                        <th><a href="@GetSortUrl("Email")" class="sort-header">Email @GetSortIcon("Email")</a></th>
-                        <th><a href="@GetSortUrl("FullName")" class="sort-header">Full Name @GetSortIcon("FullName")</a></th>
+                        <th>
+                            @{
+                                var emailSortOrder = (sortBy == "Email" && sortOrder == "desc") ? "asc" : "desc";
+                                var emailSortUrl = $"?page={currentPage}&sortBy=Email&sortOrder={emailSortOrder}" + (string.IsNullOrWhiteSpace(search) ? "" : $"&search={System.Web.HttpUtility.UrlEncode(search)}");
+                                var emailSortIcon = sortBy != "Email" ? "⇅" : (sortOrder == "asc" ? "↑" : "↓");
+                            }
+                            <a href="@emailSortUrl" class="sort-header">Email @emailSortIcon</a>
+                        </th>
+                        <th>
+                            @{
+                                var nameSortOrder = (sortBy == "FullName" && sortOrder == "desc") ? "asc" : "desc";
+                                var nameSortUrl = $"?page={currentPage}&sortBy=FullName&sortOrder={nameSortOrder}" + (string.IsNullOrWhiteSpace(search) ? "" : $"&search={System.Web.HttpUtility.UrlEncode(search)}");
+                                var nameSortIcon = sortBy != "FullName" ? "⇅" : (sortOrder == "asc" ? "↑" : "↓");
+                            }
+                            <a href="@nameSortUrl" class="sort-header">Full Name @nameSortIcon</a>
+                        </th>
                         <th>Role</th>
                         <th>Status</th>
                         <th>Expiration</th>
-                        <th><a href="@GetSortUrl("CreatedAt")" class="sort-header">Created @GetSortIcon("CreatedAt")</a></th>
-                        <th><a href="@GetSortUrl("LastLogin")" class="sort-header">Last Login @GetSortIcon("LastLogin")</a></th>
+                        <th>
+                            @{
+                                var createdSortOrder = (sortBy == "CreatedAt" && sortOrder == "desc") ? "asc" : "desc";
+                                var createdSortUrl = $"?page={currentPage}&sortBy=CreatedAt&sortOrder={createdSortOrder}" + (string.IsNullOrWhiteSpace(search) ? "" : $"&search={System.Web.HttpUtility.UrlEncode(search)}");
+                                var createdSortIcon = sortBy != "CreatedAt" ? "⇅" : (sortOrder == "asc" ? "↑" : "↓");
+                            }
+                            <a href="@createdSortUrl" class="sort-header">Created @createdSortIcon</a>
+                        </th>
+                        <th>
+                            @{
+                                var loginSortOrder = (sortBy == "LastLogin" && sortOrder == "desc") ? "asc" : "desc";
+                                var loginSortUrl = $"?page={currentPage}&sortBy=LastLogin&sortOrder={loginSortOrder}" + (string.IsNullOrWhiteSpace(search) ? "" : $"&search={System.Web.HttpUtility.UrlEncode(search)}");
+                                var loginSortIcon = sortBy != "LastLogin" ? "⇅" : (sortOrder == "asc" ? "↑" : "↓");
+                            }
+                            <a href="@loginSortUrl" class="sort-header">Last Login @loginSortIcon</a>
+                        </th>
                         <th>Actions</th>
                     </tr>
                 </thead>
