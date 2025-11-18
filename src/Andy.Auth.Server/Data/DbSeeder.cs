@@ -123,12 +123,14 @@ public class DbSeeder
                 {
                     new Uri("https://localhost:4200/callback"),
                     new Uri("https://wagram-uat.vercel.app/callback"),
+                    new Uri("https://wargram-ai-uat.vercel.app/callback"),
                     new Uri("https://wagram.ai/callback")
                 },
                 PostLogoutRedirectUris =
                 {
                     new Uri("https://localhost:4200/"),
                     new Uri("https://wagram-uat.vercel.app/"),
+                    new Uri("https://wargram-ai-uat.vercel.app/"),
                     new Uri("https://wagram.ai/")
                 }
             });
