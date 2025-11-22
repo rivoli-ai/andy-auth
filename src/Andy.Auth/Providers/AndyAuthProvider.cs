@@ -26,10 +26,13 @@ public class AndyAuthProvider : IAuthProvider
             jwtOptions.Audience = options.Audience;
             jwtOptions.RequireHttpsMetadata = options.RequireHttpsMetadata;
 
+            // Ensure the authority ends with a trailing slash to match OpenIddict's issuer format
+            var authority = options.Authority.TrimEnd('/') + "/";
+
             jwtOptions.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
-                ValidIssuer = options.Authority,
+                ValidIssuer = authority,
                 ValidateAudience = !string.IsNullOrEmpty(options.Audience),  // Validate audience when configured
                 ValidAudience = options.Audience,
                 ValidateLifetime = true,
