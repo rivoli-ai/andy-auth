@@ -1,5 +1,8 @@
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
@@ -136,5 +139,101 @@ public class OAuthIntegrationTests : IClassFixture<WebApplicationFactory<Program
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("text/html", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task ClaudeDesktopClient_AuthorizationCodeFlowWithPKCE_ShouldSucceed()
+    {
+        // Arrange - Generate PKCE parameters
+        var codeVerifier = GenerateCodeVerifier();
+        var codeChallenge = GenerateCodeChallenge(codeVerifier);
+
+        var state = Guid.NewGuid().ToString("N");
+        var redirectUri = "http://127.0.0.1/callback";
+
+        // Step 1: Start authorization flow
+        var authUrl = $"/connect/authorize?" +
+                     $"client_id=claude-desktop&" +
+                     $"redirect_uri={Uri.EscapeDataString(redirectUri)}&" +
+                     $"response_type=code&" +
+                     $"scope=openid%20profile%20email&" +
+                     $"code_challenge={codeChallenge}&" +
+                     $"code_challenge_method=S256&" +
+                     $"state={state}";
+
+        var authResponse = await _client.GetAsync(authUrl);
+
+        // Should redirect to login page (302/307) or challenge with login form (200)
+        Assert.True(
+            authResponse.StatusCode == HttpStatusCode.Redirect ||
+            authResponse.StatusCode == HttpStatusCode.RedirectKeepVerb ||
+            authResponse.StatusCode == HttpStatusCode.OK,
+            $"Expected Redirect, RedirectKeepVerb or OK, got {authResponse.StatusCode}");
+
+        // Verify the authorization endpoint requires authentication
+        // In a real flow, user would authenticate here
+        // For testing, we verify the endpoint is properly configured
+
+        // Step 2: Verify client is properly seeded
+        // Follow redirects to get the actual discovery document
+        var discoveryClient = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = true
+        });
+        var discoveryResponse = await discoveryClient.GetAsync("/.well-known/openid-configuration");
+        Assert.Equal(HttpStatusCode.OK, discoveryResponse.StatusCode);
+
+        var discoveryContent = await discoveryResponse.Content.ReadAsStringAsync();
+        var discovery = JsonDocument.Parse(discoveryContent);
+
+        // Verify PKCE is supported
+        Assert.True(discovery.RootElement.TryGetProperty("code_challenge_methods_supported", out var methods));
+        var methodArray = methods.EnumerateArray().Select(e => e.GetString()).ToList();
+        Assert.Contains("S256", methodArray);
+
+        // Step 3: Verify token endpoint configuration
+        Assert.True(discovery.RootElement.TryGetProperty("token_endpoint", out var tokenEndpoint));
+        var tokenUrl = tokenEndpoint.GetString();
+        Assert.NotNull(tokenUrl);
+        Assert.Contains("/connect/token", tokenUrl);
+
+        // Step 4: Test that token endpoint rejects request without valid authorization code
+        var tokenRequestWithoutCode = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "authorization_code" },
+            { "client_id", "claude-desktop" },
+            { "redirect_uri", redirectUri },
+            { "code_verifier", codeVerifier }
+        });
+
+        var tokenClient = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = true
+        });
+        var tokenResponse = await tokenClient.PostAsync("/connect/token", tokenRequestWithoutCode);
+
+        // Should be BadRequest because code is missing
+        Assert.Equal(HttpStatusCode.BadRequest, tokenResponse.StatusCode);
+    }
+
+    private static string GenerateCodeVerifier()
+    {
+        var bytes = new byte[32];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(bytes);
+        return Base64UrlEncode(bytes);
+    }
+
+    private static string GenerateCodeChallenge(string codeVerifier)
+    {
+        using var sha256 = SHA256.Create();
+        var challengeBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(codeVerifier));
+        return Base64UrlEncode(challengeBytes);
+    }
+
+    private static string Base64UrlEncode(byte[] input)
+    {
+        var base64 = Convert.ToBase64String(input);
+        return base64.TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 }

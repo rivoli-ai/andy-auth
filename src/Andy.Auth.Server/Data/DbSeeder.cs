@@ -173,35 +173,47 @@ public class DbSeeder
         }
 
         // Claude Desktop Client (for MCP)
-        if (await manager.FindByClientIdAsync("claude-desktop") == null)
+        var claudeDesktopClient = await manager.FindByClientIdAsync("claude-desktop");
+        var claudeDescriptor = new OpenIddictApplicationDescriptor
         {
-            await manager.CreateAsync(new OpenIddictApplicationDescriptor
+            ClientId = "claude-desktop",
+            DisplayName = "Claude Desktop",
+            ClientType = OpenIddictConstants.ClientTypes.Public, // Public client - no secret
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
             {
-                ClientId = "claude-desktop",
-                DisplayName = "Claude Desktop",
-                ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-                // Public client - no secret
-                Permissions =
-                {
-                    OpenIddictConstants.Permissions.Endpoints.Authorization,
-                    OpenIddictConstants.Permissions.Endpoints.Token,
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
 
-                    OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                    OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
 
-                    OpenIddictConstants.Permissions.Scopes.Email,
-                    OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
 
-                    OpenIddictConstants.Permissions.ResponseTypes.Code
-                },
-                RedirectUris =
-                {
-                    new Uri("http://127.0.0.1/callback"),
-                    new Uri("http://localhost/callback")
-                }
-            });
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                // Claude.ai MCP OAuth callback (current)
+                new Uri("https://claude.ai/api/mcp/auth_callback"),
+                // Claude.com MCP OAuth callback (future)
+                new Uri("https://claude.com/api/mcp/auth_callback"),
+                // Local development callbacks
+                new Uri("http://127.0.0.1/callback"),
+                new Uri("http://localhost/callback")
+            }
+        };
 
+        if (claudeDesktopClient == null)
+        {
+            await manager.CreateAsync(claudeDescriptor);
             _logger.LogInformation("Created OAuth client: claude-desktop");
+        }
+        else
+        {
+            await manager.UpdateAsync(claudeDesktopClient, claudeDescriptor);
+            _logger.LogInformation("Updated OAuth client: claude-desktop");
         }
     }
 
