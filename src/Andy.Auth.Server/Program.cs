@@ -7,8 +7,16 @@ using OpenIddict.Validation.AspNetCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure Railway PORT environment variable
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+// In Development, use HTTPS on port 7088. In production (Railway), use HTTP with the PORT env variable.
+if (builder.Environment.IsDevelopment())
+{
+    builder.WebHost.UseUrls("https://localhost:7088");
+}
+else
+{
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 // Configure forwarded headers for Railway's HTTPS proxy
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -90,7 +98,7 @@ builder.Services.AddOpenIddict()
     // Register the OpenIddict server components
     .AddServer(options =>
     {
-        // Enable the authorization, token, and userinfo endpoints
+        // Enable the authorization, token, userinfo, and logout endpoints
         options.SetAuthorizationEndpointUris("connect/authorize")
             .SetTokenEndpointUris("connect/token")
             .SetIntrospectionEndpointUris("connect/introspect")

@@ -275,6 +275,31 @@ public class AuthorizationController : ControllerBase
         return Ok(claims);
     }
 
+    [HttpGet("~/connect/logout")]
+    [HttpPost("~/connect/logout")]
+    public async Task<IActionResult> Logout()
+    {
+        // Ask OpenIddict to sign the user out
+        await _signInManager.SignOutAsync();
+
+        // Retrieve the logout request and post_logout_redirect_uri
+        var request = HttpContext.GetOpenIddictServerRequest();
+
+        if (!string.IsNullOrEmpty(request?.PostLogoutRedirectUri))
+        {
+            // Redirect the user to the post_logout_redirect_uri
+            return SignOut(
+                authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                properties: new AuthenticationProperties
+                {
+                    RedirectUri = request.PostLogoutRedirectUri
+                });
+        }
+
+        // If no post_logout_redirect_uri was specified, redirect to home
+        return Redirect("/");
+    }
+
     private async Task<ClaimsPrincipal> CreateClaimsPrincipalAsync(ApplicationUser user, IEnumerable<string> scopes)
     {
         var principal = await _signInManager.CreateUserPrincipalAsync(user);
