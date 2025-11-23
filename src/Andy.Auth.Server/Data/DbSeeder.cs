@@ -205,7 +205,9 @@ public class DbSeeder
                 // Allow requesting resource servers (for MCP)
                 OpenIddictConstants.Permissions.Prefixes.ResourceServer + "https://lexipro-uat.up.railway.app/mcp",
                 OpenIddictConstants.Permissions.Prefixes.ResourceServer + "https://lexipro-api.rivoli.ai/mcp",
-                OpenIddictConstants.Permissions.Prefixes.ResourceServer + "https://localhost:7001/mcp"
+                OpenIddictConstants.Permissions.Prefixes.ResourceServer + "https://localhost:7001/mcp",
+                OpenIddictConstants.Permissions.Prefixes.ResourceServer + "https://localhost:5154/mcp",
+                OpenIddictConstants.Permissions.Prefixes.ResourceServer + "http://localhost:5154/mcp"
             },
             RedirectUris =
             {
