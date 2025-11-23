@@ -198,8 +198,14 @@ public class DbSeeder
 
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
+                "scp:urn:lexipro-api",  // Permission to request lexipro-api resource
 
-                OpenIddictConstants.Permissions.ResponseTypes.Code
+                OpenIddictConstants.Permissions.ResponseTypes.Code,
+
+                // Allow requesting resource servers (for MCP)
+                OpenIddictConstants.Permissions.Prefixes.ResourceServer + "https://lexipro-uat.up.railway.app/mcp",
+                OpenIddictConstants.Permissions.Prefixes.ResourceServer + "https://lexipro-api.rivoli.ai/mcp",
+                OpenIddictConstants.Permissions.Prefixes.ResourceServer + "https://localhost:7001/mcp"
             },
             RedirectUris =
             {
@@ -214,7 +220,7 @@ public class DbSeeder
         };
 
         await manager.CreateAsync(claudeDescriptor);
-        _logger.LogInformation("Created OAuth client: claude-desktop with correct redirect URIs");
+        _logger.LogInformation("Created OAuth client: claude-desktop with correct redirect URIs and resource permissions");
     }
 
     private async Task SeedTestUserAsync()
