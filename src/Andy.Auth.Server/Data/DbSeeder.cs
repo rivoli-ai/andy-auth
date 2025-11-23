@@ -173,7 +173,15 @@ public class DbSeeder
         }
 
         // Claude Desktop Client (for MCP)
+        // Delete existing client if it exists (to ensure clean slate)
         var claudeDesktopClient = await manager.FindByClientIdAsync("claude-desktop");
+        if (claudeDesktopClient != null)
+        {
+            await manager.DeleteAsync(claudeDesktopClient);
+            _logger.LogInformation("Deleted existing OAuth client: claude-desktop");
+        }
+
+        // Create claude-desktop client with correct redirect URIs
         var claudeDescriptor = new OpenIddictApplicationDescriptor
         {
             ClientId = "claude-desktop",
@@ -205,16 +213,8 @@ public class DbSeeder
             }
         };
 
-        if (claudeDesktopClient == null)
-        {
-            await manager.CreateAsync(claudeDescriptor);
-            _logger.LogInformation("Created OAuth client: claude-desktop");
-        }
-        else
-        {
-            await manager.UpdateAsync(claudeDesktopClient, claudeDescriptor);
-            _logger.LogInformation("Updated OAuth client: claude-desktop");
-        }
+        await manager.CreateAsync(claudeDescriptor);
+        _logger.LogInformation("Created OAuth client: claude-desktop with correct redirect URIs");
     }
 
     private async Task SeedTestUserAsync()
