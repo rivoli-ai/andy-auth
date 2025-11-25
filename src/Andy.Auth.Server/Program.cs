@@ -1,5 +1,6 @@
 using Andy.Auth.Server.Data;
 using AspNetCoreRateLimit;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Validation.AspNetCore;
@@ -86,6 +87,35 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Lax;
 });
+
+// Configure external authentication providers (Azure AD / Microsoft Entra ID)
+var azureAdClientId = builder.Configuration["AzureAd:ClientId"];
+var azureAdClientSecret = builder.Configuration["AzureAd:ClientSecret"];
+
+if (!string.IsNullOrEmpty(azureAdClientId) && !string.IsNullOrEmpty(azureAdClientSecret))
+{
+    builder.Services.AddAuthentication()
+        .AddMicrosoftAccount(options =>
+        {
+            options.ClientId = azureAdClientId;
+            options.ClientSecret = azureAdClientSecret;
+
+            // Configure tenant (common = multi-tenant, or specific tenant ID)
+            var tenantId = builder.Configuration["AzureAd:TenantId"] ?? "common";
+            options.AuthorizationEndpoint = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/authorize";
+            options.TokenEndpoint = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token";
+
+            // Request additional scopes
+            options.Scope.Add("email");
+            options.Scope.Add("profile");
+
+            // Save tokens for later use if needed
+            options.SaveTokens = true;
+
+            // Map claims from Azure AD
+            options.ClaimActions.MapJsonKey("picture", "picture");
+        });
+}
 
 // Configure OpenIddict
 builder.Services.AddOpenIddict()

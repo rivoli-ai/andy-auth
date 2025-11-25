@@ -1,5 +1,7 @@
+using System.Security.Claims;
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Models;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -157,6 +159,170 @@ public class AccountController : Controller
     public IActionResult AccessDenied()
     {
         return View();
+    }
+
+    /// <summary>
+    /// Gets the list of configured external authentication providers.
+    /// </summary>
+    public async Task<IEnumerable<AuthenticationScheme>> GetExternalAuthenticationSchemesAsync()
+    {
+        var schemes = await _signInManager.GetExternalAuthenticationSchemesAsync();
+        return schemes;
+    }
+
+    /// <summary>
+    /// Initiates an external login flow (e.g., Azure AD / Microsoft).
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult ExternalLogin(string provider, string? returnUrl = null)
+    {
+        var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Account", new { returnUrl });
+        var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
+        return Challenge(properties, provider);
+    }
+
+    /// <summary>
+    /// Handles the callback from external authentication providers.
+    /// Creates or links user accounts as needed.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null)
+    {
+        returnUrl ??= Url.Content("~/");
+
+        if (!string.IsNullOrEmpty(remoteError))
+        {
+            _logger.LogWarning("External login error: {Error}", remoteError);
+            ModelState.AddModelError(string.Empty, $"Error from external provider: {remoteError}");
+            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+        }
+
+        var info = await _signInManager.GetExternalLoginInfoAsync();
+        if (info == null)
+        {
+            _logger.LogWarning("External login info not available");
+            ModelState.AddModelError(string.Empty, "Error loading external login information.");
+            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+        }
+
+        // Try to sign in with the external login provider
+        var signInResult = await _signInManager.ExternalLoginSignInAsync(
+            info.LoginProvider,
+            info.ProviderKey,
+            isPersistent: false,
+            bypassTwoFactor: true);
+
+        if (signInResult.Succeeded)
+        {
+            _logger.LogInformation("User logged in with {Provider} provider.", info.LoginProvider);
+
+            // Update last login time
+            var existingUser = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
+            if (existingUser != null)
+            {
+                existingUser.LastLoginAt = DateTime.UtcNow;
+                await _userManager.UpdateAsync(existingUser);
+            }
+
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+            return RedirectToAction("Index", "Home");
+        }
+
+        if (signInResult.IsLockedOut)
+        {
+            _logger.LogWarning("User account locked out.");
+            ModelState.AddModelError(string.Empty, "This account has been locked out. Please try again later.");
+            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+        }
+
+        // User doesn't have an account - create one or link to existing
+        var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+        var name = info.Principal.FindFirstValue(ClaimTypes.Name)
+                   ?? info.Principal.FindFirstValue("name")
+                   ?? email;
+
+        if (string.IsNullOrEmpty(email))
+        {
+            _logger.LogWarning("External login did not provide an email address");
+            ModelState.AddModelError(string.Empty, "Email address is required from the external provider.");
+            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+        }
+
+        // Check if user already exists with this email
+        var user = await _userManager.FindByEmailAsync(email);
+
+        if (user == null)
+        {
+            // Create a new user account
+            user = new ApplicationUser
+            {
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true, // Email is verified by external provider
+                FullName = name ?? "",
+                CreatedAt = DateTime.UtcNow,
+                LastLoginAt = DateTime.UtcNow,
+                IsActive = true
+            };
+
+            // Extract profile picture if available
+            var picture = info.Principal.FindFirstValue("picture")
+                          ?? info.Principal.FindFirstValue("urn:google:picture");
+            if (!string.IsNullOrEmpty(picture))
+            {
+                user.ProfilePictureUrl = picture;
+            }
+
+            var createResult = await _userManager.CreateAsync(user);
+            if (!createResult.Succeeded)
+            {
+                foreach (var error in createResult.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+                return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+            }
+
+            _logger.LogInformation("Created new user {Email} via {Provider} external login.", email, info.LoginProvider);
+        }
+        else
+        {
+            // User exists - check if account is active
+            if (!user.IsActive)
+            {
+                ModelState.AddModelError(string.Empty, "This account has been disabled.");
+                return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+            }
+
+            // Update last login time
+            user.LastLoginAt = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+
+            _logger.LogInformation("Linked {Provider} login to existing user {Email}.", info.LoginProvider, email);
+        }
+
+        // Link the external login to the user account
+        var addLoginResult = await _userManager.AddLoginAsync(user, info);
+        if (!addLoginResult.Succeeded)
+        {
+            // Login might already be linked (e.g., if user registered with same email)
+            _logger.LogWarning("Failed to add external login for {Email}: {Errors}",
+                email, string.Join(", ", addLoginResult.Errors.Select(e => e.Description)));
+        }
+
+        // Sign in the user
+        await _signInManager.SignInAsync(user, isPersistent: false);
+        _logger.LogInformation("User {Email} signed in via {Provider}.", email, info.LoginProvider);
+
+        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            return Redirect(returnUrl);
+        }
+        return RedirectToAction("Index", "Home");
     }
 
     /// <summary>
