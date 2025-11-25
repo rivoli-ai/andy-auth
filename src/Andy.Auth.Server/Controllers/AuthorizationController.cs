@@ -21,19 +21,22 @@ public class AuthorizationController : ControllerBase
     private readonly IOpenIddictScopeManager _scopeManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ApplicationDbContext _dbContext;
 
     public AuthorizationController(
         IOpenIddictApplicationManager applicationManager,
         IOpenIddictAuthorizationManager authorizationManager,
         IOpenIddictScopeManager scopeManager,
         SignInManager<ApplicationUser> signInManager,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        ApplicationDbContext dbContext)
     {
         _applicationManager = applicationManager;
         _authorizationManager = authorizationManager;
         _scopeManager = scopeManager;
         _signInManager = signInManager;
         _userManager = userManager;
+        _dbContext = dbContext;
     }
 
     [HttpGet("~/connect/authorize")]
@@ -79,6 +82,20 @@ public class AuthorizationController : ControllerBase
             authorizations.Add(authorization);
         }
 
+        // Check if the user has already granted consent for this client and scopes
+        var userId = await _userManager.GetUserIdAsync(user);
+        var requestedScopes = request.GetScopes().ToList();
+        var existingConsent = await _dbContext.UserConsents
+            .FirstOrDefaultAsync(c => c.UserId == userId && c.ClientId == request.ClientId);
+
+        // Check if consent was just granted (redirect from consent page)
+        var consentGranted = Request.Query.ContainsKey("consent_granted") &&
+                             Request.Query["consent_granted"] == "true";
+
+        var hasValidConsent = existingConsent != null &&
+                              existingConsent.IsValid &&
+                              existingConsent.CoversScopes(requestedScopes);
+
         switch (await _applicationManager.GetConsentTypeAsync(application))
         {
             // If the consent is external (e.g., when authorizations are granted by a sysadmin),
@@ -97,7 +114,6 @@ public class AuthorizationController : ControllerBase
             // return an authorization response without displaying the consent form
             case ConsentTypes.Implicit:
             case ConsentTypes.External when authorizations.Any():
-            case ConsentTypes.Explicit when authorizations.Any():
                 var principal = await CreateClaimsPrincipalAsync(user, request.GetScopes());
 
                 // Always include lexipro-api audience for wagram-web client
@@ -115,24 +131,61 @@ public class AuthorizationController : ControllerBase
                 // Signing in with the OpenIddict authentiction scheme trigger OpenIddict to issue a code
                 return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
 
-            // At this point, no authorization was found in the database and an error must be returned
-            // if the client application specified prompt=none in the authorization request
+            // For explicit consent, check if user has already granted consent
+            case ConsentTypes.Explicit when authorizations.Any():
+            case ConsentTypes.Explicit when hasValidConsent:
+            case ConsentTypes.Explicit when consentGranted:
+                var principalExplicit = await CreateClaimsPrincipalAsync(user, request.GetScopes());
+
+                // Always include lexipro-api audience for wagram-web client
+                if (request.ClientId == "wagram-web")
+                {
+                    var currentResources = principalExplicit.GetResources().ToList();
+                    const string lexiproApiResource = "urn:lexipro-api";
+                    if (!currentResources.Contains(lexiproApiResource))
+                    {
+                        currentResources.Add(lexiproApiResource);
+                    }
+                    principalExplicit.SetResources(currentResources);
+                }
+
+                return SignIn(principalExplicit, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+
+            // For explicit/systematic consent without prior consent, redirect to consent page
+            // unless prompt=none was specified
             case ConsentTypes.Explicit:
             case ConsentTypes.Systematic:
-                return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                    properties: new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.ConsentRequired,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
-                            "Interactive user consent is required."
-                    }));
+                // If prompt=none, return error as we can't show consent UI
+                if (request.Prompt == "none")
+                {
+                    return Forbid(
+                        authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                        properties: new AuthenticationProperties(new Dictionary<string, string?>
+                        {
+                            [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.ConsentRequired,
+                            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                                "Interactive user consent is required."
+                        }));
+                }
 
-            // In every other case, render the consent form
+                // Redirect to consent page
+                var returnUrl = Request.PathBase + Request.Path + QueryString.Create(
+                    Request.HasFormContentType ? Request.Form.ToList() : Request.Query.ToList());
+                return Redirect($"/Consent?returnUrl={Uri.EscapeDataString(returnUrl)}");
+
+            // Default case: check for existing consent or redirect to consent page
             default:
-                // For now, automatically grant consent (TODO: add consent UI)
-                var principal2 = await CreateClaimsPrincipalAsync(user, request.GetScopes());
-                return SignIn(principal2, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+                // If user has valid consent, proceed
+                if (hasValidConsent || consentGranted)
+                {
+                    var principalDefault = await CreateClaimsPrincipalAsync(user, request.GetScopes());
+                    return SignIn(principalDefault, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+                }
+
+                // Redirect to consent page
+                var defaultReturnUrl = Request.PathBase + Request.Path + QueryString.Create(
+                    Request.HasFormContentType ? Request.Form.ToList() : Request.Query.ToList());
+                return Redirect($"/Consent?returnUrl={Uri.EscapeDataString(defaultReturnUrl)}");
         }
     }
 

@@ -1,0 +1,286 @@
+@model List<Andy.Auth.Server.Controllers.UserConsentViewModel>
+@{
+    ViewData["Title"] = "Authorized Applications";
+}
+
+<style>
+    .consents-page {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .page-title {
+        margin-bottom: 0.5rem;
+    }
+
+    .page-description {
+        color: var(--text-muted);
+        margin-bottom: 2rem;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .alert-success {
+        background: rgba(40, 167, 69, 0.1);
+        border: 1px solid rgba(40, 167, 69, 0.3);
+        color: var(--success);
+    }
+
+    .consent-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .consent-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        transition: box-shadow 0.2s;
+    }
+
+    .consent-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .consent-card.expired {
+        opacity: 0.7;
+        background: var(--surface-2);
+    }
+
+    .consent-icon {
+        width: 48px;
+        height: 48px;
+        background: var(--surface-2);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary);
+        flex-shrink: 0;
+    }
+
+    .consent-details {
+        flex: 1;
+    }
+
+    .consent-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+    }
+
+    .consent-name {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: var(--text);
+    }
+
+    .consent-client-id {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+
+    .consent-status {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        font-size: 0.8rem;
+        padding: 0.25rem 0.625rem;
+        border-radius: 999px;
+        font-weight: 500;
+    }
+
+    .consent-status.active {
+        background: rgba(40, 167, 69, 0.1);
+        color: var(--success);
+    }
+
+    .consent-status.expired {
+        background: rgba(220, 53, 69, 0.1);
+        color: var(--danger);
+    }
+
+    .consent-scopes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .scope-badge {
+        background: var(--surface-2);
+        color: var(--text-muted);
+        padding: 0.25rem 0.625rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .consent-meta {
+        display: flex;
+        gap: 1.5rem;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+
+    .consent-meta span {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+
+    .consent-actions {
+        flex-shrink: 0;
+    }
+
+    .btn-revoke {
+        background: transparent;
+        color: var(--danger);
+        border: 1px solid var(--danger);
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-revoke:hover {
+        background: var(--danger);
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+    }
+
+    .empty-state svg {
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+    }
+
+    .empty-state h3 {
+        color: var(--text);
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+        color: var(--text-muted);
+    }
+</style>
+
+<div class="consents-page">
+    <h1 class="page-title">Authorized Applications</h1>
+    <p class="page-description">These applications have been granted access to your account. You can revoke access at any time.</p>
+
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Message"]
+        </div>
+    }
+
+    @if (Model.Any())
+    {
+        <div class="consent-list">
+            @foreach (var consent in Model)
+            {
+                <div class="consent-card @(consent.IsValid ? "" : "expired")">
+                    <div class="consent-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M3 9H21" stroke="currentColor" stroke-width="1.5"/>
+                            <circle cx="6" cy="7" r="0.5" fill="currentColor"/>
+                            <circle cx="8.5" cy="7" r="0.5" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <div class="consent-details">
+                        <div class="consent-header">
+                            <div>
+                                <div class="consent-name">@consent.ClientName</div>
+                                <div class="consent-client-id">@consent.ClientId</div>
+                            </div>
+                            <div class="consent-status @(consent.IsValid ? "active" : "expired")">
+                                @if (consent.IsValid)
+                                {
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <span>Active</span>
+                                }
+                                else
+                                {
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                    </svg>
+                                    <span>Expired</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="consent-scopes">
+                            @foreach (var scope in consent.Scopes)
+                            {
+                                <span class="scope-badge">@scope</span>
+                            }
+                        </div>
+                        <div class="consent-meta">
+                            <span>
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.25"/>
+                                    <path d="M7 4V7L9 8.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                                </svg>
+                                Granted @consent.GrantedAt.ToString("MMM d, yyyy")
+                            </span>
+                            @if (consent.ExpiresAt.HasValue)
+                            {
+                                <span>
+                                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <rect x="2" y="3" width="10" height="9" rx="1" stroke="currentColor" stroke-width="1.25"/>
+                                        <path d="M2 6H12" stroke="currentColor" stroke-width="1.25"/>
+                                        <path d="M5 1.5V3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                                        <path d="M9 1.5V3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                                    </svg>
+                                    @(consent.IsValid ? "Expires" : "Expired") @consent.ExpiresAt.Value.ToString("MMM d, yyyy")
+                                </span>
+                            }
+                        </div>
+                    </div>
+                    <div class="consent-actions">
+                        <form asp-action="Revoke" method="post" onsubmit="return confirm('Are you sure you want to revoke access for @consent.ClientName?');">
+                            <input type="hidden" name="id" value="@consent.Id" />
+                            <button type="submit" class="btn-revoke">Revoke</button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="6" y="10" width="36" height="28" rx="4" stroke="currentColor" stroke-width="2"/>
+                <path d="M6 18H42" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="14" r="1.5" fill="currentColor"/>
+                <circle cx="17" cy="14" r="1.5" fill="currentColor"/>
+                <path d="M18 28L22 32L30 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h3>No authorized applications</h3>
+            <p>When you authorize applications to access your account, they'll appear here.</p>
+        </div>
+    }
+</div>

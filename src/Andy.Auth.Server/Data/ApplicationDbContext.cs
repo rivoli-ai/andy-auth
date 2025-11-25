@@ -19,6 +19,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     /// </summary>
     public DbSet<AuditLog> AuditLogs { get; set; }
 
+    /// <summary>
+    /// User consent records for OAuth applications.
+    /// </summary>
+    public DbSet<UserConsent> UserConsents { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -32,6 +37,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(u => u.FullName).HasMaxLength(200);
             entity.Property(u => u.ProfilePictureUrl).HasMaxLength(500);
             entity.HasIndex(u => u.Email).IsUnique();
+        });
+
+        // Configure UserConsent entity
+        builder.Entity<UserConsent>(entity =>
+        {
+            entity.HasIndex(c => new { c.UserId, c.ClientId }).IsUnique();
+            entity.HasIndex(c => c.ClientId);
+            entity.HasOne(c => c.User)
+                .WithMany()
+                .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
