@@ -176,6 +176,12 @@ builder.Services.AddOpenIddict()
         // Register scopes
         options.RegisterScopes("openid", "profile", "email", "roles", "offline_access");
 
+        // Enable reference tokens (opaque tokens stored in database)
+        // Reference tokens can be revoked immediately and provide better security audit trails
+        // Per-client: Use OpenIddictConstants.Settings.TokenFormat = "Opaque" for reference tokens
+        options.UseReferenceAccessTokens()
+            .UseReferenceRefreshTokens();
+
         // Register the ASP.NET Core host and configure based on environment
         var aspNetCoreBuilder = options.UseAspNetCore()
             .EnableAuthorizationEndpointPassthrough()
@@ -206,6 +212,9 @@ builder.Services.AddAuthorization();
 
 // Register session management service
 builder.Services.AddScoped<SessionService>();
+
+// Register token cleanup background service
+builder.Services.AddHostedService<TokenCleanupService>();
 
 // Configure CORS to allow frontend applications
 var allowedOrigins = builder.Configuration.GetSection("CorsOrigins:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();

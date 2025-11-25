@@ -1,0 +1,549 @@
+@model List<Andy.Auth.Server.Controllers.AdminController.TokenViewModel>
+@{
+    ViewData["Title"] = "Token Management";
+    var currentPage = ViewBag.CurrentPage;
+    var totalPages = ViewBag.TotalPages;
+    var totalTokens = ViewBag.TotalTokens;
+    var search = ViewBag.Search as string;
+    var status = ViewBag.Status as string;
+    var stats = ViewBag.Stats as Andy.Auth.Server.Controllers.AdminController.TokenStatsViewModel;
+}
+
+<style>
+    .tokens-page {
+        max-width: 100%;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .page-header h1 {
+        margin: 0;
+    }
+
+    .subtitle {
+        color: var(--text-muted);
+        margin: 0.25rem 0 0;
+        font-size: 0.9rem;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+    }
+
+    .stat-card h3 {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-bottom: 0.25rem;
+        font-weight: 500;
+    }
+
+    .stat-card .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .stat-card.active .stat-value {
+        color: var(--success);
+    }
+
+    .stat-card.expired .stat-value {
+        color: var(--warning);
+    }
+
+    .stat-card.revoked .stat-value {
+        color: var(--danger);
+    }
+
+    .filters-form {
+        margin-bottom: 1.5rem;
+    }
+
+    .filters-container {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .search-input {
+        flex: 1;
+        min-width: 250px;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.95rem;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    .filter-select {
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        background: var(--surface);
+        cursor: pointer;
+    }
+
+    .tokens-container {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .tokens-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .tokens-table th {
+        background: var(--surface-2);
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .tokens-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.95rem;
+    }
+
+    .tokens-table tbody tr:hover {
+        background: var(--surface-2);
+    }
+
+    .tokens-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .token-type {
+        display: inline-block;
+        padding: 0.25rem 0.625rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        background: rgba(0, 102, 204, 0.1);
+        color: var(--primary);
+    }
+
+    .token-type.access_token {
+        background: rgba(0, 102, 204, 0.1);
+        color: var(--primary);
+    }
+
+    .token-type.refresh_token {
+        background: rgba(40, 167, 69, 0.1);
+        color: var(--success);
+    }
+
+    .token-type.authorization_code {
+        background: rgba(255, 193, 7, 0.1);
+        color: #856404;
+    }
+
+    .token-status {
+        display: inline-block;
+        padding: 0.25rem 0.625rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .token-status.valid {
+        background: rgba(40, 167, 69, 0.1);
+        color: var(--success);
+    }
+
+    .token-status.revoked,
+    .token-status.redeemed {
+        background: rgba(220, 53, 69, 0.1);
+        color: var(--danger);
+    }
+
+    .token-status.inactive {
+        background: rgba(108, 117, 125, 0.1);
+        color: var(--text-muted);
+    }
+
+    .token-user {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .token-user .email {
+        color: var(--text);
+        font-weight: 500;
+    }
+
+    .token-user .subject {
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        font-family: monospace;
+    }
+
+    .token-date {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+        background: var(--surface-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+        background: var(--background);
+    }
+
+    .btn-danger {
+        background: transparent;
+        color: var(--danger);
+        border: 1px solid var(--danger);
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .btn-danger:hover {
+        background: var(--danger);
+        color: white;
+    }
+
+    .btn-danger-solid {
+        background: var(--danger);
+        color: white;
+    }
+
+    .btn-danger-solid:hover {
+        background: #c82333;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .pagination a,
+    .pagination span {
+        padding: 0.5rem 0.875rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        text-decoration: none;
+    }
+
+    .pagination a {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--text);
+    }
+
+    .pagination a:hover {
+        background: var(--surface-2);
+    }
+
+    .pagination .current {
+        background: var(--primary);
+        color: white;
+        border: 1px solid var(--primary);
+    }
+
+    .pagination .disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-muted);
+    }
+
+    .empty-state h3 {
+        color: var(--text);
+        margin-bottom: 0.5rem;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .alert-success {
+        background: rgba(40, 167, 69, 0.1);
+        border: 1px solid rgba(40, 167, 69, 0.3);
+        color: var(--success);
+    }
+
+    .alert-danger {
+        background: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.3);
+        color: var(--danger);
+    }
+
+    @@media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+
+<div class="tokens-page">
+    <div class="page-header">
+        <div>
+            <h1>Token Management</h1>
+            <p class="subtitle">Manage OAuth tokens (Reference Tokens)</p>
+        </div>
+        <div class="header-actions">
+            @if (Model.Any(t => t.Status.Equals("valid", StringComparison.OrdinalIgnoreCase)))
+            {
+                <form asp-action="RevokeAllTokens" method="post" onsubmit="return confirm('Are you sure you want to revoke ALL active tokens? This cannot be undone.');">
+                    <button type="submit" class="btn btn-danger-solid">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                        Revoke All
+                    </button>
+                </form>
+            }
+            <a asp-action="Index" class="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    @if (stats != null)
+    {
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Tokens</h3>
+                <div class="stat-value">@stats.TotalTokens</div>
+            </div>
+            <div class="stat-card active">
+                <h3>Active Tokens</h3>
+                <div class="stat-value">@stats.ActiveTokens</div>
+            </div>
+            <div class="stat-card expired">
+                <h3>Expired</h3>
+                <div class="stat-value">@stats.ExpiredTokens</div>
+            </div>
+            <div class="stat-card revoked">
+                <h3>Revoked</h3>
+                <div class="stat-value">@stats.RevokedTokens</div>
+            </div>
+        </div>
+    }
+
+    <!-- Search and Filter -->
+    <form method="get" asp-action="Tokens" class="filters-form">
+        <div class="filters-container">
+            <input type="text" name="search" value="@search" placeholder="Search by user email or application..." class="search-input" />
+            <select name="status" class="filter-select">
+                <option value="">All Statuses</option>
+                <option value="valid" selected="@(status == "valid")">Valid</option>
+                <option value="revoked" selected="@(status == "revoked")">Revoked</option>
+                <option value="redeemed" selected="@(status == "redeemed")">Redeemed</option>
+                <option value="inactive" selected="@(status == "inactive")">Inactive</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Filter</button>
+            @if (!string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(status))
+            {
+                <a asp-action="Tokens" class="btn btn-secondary">Clear</a>
+            }
+        </div>
+    </form>
+
+    @if (Model.Any())
+    {
+        <div class="tokens-container">
+            <table class="tokens-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>User</th>
+                        <th>Application</th>
+                        <th>Created</th>
+                        <th>Expires</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var token in Model)
+                    {
+                        <tr>
+                            <td>
+                                <span class="token-type @token.Type.ToLower().Replace(" ", "_")">@token.Type</span>
+                            </td>
+                            <td>
+                                <div class="token-user">
+                                    @if (!string.IsNullOrEmpty(token.UserEmail))
+                                    {
+                                        <span class="email">@token.UserEmail</span>
+                                    }
+                                    else if (!string.IsNullOrEmpty(token.Subject))
+                                    {
+                                        <span class="subject">@token.Subject</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="subject">Client credentials</span>
+                                    }
+                                </div>
+                            </td>
+                            <td>@(token.ApplicationName ?? "Unknown")</td>
+                            <td class="token-date">
+                                @if (token.CreatedAt.HasValue)
+                                {
+                                    @token.CreatedAt.Value.ToString("MMM d, yyyy HH:mm")
+                                }
+                            </td>
+                            <td class="token-date">
+                                @if (token.ExpiresAt.HasValue)
+                                {
+                                    var isExpired = token.ExpiresAt < DateTime.UtcNow;
+                                    <span style="@(isExpired ? "color: var(--danger);" : "")">
+                                        @token.ExpiresAt.Value.ToString("MMM d, yyyy HH:mm")
+                                        @if (isExpired)
+                                        {
+                                            <span>(expired)</span>
+                                        }
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                <span class="token-status @token.Status.ToLower()">@token.Status</span>
+                            </td>
+                            <td>
+                                @if (token.Status.Equals("valid", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <form asp-action="RevokeToken" method="post" style="display: inline;">
+                                        <input type="hidden" name="tokenId" value="@token.Id" />
+                                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to revoke this token?');">
+                                            Revoke
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        @if (totalPages > 1)
+        {
+            <div class="pagination">
+                @if (currentPage > 1)
+                {
+                    <a href="?page=@(currentPage - 1)&search=@search&status=@status">Previous</a>
+                }
+                else
+                {
+                    <span class="disabled">Previous</span>
+                }
+
+                @for (var i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+                {
+                    if (i == currentPage)
+                    {
+                        <span class="current">@i</span>
+                    }
+                    else
+                    {
+                        <a href="?page=@i&search=@search&status=@status">@i</a>
+                    }
+                }
+
+                @if (currentPage < totalPages)
+                {
+                    <a href="?page=@(currentPage + 1)&search=@search&status=@status">Next</a>
+                }
+                else
+                {
+                    <span class="disabled">Next</span>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <div class="empty-state">
+            <h3>No tokens found</h3>
+            <p>There are no tokens matching your criteria.</p>
+        </div>
+    }
+</div>

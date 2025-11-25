@@ -13,17 +13,23 @@ public class AdminController : Controller
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IOpenIddictApplicationManager _applicationManager;
+    private readonly IOpenIddictTokenManager _tokenManager;
+    private readonly IOpenIddictAuthorizationManager _authorizationManager;
     private readonly ILogger<AdminController> _logger;
 
     public AdminController(
         ApplicationDbContext context,
         UserManager<ApplicationUser> userManager,
         IOpenIddictApplicationManager applicationManager,
+        IOpenIddictTokenManager tokenManager,
+        IOpenIddictAuthorizationManager authorizationManager,
         ILogger<AdminController> logger)
     {
         _context = context;
         _userManager = userManager;
         _applicationManager = applicationManager;
+        _tokenManager = tokenManager;
+        _authorizationManager = authorizationManager;
         _logger = logger;
     }
 
@@ -344,6 +350,197 @@ public class AdminController : Controller
         return View(logs);
     }
 
+    public async Task<IActionResult> Tokens(int page = 1, int pageSize = 50, string? search = null, string? status = null)
+    {
+        var tokens = new List<TokenViewModel>();
+        var allTokens = new List<TokenViewModel>();
+
+        // Collect all tokens
+        await foreach (var token in _tokenManager.ListAsync())
+        {
+            var tokenId = await _tokenManager.GetIdAsync(token);
+            var subject = await _tokenManager.GetSubjectAsync(token);
+            var applicationId = await _tokenManager.GetApplicationIdAsync(token);
+            var createdAt = await _tokenManager.GetCreationDateAsync(token);
+            var expiresAt = await _tokenManager.GetExpirationDateAsync(token);
+            var tokenStatus = await _tokenManager.GetStatusAsync(token);
+            var tokenType = await _tokenManager.GetTypeAsync(token);
+
+            // Get application name
+            string? applicationName = null;
+            if (!string.IsNullOrEmpty(applicationId))
+            {
+                var app = await _applicationManager.FindByIdAsync(applicationId);
+                if (app != null)
+                {
+                    applicationName = await _applicationManager.GetDisplayNameAsync(app);
+                }
+            }
+
+            // Get user email
+            string? userEmail = null;
+            if (!string.IsNullOrEmpty(subject))
+            {
+                var user = await _userManager.FindByIdAsync(subject);
+                if (user != null)
+                {
+                    userEmail = user.Email;
+                }
+            }
+
+            allTokens.Add(new TokenViewModel
+            {
+                Id = tokenId ?? "",
+                Subject = subject,
+                UserEmail = userEmail,
+                ApplicationId = applicationId,
+                ApplicationName = applicationName,
+                CreatedAt = createdAt?.DateTime,
+                ExpiresAt = expiresAt?.DateTime,
+                Status = tokenStatus ?? "Unknown",
+                Type = tokenType ?? "Unknown"
+            });
+        }
+
+        // Apply filters
+        var filtered = allTokens.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var searchLower = search.ToLower();
+            filtered = filtered.Where(t =>
+                (t.UserEmail != null && t.UserEmail.ToLower().Contains(searchLower)) ||
+                (t.ApplicationName != null && t.ApplicationName.ToLower().Contains(searchLower)) ||
+                (t.Subject != null && t.Subject.ToLower().Contains(searchLower))
+            );
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            filtered = filtered.Where(t => t.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Sort by creation date descending
+        var sortedTokens = filtered.OrderByDescending(t => t.CreatedAt).ToList();
+
+        // Apply pagination
+        var totalTokens = sortedTokens.Count;
+        tokens = sortedTokens.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+        // Calculate statistics
+        var stats = new TokenStatsViewModel
+        {
+            TotalTokens = allTokens.Count,
+            ActiveTokens = allTokens.Count(t => t.Status.Equals("valid", StringComparison.OrdinalIgnoreCase)),
+            ExpiredTokens = allTokens.Count(t => t.ExpiresAt.HasValue && t.ExpiresAt < DateTime.UtcNow),
+            RevokedTokens = allTokens.Count(t => t.Status.Equals("revoked", StringComparison.OrdinalIgnoreCase) ||
+                                                  t.Status.Equals("redeemed", StringComparison.OrdinalIgnoreCase))
+        };
+
+        ViewBag.CurrentPage = page;
+        ViewBag.TotalPages = (int)Math.Ceiling(totalTokens / (double)pageSize);
+        ViewBag.TotalTokens = totalTokens;
+        ViewBag.Search = search;
+        ViewBag.Status = status;
+        ViewBag.Stats = stats;
+
+        return View(tokens);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> RevokeToken(string tokenId)
+    {
+        var token = await _tokenManager.FindByIdAsync(tokenId);
+        if (token == null)
+        {
+            TempData["ErrorMessage"] = "Token not found.";
+            return RedirectToAction(nameof(Tokens));
+        }
+
+        var subject = await _tokenManager.GetSubjectAsync(token);
+        string? userEmail = null;
+        if (!string.IsNullOrEmpty(subject))
+        {
+            var user = await _userManager.FindByIdAsync(subject);
+            userEmail = user?.Email;
+        }
+
+        try
+        {
+            await _tokenManager.TryRevokeAsync(token);
+            await LogAuditAsync("TokenRevoked", subject, userEmail, $"Token ID: {tokenId}");
+            TempData["SuccessMessage"] = "Token has been revoked.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to revoke token {TokenId}", tokenId);
+            TempData["ErrorMessage"] = "Failed to revoke token.";
+        }
+
+        return RedirectToAction(nameof(Tokens));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> RevokeUserTokens(string userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            TempData["ErrorMessage"] = "User not found.";
+            return RedirectToAction(nameof(Users));
+        }
+
+        var revokedCount = 0;
+
+        // Find and revoke all tokens for this user
+        await foreach (var token in _tokenManager.FindBySubjectAsync(userId))
+        {
+            try
+            {
+                await _tokenManager.TryRevokeAsync(token);
+                revokedCount++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to revoke token for user {UserId}", userId);
+            }
+        }
+
+        await LogAuditAsync("UserTokensRevoked", userId, user.Email, $"Revoked {revokedCount} tokens");
+        TempData["SuccessMessage"] = $"Revoked {revokedCount} tokens for {user.Email}.";
+
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> RevokeAllTokens()
+    {
+        var revokedCount = 0;
+
+        await foreach (var token in _tokenManager.ListAsync())
+        {
+            var status = await _tokenManager.GetStatusAsync(token);
+            if (status?.Equals("valid", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                try
+                {
+                    await _tokenManager.TryRevokeAsync(token);
+                    revokedCount++;
+                }
+                catch (Exception ex)
+                {
+                    var tokenId = await _tokenManager.GetIdAsync(token);
+                    _logger.LogError(ex, "Failed to revoke token {TokenId}", tokenId);
+                }
+            }
+        }
+
+        await LogAuditAsync("AllTokensRevoked", null, null, $"Revoked {revokedCount} tokens");
+        TempData["SuccessMessage"] = $"Revoked {revokedCount} active tokens.";
+
+        return RedirectToAction(nameof(Tokens));
+    }
+
     private async Task LogAuditAsync(string action, string? targetUserId = null, string? targetUserEmail = null, string? details = null)
     {
         var currentUser = await _userManager.GetUserAsync(User);
@@ -371,5 +568,26 @@ public class AdminController : Controller
         public string ClientId { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
         public List<string> RedirectUris { get; set; } = new();
+    }
+
+    public class TokenViewModel
+    {
+        public string Id { get; set; } = string.Empty;
+        public string? Subject { get; set; }
+        public string? UserEmail { get; set; }
+        public string? ApplicationId { get; set; }
+        public string? ApplicationName { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public DateTime? ExpiresAt { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+    }
+
+    public class TokenStatsViewModel
+    {
+        public int TotalTokens { get; set; }
+        public int ActiveTokens { get; set; }
+        public int ExpiredTokens { get; set; }
+        public int RevokedTokens { get; set; }
     }
 }
