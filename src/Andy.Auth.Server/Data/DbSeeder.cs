@@ -223,6 +223,209 @@ public class DbSeeder
 
         await manager.CreateAsync(claudeDescriptor);
         _logger.LogInformation("Created OAuth client: claude-desktop with correct redirect URIs and resource permissions");
+
+        // ChatGPT Client (for MCP)
+        var chatGptClient = await manager.FindByClientIdAsync("chatgpt");
+        if (chatGptClient != null)
+        {
+            await manager.DeleteAsync(chatGptClient);
+            _logger.LogInformation("Deleted existing OAuth client: chatgpt");
+        }
+
+        var chatGptDescriptor = new OpenIddictApplicationDescriptor
+        {
+            ClientId = "chatgpt",
+            DisplayName = "ChatGPT",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                "scp:urn:lexipro-api",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code,
+
+                // Allow requesting resource servers (for MCP)
+                "aud:https://lexipro-uat.up.railway.app/mcp",
+                "aud:https://lexipro-api.rivoli.ai/mcp",
+                "aud:https://localhost:7001/mcp"
+            },
+            RedirectUris =
+            {
+                // ChatGPT OAuth callback URLs
+                new Uri("https://chat.openai.com/api/mcp/auth_callback"),
+                new Uri("https://chatgpt.com/api/mcp/auth_callback"),
+                // Local development
+                new Uri("http://127.0.0.1/callback"),
+                new Uri("http://localhost/callback")
+            }
+        };
+
+        await manager.CreateAsync(chatGptDescriptor);
+        _logger.LogInformation("Created OAuth client: chatgpt");
+
+        // Cline (VS Code Extension - formerly Claude Dev)
+        var clineClient = await manager.FindByClientIdAsync("cline");
+        if (clineClient != null)
+        {
+            await manager.DeleteAsync(clineClient);
+            _logger.LogInformation("Deleted existing OAuth client: cline");
+        }
+
+        var clineDescriptor = new OpenIddictApplicationDescriptor
+        {
+            ClientId = "cline",
+            DisplayName = "Cline (VS Code)",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                "scp:urn:lexipro-api",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code,
+
+                // Allow requesting resource servers (for MCP)
+                "aud:https://lexipro-uat.up.railway.app/mcp",
+                "aud:https://lexipro-api.rivoli.ai/mcp",
+                "aud:https://localhost:7001/mcp",
+                "aud:https://localhost:5154/mcp",
+                "aud:http://localhost:5154/mcp"
+            },
+            RedirectUris =
+            {
+                // VS Code extension localhost callbacks (various ports)
+                new Uri("http://127.0.0.1/callback"),
+                new Uri("http://127.0.0.1:3000/callback"),
+                new Uri("http://127.0.0.1:8080/callback"),
+                new Uri("http://localhost/callback"),
+                new Uri("http://localhost:3000/callback"),
+                new Uri("http://localhost:8080/callback"),
+                // VS Code protocol handler
+                new Uri("vscode://saoudrizwan.claude-dev/callback")
+            }
+        };
+
+        await manager.CreateAsync(clineDescriptor);
+        _logger.LogInformation("Created OAuth client: cline");
+
+        // Roo (VS Code Extension for Claude)
+        var rooClient = await manager.FindByClientIdAsync("roo");
+        if (rooClient != null)
+        {
+            await manager.DeleteAsync(rooClient);
+            _logger.LogInformation("Deleted existing OAuth client: roo");
+        }
+
+        var rooDescriptor = new OpenIddictApplicationDescriptor
+        {
+            ClientId = "roo",
+            DisplayName = "Roo (VS Code)",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                "scp:urn:lexipro-api",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code,
+
+                // Allow requesting resource servers (for MCP)
+                "aud:https://lexipro-uat.up.railway.app/mcp",
+                "aud:https://lexipro-api.rivoli.ai/mcp",
+                "aud:https://localhost:7001/mcp",
+                "aud:https://localhost:5154/mcp",
+                "aud:http://localhost:5154/mcp"
+            },
+            RedirectUris =
+            {
+                // VS Code extension localhost callbacks
+                new Uri("http://127.0.0.1/callback"),
+                new Uri("http://127.0.0.1:3000/callback"),
+                new Uri("http://127.0.0.1:8080/callback"),
+                new Uri("http://localhost/callback"),
+                new Uri("http://localhost:3000/callback"),
+                new Uri("http://localhost:8080/callback"),
+                // VS Code protocol handler (adjust extension ID as needed)
+                new Uri("vscode://roo-cline.roo-cline/callback")
+            }
+        };
+
+        await manager.CreateAsync(rooDescriptor);
+        _logger.LogInformation("Created OAuth client: roo");
+
+        // Continue.dev (VS Code/IntelliJ Extension)
+        var continueClient = await manager.FindByClientIdAsync("continue-dev");
+        if (continueClient != null)
+        {
+            await manager.DeleteAsync(continueClient);
+            _logger.LogInformation("Deleted existing OAuth client: continue-dev");
+        }
+
+        var continueDescriptor = new OpenIddictApplicationDescriptor
+        {
+            ClientId = "continue-dev",
+            DisplayName = "Continue.dev",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                "scp:urn:lexipro-api",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code,
+
+                // Allow requesting resource servers (for MCP)
+                "aud:https://lexipro-uat.up.railway.app/mcp",
+                "aud:https://lexipro-api.rivoli.ai/mcp",
+                "aud:https://localhost:7001/mcp",
+                "aud:https://localhost:5154/mcp",
+                "aud:http://localhost:5154/mcp"
+            },
+            RedirectUris =
+            {
+                // VS Code/IntelliJ extension localhost callbacks
+                new Uri("http://127.0.0.1/callback"),
+                new Uri("http://127.0.0.1:3000/callback"),
+                new Uri("http://127.0.0.1:8080/callback"),
+                new Uri("http://localhost/callback"),
+                new Uri("http://localhost:3000/callback"),
+                new Uri("http://localhost:8080/callback"),
+                // VS Code protocol handler
+                new Uri("vscode://continue.continue/callback")
+            }
+        };
+
+        await manager.CreateAsync(continueDescriptor);
+        _logger.LogInformation("Created OAuth client: continue-dev");
     }
 
     private async Task SeedTestUserAsync()
