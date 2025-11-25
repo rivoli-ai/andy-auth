@@ -1,0 +1,383 @@
+@model Andy.Auth.Server.Controllers.SessionsViewModel
+@{
+    ViewData["Title"] = "Active Sessions";
+}
+
+<style>
+    .sessions-page {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+    }
+
+    .page-title {
+        margin-bottom: 0.5rem;
+    }
+
+    .page-description {
+        color: var(--text-muted);
+    }
+
+    .session-limit-info {
+        background: var(--surface-2);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .alert-success {
+        background: rgba(40, 167, 69, 0.1);
+        border: 1px solid rgba(40, 167, 69, 0.3);
+        color: var(--success);
+    }
+
+    .alert-danger {
+        background: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.3);
+        color: var(--danger);
+    }
+
+    .session-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .session-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        display: flex;
+        gap: 1.25rem;
+        transition: box-shadow 0.2s;
+    }
+
+    .session-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .session-card.current {
+        border-color: var(--primary);
+        background: rgba(0, 102, 204, 0.03);
+    }
+
+    .session-icon {
+        width: 48px;
+        height: 48px;
+        background: var(--surface-2);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary);
+        flex-shrink: 0;
+    }
+
+    .session-details {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .session-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+    }
+
+    .session-device {
+        font-weight: 600;
+        font-size: 1.05rem;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .current-badge {
+        background: var(--primary);
+        color: white;
+        padding: 0.125rem 0.5rem;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .session-browser {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .session-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+
+    .session-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+
+    .session-actions {
+        display: flex;
+        align-items: flex-start;
+        flex-shrink: 0;
+    }
+
+    .btn-revoke {
+        background: transparent;
+        color: var(--danger);
+        border: 1px solid var(--danger);
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-revoke:hover {
+        background: var(--danger);
+        color: white;
+    }
+
+    .btn-revoke:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .bulk-actions {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .btn-revoke-all {
+        background: transparent;
+        color: var(--danger);
+        border: 1px solid var(--danger);
+        padding: 0.625rem 1.25rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-revoke-all:hover {
+        background: var(--danger);
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+    }
+
+    .empty-state svg {
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+    }
+
+    .empty-state h3 {
+        color: var(--text);
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+        color: var(--text-muted);
+    }
+
+    .time-ago {
+        font-weight: 500;
+    }
+</style>
+
+<div class="sessions-page">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Active Sessions</h1>
+            <p class="page-description">Manage your active login sessions across devices</p>
+        </div>
+        <div class="session-limit-info">
+            @Model.Sessions.Count / @Model.MaxConcurrentSessions sessions active
+        </div>
+    </div>
+
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Message"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
+    @if (Model.Sessions.Any())
+    {
+        <div class="session-list">
+            @foreach (var session in Model.Sessions)
+            {
+                <div class="session-card @(session.IsCurrentSession ? "current" : "")">
+                    <div class="session-icon">
+                        @if (session.DeviceDescription.Contains("iPhone") || session.DeviceDescription.Contains("Android Phone"))
+                        {
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="6" y="2" width="12" height="20" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M10 18H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        }
+                        else if (session.DeviceDescription.Contains("iPad") || session.DeviceDescription.Contains("Tablet"))
+                        {
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                <circle cx="12" cy="17" r="1" fill="currentColor"/>
+                            </svg>
+                        }
+                        else
+                        {
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="2" y="4" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M8 21H16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                <path d="M12 18V21" stroke="currentColor" stroke-width="1.5"/>
+                            </svg>
+                        }
+                    </div>
+                    <div class="session-details">
+                        <div class="session-header">
+                            <div class="session-device">
+                                @session.DeviceDescription
+                                @if (session.IsCurrentSession)
+                                {
+                                    <span class="current-badge">Current</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="session-browser">@session.BrowserDescription</div>
+                        <div class="session-meta">
+                            <div class="session-meta-item">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.25"/>
+                                    <path d="M7 4V7L9 8.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                                </svg>
+                                Last active <span class="time-ago">@GetTimeAgo(session.LastActivity)</span>
+                            </div>
+                            <div class="session-meta-item">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M7 7.5C8.38071 7.5 9.5 6.38071 9.5 5C9.5 3.61929 8.38071 2.5 7 2.5C5.61929 2.5 4.5 3.61929 4.5 5C4.5 6.38071 5.61929 7.5 7 7.5Z" stroke="currentColor" stroke-width="1.25"/>
+                                    <path d="M7 7.5V11.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                                    <path d="M5.5 9.5L7 11.5L8.5 9.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                @session.IpAddress
+                            </div>
+                            <div class="session-meta-item">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="2" y="3" width="10" height="9" rx="1" stroke="currentColor" stroke-width="1.25"/>
+                                    <path d="M2 6H12" stroke="currentColor" stroke-width="1.25"/>
+                                    <path d="M5 1.5V3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                                    <path d="M9 1.5V3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                                </svg>
+                                Signed in @session.CreatedAt.ToString("MMM d, yyyy")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="session-actions">
+                        @if (session.IsCurrentSession)
+                        {
+                            <button class="btn-revoke" disabled title="You cannot revoke your current session">
+                                Current
+                            </button>
+                        }
+                        else
+                        {
+                            <form asp-action="Revoke" method="post" onsubmit="return confirm('Are you sure you want to revoke this session? The device will be signed out.');">
+                                <input type="hidden" name="id" value="@session.Id" />
+                                <button type="submit" class="btn-revoke">
+                                    Revoke
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (Model.Sessions.Count > 1)
+        {
+            <div class="bulk-actions">
+                <form asp-action="RevokeAllOther" method="post" onsubmit="return confirm('Are you sure you want to revoke all other sessions? All other devices will be signed out.');">
+                    <button type="submit" class="btn-revoke-all">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 0.375rem;">
+                            <path d="M2 4H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M12.6667 4V13.3333C12.6667 14 12 14.6667 11.3333 14.6667H4.66667C4 14.6667 3.33333 14 3.33333 13.3333V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M5.33333 4V2.66667C5.33333 2 6 1.33333 6.66667 1.33333H9.33333C10 1.33333 10.6667 2 10.6667 2.66667V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Sign out all other sessions
+                    </button>
+                </form>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="4" y="8" width="40" height="28" rx="4" stroke="currentColor" stroke-width="2"/>
+                <path d="M16 42H32" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M24 36V42" stroke="currentColor" stroke-width="2"/>
+                <path d="M18 22L22 26L30 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h3>No active sessions</h3>
+            <p>You don't have any active sessions at the moment.</p>
+        </div>
+    }
+</div>
+
+@functions {
+    string GetTimeAgo(DateTime dateTime)
+    {
+        var timeSpan = DateTime.UtcNow - dateTime;
+
+        if (timeSpan.TotalMinutes < 1)
+            return "just now";
+        if (timeSpan.TotalMinutes < 60)
+            return $"{(int)timeSpan.TotalMinutes}m ago";
+        if (timeSpan.TotalHours < 24)
+            return $"{(int)timeSpan.TotalHours}h ago";
+        if (timeSpan.TotalDays < 7)
+            return $"{(int)timeSpan.TotalDays}d ago";
+
+        return dateTime.ToString("MMM d");
+    }
+}

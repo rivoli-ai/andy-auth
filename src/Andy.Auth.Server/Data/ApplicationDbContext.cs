@@ -24,6 +24,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     /// </summary>
     public DbSet<UserConsent> UserConsents { get; set; }
 
+    /// <summary>
+    /// Active user sessions for session management.
+    /// </summary>
+    public DbSet<UserSession> UserSessions { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -47,6 +52,18 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasOne(c => c.User)
                 .WithMany()
                 .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure UserSession entity
+        builder.Entity<UserSession>(entity =>
+        {
+            entity.HasIndex(s => s.SessionId).IsUnique();
+            entity.HasIndex(s => s.UserId);
+            entity.HasIndex(s => new { s.UserId, s.IsRevoked });
+            entity.HasOne(s => s.User)
+                .WithMany()
+                .HasForeignKey(s => s.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

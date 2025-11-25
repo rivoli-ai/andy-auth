@@ -1,4 +1,6 @@
 using Andy.Auth.Server.Data;
+using Andy.Auth.Server.Middleware;
+using Andy.Auth.Server.Services;
 using AspNetCoreRateLimit;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
@@ -202,6 +204,9 @@ builder.Services.AddAuthentication(options =>
 // Configure authorization
 builder.Services.AddAuthorization();
 
+// Register session management service
+builder.Services.AddScoped<SessionService>();
+
 // Configure CORS to allow frontend applications
 var allowedOrigins = builder.Configuration.GetSection("CorsOrigins:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 
@@ -266,6 +271,7 @@ app.UseRouting();
 app.UseCors("AllowWebClients");
 
 app.UseAuthentication();
+app.UseSessionTracking();
 app.UseAuthorization();
 
 app.MapControllerRoute(
