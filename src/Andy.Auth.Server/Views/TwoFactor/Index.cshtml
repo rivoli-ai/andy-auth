@@ -1,0 +1,335 @@
+@model Andy.Auth.Server.Controllers.TwoFactorIndexViewModel
+@{
+    ViewData["Title"] = "Two-Factor Authentication";
+}
+
+<style>
+    .twofactor-page {
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .page-title {
+        margin-bottom: 0.5rem;
+    }
+
+    .page-description {
+        color: var(--text-muted);
+        margin-bottom: 2rem;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .alert-success {
+        background: rgba(40, 167, 69, 0.1);
+        border: 1px solid rgba(40, 167, 69, 0.3);
+        color: var(--success);
+    }
+
+    .alert-danger {
+        background: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.3);
+        color: var(--danger);
+    }
+
+    .status-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .status-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .status-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .status-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .status-icon.enabled {
+        background: rgba(40, 167, 69, 0.1);
+        color: var(--success);
+    }
+
+    .status-icon.disabled {
+        background: rgba(220, 53, 69, 0.1);
+        color: var(--danger);
+    }
+
+    .status-text h3 {
+        font-size: 1.1rem;
+        color: var(--text);
+        margin-bottom: 0.25rem;
+    }
+
+    .status-text p {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        margin: 0;
+    }
+
+    .status-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .status-badge.enabled {
+        background: rgba(40, 167, 69, 0.1);
+        color: var(--success);
+    }
+
+    .status-badge.disabled {
+        background: rgba(220, 53, 69, 0.1);
+        color: var(--danger);
+    }
+
+    .recovery-info {
+        background: var(--surface-2);
+        border-radius: 8px;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .recovery-icon {
+        color: var(--warning);
+    }
+
+    .recovery-text {
+        flex: 1;
+    }
+
+    .recovery-text strong {
+        color: var(--text);
+    }
+
+    .recovery-text p {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin: 0.25rem 0 0;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .btn {
+        padding: 0.75rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+        background: var(--surface-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+        background: var(--background);
+    }
+
+    .btn-danger {
+        background: transparent;
+        color: var(--danger);
+        border: 1px solid var(--danger);
+    }
+
+    .btn-danger:hover {
+        background: var(--danger);
+        color: white;
+    }
+
+    .info-section {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+
+    .info-section h4 {
+        font-size: 1rem;
+        color: var(--text);
+        margin-bottom: 1rem;
+    }
+
+    .info-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
+
+    .info-item svg {
+        color: var(--primary);
+        flex-shrink: 0;
+        margin-top: 0.125rem;
+    }
+</style>
+
+<div class="twofactor-page">
+    <h1 class="page-title">Two-Factor Authentication</h1>
+    <p class="page-description">Add an extra layer of security to your account</p>
+
+    @if (TempData["StatusMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["StatusMessage"]</div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="status-card">
+        <div class="status-header">
+            <div class="status-title">
+                <div class="status-icon @(Model.Is2faEnabled ? "enabled" : "disabled")">
+                    @if (Model.Is2faEnabled)
+                    {
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 3L20 7V11C20 15.4183 16.4183 19 12 19C7.58172 19 4 15.4183 4 11V7L12 3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 3L20 7V11C20 15.4183 16.4183 19 12 19C7.58172 19 4 15.4183 4 11V7L12 3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                            <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <circle cx="12" cy="15" r="1" fill="currentColor"/>
+                        </svg>
+                    }
+                </div>
+                <div class="status-text">
+                    <h3>Authenticator App</h3>
+                    <p>Use an app like Google Authenticator or Authy</p>
+                </div>
+            </div>
+            <span class="status-badge @(Model.Is2faEnabled ? "enabled" : "disabled")">
+                @(Model.Is2faEnabled ? "Enabled" : "Disabled")
+            </span>
+        </div>
+
+        @if (Model.Is2faEnabled)
+        {
+            <div class="recovery-info">
+                <svg class="recovery-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 3H19C20.1046 3 21 3.89543 21 5V9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M9 21H5C3.89543 21 3 20.1046 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M21 15V19C21 20.1046 20.1046 21 19 21H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M3 9V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <rect x="7" y="7" width="10" height="10" rx="1" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <div class="recovery-text">
+                    <strong>@Model.RecoveryCodesLeft recovery codes remaining</strong>
+                    <p>Use these if you lose access to your authenticator app</p>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <a asp-action="ShowRecoveryCodes" class="btn btn-secondary">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Regenerate Codes
+                </a>
+                <form asp-action="ResetAuthenticator" method="post" style="margin: 0;">
+                    <button type="submit" class="btn btn-secondary" onclick="return confirm('This will invalidate your current authenticator. Are you sure?');">
+                        Reset Authenticator
+                    </button>
+                </form>
+                <a asp-action="Disable2fa" class="btn btn-danger">
+                    Disable 2FA
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="action-buttons">
+                <a asp-action="EnableAuthenticator" class="btn btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8 3V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <path d="M3 8H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    Enable 2FA
+                </a>
+            </div>
+        }
+    </div>
+
+    <div class="info-section">
+        <h4>Why use two-factor authentication?</h4>
+        <div class="info-list">
+            <div class="info-item">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 8L6.5 10.5L12 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Protects your account even if your password is compromised</span>
+            </div>
+            <div class="info-item">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 8L6.5 10.5L12 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Required for accessing sensitive features and admin functions</span>
+            </div>
+            <div class="info-item">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 8L6.5 10.5L12 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Works with any TOTP-compatible authenticator app</span>
+            </div>
+        </div>
+    </div>
+</div>

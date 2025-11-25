@@ -1,0 +1,202 @@
+@model Andy.Auth.Server.Controllers.ShowRecoveryCodesViewModel
+@{
+    ViewData["Title"] = "Recovery Codes";
+}
+
+<style>
+    .recovery-page {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .recovery-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 2rem;
+    }
+
+    .recovery-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .recovery-icon {
+        width: 64px;
+        height: 64px;
+        background: rgba(255, 193, 7, 0.1);
+        color: var(--warning);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+
+    .recovery-header h2 {
+        font-size: 1.5rem;
+        color: var(--text);
+        margin-bottom: 0.5rem;
+    }
+
+    .recovery-header p {
+        color: var(--text-muted);
+    }
+
+    .warning-box {
+        background: rgba(255, 193, 7, 0.1);
+        border: 1px solid rgba(255, 193, 7, 0.3);
+        color: #856404;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .warning-box svg {
+        flex-shrink: 0;
+        margin-top: 0.125rem;
+    }
+
+    .warning-box strong {
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    .codes-container {
+        background: var(--surface-2);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .codes-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .code-item {
+        font-family: monospace;
+        font-size: 1rem;
+        padding: 0.625rem 1rem;
+        background: var(--surface);
+        border-radius: 6px;
+        text-align: center;
+        letter-spacing: 0.1em;
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .btn {
+        flex: 1;
+        padding: 0.875rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+        background: var(--surface-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+        background: var(--background);
+    }
+
+    .codes-text {
+        display: none;
+    }
+</style>
+
+<div class="recovery-page">
+    <div class="recovery-card">
+        <div class="recovery-header">
+            <div class="recovery-icon">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 4L28 10V16C28 22.6274 22.6274 28 16 28C9.37258 28 4 22.6274 4 16V10L16 4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                    <path d="M16 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="16" cy="21" r="1.5" fill="currentColor"/>
+                </svg>
+            </div>
+            <h2>Recovery Codes</h2>
+            <p>Save these codes in a secure location</p>
+        </div>
+
+        <div class="warning-box">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 7V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="10" cy="14" r="1" fill="currentColor"/>
+                <path d="M8.57 3.22L1.5 15.5C0.87 16.59 1.64 18 2.93 18H17.07C18.36 18 19.13 16.59 18.5 15.5L11.43 3.22C10.8 2.13 9.2 2.13 8.57 3.22Z" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+            <div>
+                <strong>Save these codes now!</strong>
+                <span>You won't be able to see them again. Use them to access your account if you lose your authenticator device.</span>
+            </div>
+        </div>
+
+        <div class="codes-container">
+            <div class="codes-grid">
+                @foreach (var code in Model.RecoveryCodes)
+                {
+                    <div class="code-item">@code</div>
+                }
+            </div>
+        </div>
+
+        <textarea class="codes-text" id="codesText">Recovery Codes for Andy Auth:
+@foreach (var code in Model.RecoveryCodes)
+{
+@code
+}</textarea>
+
+        <div class="action-buttons">
+            <button type="button" class="btn btn-secondary" onclick="copyToClipboard()">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="5" y="5" width="9" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M11 5V3C11 2.44772 10.5523 2 10 2H3C2.44772 2 2 2.44772 2 3V10C2 10.5523 2.44772 11 3 11H5" stroke="currentColor" stroke-width="1.5"/>
+                </svg>
+                Copy Codes
+            </button>
+            <a asp-action="Index" class="btn btn-primary">
+                Done
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function copyToClipboard() {
+        const text = document.getElementById('codesText').value;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Recovery codes copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+        });
+    }
+</script>

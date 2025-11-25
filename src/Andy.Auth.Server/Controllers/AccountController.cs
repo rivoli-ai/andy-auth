@@ -162,6 +162,150 @@ public class AccountController : Controller
     }
 
     /// <summary>
+    /// Shows the two-factor authentication verification page.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> LoginWith2fa(string? returnUrl = null, bool rememberMe = false)
+    {
+        // Ensure the user has gone through the username & password screen first
+        var user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
+        if (user == null)
+        {
+            return RedirectToAction(nameof(Login));
+        }
+
+        var model = new LoginWith2faViewModel
+        {
+            ReturnUrl = returnUrl,
+            RememberMe = rememberMe
+        };
+
+        return View(model);
+    }
+
+    /// <summary>
+    /// Verifies the two-factor authentication code.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> LoginWith2fa(LoginWith2faViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
+        if (user == null)
+        {
+            return RedirectToAction(nameof(Login));
+        }
+
+        var authenticatorCode = model.TwoFactorCode.Replace(" ", string.Empty).Replace("-", string.Empty);
+
+        var result = await _signInManager.TwoFactorAuthenticatorSignInAsync(
+            authenticatorCode,
+            model.RememberMe,
+            model.RememberMachine);
+
+        if (result.Succeeded)
+        {
+            _logger.LogInformation("User {UserId} logged in with 2FA.", user.Id);
+
+            user.LastLoginAt = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+
+            if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
+            {
+                return Redirect(model.ReturnUrl);
+            }
+
+            return RedirectToAction("Index", "Home");
+        }
+
+        if (result.IsLockedOut)
+        {
+            _logger.LogWarning("User {UserId} account locked out.", user.Id);
+            ModelState.AddModelError(string.Empty, "This account has been locked out. Please try again later.");
+            return View(model);
+        }
+
+        _logger.LogWarning("Invalid authenticator code entered for user {UserId}.", user.Id);
+        ModelState.AddModelError(string.Empty, "Invalid authenticator code.");
+        return View(model);
+    }
+
+    /// <summary>
+    /// Shows the recovery code login page.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> LoginWithRecoveryCode(string? returnUrl = null)
+    {
+        // Ensure the user has gone through the username & password screen first
+        var user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
+        if (user == null)
+        {
+            return RedirectToAction(nameof(Login));
+        }
+
+        var model = new LoginWithRecoveryCodeViewModel
+        {
+            ReturnUrl = returnUrl
+        };
+
+        return View(model);
+    }
+
+    /// <summary>
+    /// Verifies the recovery code and signs in the user.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> LoginWithRecoveryCode(LoginWithRecoveryCodeViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
+        if (user == null)
+        {
+            return RedirectToAction(nameof(Login));
+        }
+
+        var recoveryCode = model.RecoveryCode.Replace(" ", string.Empty);
+
+        var result = await _signInManager.TwoFactorRecoveryCodeSignInAsync(recoveryCode);
+
+        if (result.Succeeded)
+        {
+            _logger.LogInformation("User {UserId} logged in with a recovery code.", user.Id);
+
+            user.LastLoginAt = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+
+            if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
+            {
+                return Redirect(model.ReturnUrl);
+            }
+
+            return RedirectToAction("Index", "Home");
+        }
+
+        if (result.IsLockedOut)
+        {
+            _logger.LogWarning("User {UserId} account locked out.", user.Id);
+            ModelState.AddModelError(string.Empty, "This account has been locked out. Please try again later.");
+            return View(model);
+        }
+
+        _logger.LogWarning("Invalid recovery code entered for user {UserId}.", user.Id);
+        ModelState.AddModelError(string.Empty, "Invalid recovery code.");
+        return View(model);
+    }
+
+    /// <summary>
     /// Gets the list of configured external authentication providers.
     /// </summary>
     public async Task<IEnumerable<AuthenticationScheme>> GetExternalAuthenticationSchemesAsync()

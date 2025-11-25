@@ -1,0 +1,181 @@
+@model Andy.Auth.Server.Models.LoginWith2faViewModel
+@{
+    ViewData["Title"] = "Two-Factor Authentication";
+}
+
+<style>
+    .twofactor-card {
+        max-width: 450px;
+        margin: 0 auto;
+    }
+
+    .twofactor-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .twofactor-icon {
+        width: 64px;
+        height: 64px;
+        background: rgba(0, 102, 204, 0.1);
+        color: var(--primary);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+
+    .twofactor-header h2 {
+        font-size: 1.5rem;
+        color: var(--text);
+        margin-bottom: 0.5rem;
+    }
+
+    .twofactor-header p {
+        color: var(--text-muted);
+    }
+
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--text);
+    }
+
+    .form-group input[type="text"] {
+        width: 100%;
+        padding: 0.875rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 1.25rem;
+        font-family: monospace;
+        text-align: center;
+        letter-spacing: 0.2em;
+    }
+
+    .form-group input:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--primary);
+    }
+
+    .checkbox-group label {
+        color: var(--text);
+        margin: 0;
+    }
+
+    .text-danger {
+        color: var(--danger);
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 0.875rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        font-size: 1rem;
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: var(--primary-dark);
+    }
+
+    .recovery-link {
+        display: block;
+        text-align: center;
+        margin-top: 1.5rem;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
+
+    .recovery-link a {
+        color: var(--primary);
+        text-decoration: none;
+    }
+
+    .recovery-link a:hover {
+        text-decoration: underline;
+    }
+
+    .validation-summary-errors {
+        background: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.3);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .validation-summary-errors ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .validation-summary-errors li {
+        color: var(--danger);
+    }
+</style>
+
+<div class="card twofactor-card">
+    <div class="twofactor-header">
+        <div class="twofactor-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 4L28 10V16C28 22.6274 22.6274 28 16 28C9.37258 28 4 22.6274 4 16V10L16 4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M12 16L14 18L20 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        <h2>Two-Factor Authentication</h2>
+        <p>Enter the code from your authenticator app</p>
+    </div>
+
+    <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+
+    <form asp-action="LoginWith2fa" method="post">
+        <input asp-for="ReturnUrl" type="hidden" />
+        <input asp-for="RememberMe" type="hidden" />
+
+        <div class="form-group">
+            <label asp-for="TwoFactorCode">Authentication Code</label>
+            <input asp-for="TwoFactorCode" type="text" maxlength="7" pattern="[0-9]*" inputmode="numeric" autocomplete="one-time-code" placeholder="000000" autofocus />
+            <span asp-validation-for="TwoFactorCode" class="text-danger"></span>
+        </div>
+
+        <div class="checkbox-group">
+            <input asp-for="RememberMachine" type="checkbox" />
+            <label asp-for="RememberMachine">Remember this device</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Verify</button>
+    </form>
+
+    <p class="recovery-link">
+        Lost access to your authenticator? <a asp-action="LoginWithRecoveryCode" asp-route-returnUrl="@Model.ReturnUrl">Use a recovery code</a>
+    </p>
+</div>
