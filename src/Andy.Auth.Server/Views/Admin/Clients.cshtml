@@ -1,13 +1,337 @@
 @model List<Andy.Auth.Server.Controllers.AdminController.ClientViewModel>
 @{
     ViewData["Title"] = "OAuth Clients";
+    var newClientSecret = TempData["NewClientSecret"] as string;
+    var newClientId = TempData["NewClientId"] as string;
 }
 
-<div class="admin-page">
+<style>
+    .clients-page {
+        max-width: 100%;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .page-header h1 {
+        margin: 0;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .btn {
+        padding: 0.625rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+        background: var(--surface-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+        background: var(--background);
+    }
+
+    .btn-danger {
+        background: transparent;
+        color: var(--danger);
+        border: 1px solid var(--danger);
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .btn-danger:hover {
+        background: var(--danger);
+        color: white;
+    }
+
+    .btn-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .alert-success {
+        background: rgba(40, 167, 69, 0.1);
+        border: 1px solid rgba(40, 167, 69, 0.3);
+        color: var(--success);
+    }
+
+    .alert-danger {
+        background: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.3);
+        color: var(--danger);
+    }
+
+    .secret-display {
+        background: rgba(255, 193, 7, 0.1);
+        border: 1px solid rgba(255, 193, 7, 0.3);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .secret-display h3 {
+        color: #856404;
+        margin-bottom: 0.75rem;
+        font-size: 1rem;
+    }
+
+    .secret-value {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: var(--surface);
+        padding: 1rem;
+        border-radius: 6px;
+        font-family: monospace;
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+        word-break: break-all;
+    }
+
+    .secret-value code {
+        flex: 1;
+    }
+
+    .secret-warning {
+        font-size: 0.85rem;
+        color: #856404;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .clients-grid {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    .client-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: box-shadow 0.2s;
+    }
+
+    .client-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .client-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .client-info h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.1rem;
+        color: var(--text);
+    }
+
+    .client-id {
+        display: inline-block;
+        background: var(--surface-2);
+        padding: 0.25rem 0.625rem;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+
+    .client-type {
+        display: inline-block;
+        padding: 0.25rem 0.625rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+
+    .client-type.confidential {
+        background: rgba(0, 102, 204, 0.1);
+        color: var(--primary);
+    }
+
+    .client-type.public {
+        background: rgba(40, 167, 69, 0.1);
+        color: var(--success);
+    }
+
+    .client-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .client-details {
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .detail-section {
+        margin-bottom: 1rem;
+    }
+
+    .detail-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .detail-section strong {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .uri-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .uri-list li {
+        padding: 0.25rem 0;
+    }
+
+    .uri-list code {
+        background: var(--surface-2);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        color: var(--primary);
+    }
+
+    .permissions-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.375rem;
+    }
+
+    .permission-badge {
+        background: var(--surface-2);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    .text-muted {
+        color: var(--text-muted);
+        font-style: italic;
+        font-size: 0.9rem;
+    }
+
+    .empty-state {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 4rem 2rem;
+        text-align: center;
+    }
+
+    .empty-state h3 {
+        color: var(--text);
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+        color: var(--text-muted);
+        margin-bottom: 1.5rem;
+    }
+</style>
+
+<div class="clients-page">
     <div class="page-header">
         <h1>OAuth Clients</h1>
-        <a asp-action="Index" class="btn btn-secondary">← Back to Dashboard</a>
+        <div class="header-actions">
+            <a asp-action="CreateClient" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 3V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M3 8H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                Create Client
+            </a>
+            <a asp-action="Index" class="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Back to Dashboard
+            </a>
+        </div>
     </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    @if (!string.IsNullOrEmpty(newClientSecret))
+    {
+        <div class="secret-display">
+            <h3>Client Secret for "@newClientId"</h3>
+            <div class="secret-value">
+                <code id="clientSecret">@newClientSecret</code>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="copySecret()">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="4" y="4" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.25"/>
+                        <path d="M10 4V3C10 2.44772 9.55228 2 9 2H3C2.44772 2 2 2.44772 2 3V9C2 9.55228 2.44772 10 3 10H4" stroke="currentColor" stroke-width="1.25"/>
+                    </svg>
+                    Copy
+                </button>
+            </div>
+            <p class="secret-warning">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 6V8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    <circle cx="8" cy="11" r="0.75" fill="currentColor"/>
+                    <path d="M6.86 2.57L1.21 12.29C0.47 13.57 1.41 15 2.89 15H13.11C14.59 15 15.53 13.57 14.79 12.29L9.14 2.57C8.4 1.29 6.6 1.29 5.86 2.57H6.86Z" stroke="currentColor" stroke-width="1.25"/>
+                </svg>
+                Save this secret now! It will not be shown again.
+            </p>
+        </div>
+    }
 
     @if (Model.Any())
     {
@@ -16,8 +340,31 @@
             {
                 <div class="client-card">
                     <div class="client-header">
-                        <h3>@client.DisplayName</h3>
-                        <span class="client-id">@client.ClientId</span>
+                        <div class="client-info">
+                            <h3>@client.DisplayName</h3>
+                            <span class="client-id">@client.ClientId</span>
+                            <span class="client-type @client.ClientType.ToLower()">@client.ClientType</span>
+                        </div>
+                        <div class="client-actions">
+                            <a asp-action="EditClient" asp-route-id="@client.ClientId" class="btn btn-secondary btn-sm">
+                                Edit
+                            </a>
+                            @if (client.ClientType.Equals("confidential", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <form asp-action="RegenerateClientSecret" method="post" style="display: inline;">
+                                    <input type="hidden" name="clientId" value="@client.ClientId" />
+                                    <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Are you sure you want to regenerate the client secret? This will invalidate the existing secret.');">
+                                        Regenerate Secret
+                                    </button>
+                                </form>
+                            }
+                            <form asp-action="DeleteClient" method="post" style="display: inline;">
+                                <input type="hidden" name="clientId" value="@client.ClientId" />
+                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this client? This action cannot be undone.');">
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
                     </div>
                     <div class="client-details">
                         <div class="detail-section">
@@ -36,6 +383,22 @@
                                 <p class="text-muted">No redirect URIs configured</p>
                             }
                         </div>
+                        @if (client.Permissions.Any())
+                        {
+                            <div class="detail-section">
+                                <strong>Permissions:</strong>
+                                <div class="permissions-list">
+                                    @foreach (var permission in client.Permissions.Take(8))
+                                    {
+                                        <span class="permission-badge">@permission.Replace("gt:", "").Replace("scp:", "").Replace("ept:", "")</span>
+                                    }
+                                    @if (client.Permissions.Count > 8)
+                                    {
+                                        <span class="permission-badge">+@(client.Permissions.Count - 8) more</span>
+                                    }
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
             }
@@ -44,96 +407,26 @@
     else
     {
         <div class="empty-state">
-            <p>No OAuth clients configured yet.</p>
+            <h3>No OAuth Clients</h3>
+            <p>Create your first OAuth client to get started.</p>
+            <a asp-action="CreateClient" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 3V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M3 8H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                Create Client
+            </a>
         </div>
     }
 </div>
 
-<style>
-.admin-page {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem;
-}
-
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-}
-
-.clients-grid {
-    display: grid;
-    gap: 1.5rem;
-}
-
-.client-card {
-    background: white;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    border-left: 4px solid #7c3aed;
-}
-
-.client-header {
-    margin-bottom: 1rem;
-}
-
-.client-header h3 {
-    margin: 0 0 0.5rem 0;
-    color: #1f2937;
-}
-
-.client-id {
-    display: inline-block;
-    background: #f3f4f6;
-    padding: 0.25rem 0.75rem;
-    border-radius: 6px;
-    font-family: monospace;
-    font-size: 0.9rem;
-    color: #6b7280;
-}
-
-.client-details {
-    padding-top: 1rem;
-    border-top: 1px solid #e5e7eb;
-}
-
-.detail-section strong {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: #4b5563;
-}
-
-.uri-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.uri-list li {
-    padding: 0.5rem 0;
-}
-
-.uri-list code {
-    background: #f9fafb;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    color: #7c3aed;
-}
-
-.text-muted {
-    color: #9ca3af;
-    font-style: italic;
-}
-
-.empty-state {
-    background: white;
-    border-radius: 12px;
-    padding: 3rem;
-    text-align: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-</style>
+<script>
+    function copySecret() {
+        const secret = document.getElementById('clientSecret').textContent;
+        navigator.clipboard.writeText(secret).then(() => {
+            alert('Client secret copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+        });
+    }
+</script>

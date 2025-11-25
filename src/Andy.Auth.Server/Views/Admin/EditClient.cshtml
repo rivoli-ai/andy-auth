@@ -1,0 +1,318 @@
+@model Andy.Auth.Server.Controllers.AdminController.EditClientViewModel
+@{
+    ViewData["Title"] = "Edit OAuth Client";
+}
+
+<style>
+    .edit-page {
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .form-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 2rem;
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .form-section:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    .form-section h3 {
+        font-size: 1rem;
+        color: var(--text);
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-group:last-child {
+        margin-bottom: 0;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--text);
+    }
+
+    .form-group label.required:after {
+        content: " *";
+        color: var(--danger);
+    }
+
+    .form-group input[type="text"],
+    .form-group textarea,
+    .form-group select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-family: inherit;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    .form-group input:disabled {
+        background: var(--surface-2);
+        cursor: not-allowed;
+    }
+
+    .form-group textarea {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    .form-group small {
+        display: block;
+        margin-top: 0.375rem;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+
+    .checkbox-group {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+    }
+
+    .checkbox-option {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .checkbox-option input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--primary);
+    }
+
+    .text-danger {
+        color: var(--danger);
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+        background: var(--surface-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+        background: var(--background);
+    }
+
+    .validation-summary-errors {
+        background: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.3);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .validation-summary-errors ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .validation-summary-errors li {
+        color: var(--danger);
+    }
+
+    .client-type-badge {
+        display: inline-block;
+        padding: 0.375rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .client-type-badge.confidential {
+        background: rgba(0, 102, 204, 0.1);
+        color: var(--primary);
+    }
+
+    .client-type-badge.public {
+        background: rgba(40, 167, 69, 0.1);
+        color: var(--success);
+    }
+</style>
+
+<div class="edit-page">
+    <div class="page-header">
+        <h1>Edit OAuth Client</h1>
+        <a asp-action="Clients" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Back to Clients
+        </a>
+    </div>
+
+    <div class="form-card">
+        <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+
+        <form asp-action="EditClient" method="post">
+            <input asp-for="OriginalClientId" type="hidden" />
+
+            <div class="form-section">
+                <h3>Basic Information</h3>
+
+                <div class="form-group">
+                    <label asp-for="DisplayName" class="required">Display Name</label>
+                    <input asp-for="DisplayName" type="text" />
+                    <span asp-validation-for="DisplayName" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label>Client ID</label>
+                    <input asp-for="ClientId" type="text" disabled />
+                    <small>Client ID cannot be changed after creation</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Client Type</label>
+                    <div>
+                        <span class="client-type-badge @Model.ClientType.ToLower()">@Model.ClientType</span>
+                    </div>
+                    <small>Client type cannot be changed after creation</small>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>Redirect URIs</h3>
+
+                <div class="form-group">
+                    <label asp-for="RedirectUris">Redirect URIs</label>
+                    <textarea asp-for="RedirectUris" placeholder="https://example.com/callback"></textarea>
+                    <small>One URI per line. Must be absolute URLs</small>
+                    <span asp-validation-for="RedirectUris" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="PostLogoutRedirectUris">Post-Logout Redirect URIs</label>
+                    <textarea asp-for="PostLogoutRedirectUris" placeholder="https://example.com/"></textarea>
+                    <small>One URI per line. Where users are redirected after logout</small>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>OAuth Flows</h3>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <label class="checkbox-option">
+                            <input asp-for="AllowAuthorizationCodeFlow" type="checkbox" />
+                            <span>Authorization Code Flow</span>
+                        </label>
+                        <label class="checkbox-option">
+                            <input asp-for="AllowClientCredentialsFlow" type="checkbox" />
+                            <span>Client Credentials Flow</span>
+                        </label>
+                        <label class="checkbox-option">
+                            <input asp-for="AllowRefreshTokens" type="checkbox" />
+                            <span>Refresh Tokens</span>
+                        </label>
+                        <label class="checkbox-option">
+                            <input asp-for="RequireConsent" type="checkbox" />
+                            <span>Require User Consent</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>Scopes</h3>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <label class="checkbox-option">
+                            <input asp-for="AllowOpenIdScope" type="checkbox" />
+                            <span>openid</span>
+                        </label>
+                        <label class="checkbox-option">
+                            <input asp-for="AllowProfileScope" type="checkbox" />
+                            <span>profile</span>
+                        </label>
+                        <label class="checkbox-option">
+                            <input asp-for="AllowEmailScope" type="checkbox" />
+                            <span>email</span>
+                        </label>
+                        <label class="checkbox-option">
+                            <input asp-for="AllowRolesScope" type="checkbox" />
+                            <span>roles</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a asp-action="Clients" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -69,16 +69,318 @@ public class AdminController : Controller
             var clientId = await _applicationManager.GetClientIdAsync(application);
             var displayName = await _applicationManager.GetDisplayNameAsync(application);
             var redirectUris = await _applicationManager.GetRedirectUrisAsync(application);
+            var clientType = await _applicationManager.GetClientTypeAsync(application);
+            var permissions = await _applicationManager.GetPermissionsAsync(application);
 
             clients.Add(new ClientViewModel
             {
                 ClientId = clientId ?? "Unknown",
                 DisplayName = displayName ?? "Unknown",
-                RedirectUris = redirectUris.Select(uri => uri.ToString()).ToList()
+                RedirectUris = redirectUris.Select(uri => uri.ToString()).ToList(),
+                ClientType = clientType ?? "public",
+                Permissions = permissions.ToList()
             });
         }
 
         return View(clients);
+    }
+
+    [HttpGet]
+    public IActionResult CreateClient()
+    {
+        return View(new CreateClientViewModel());
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateClient(CreateClientViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        // Check if client ID already exists
+        var existingClient = await _applicationManager.FindByClientIdAsync(model.ClientId);
+        if (existingClient != null)
+        {
+            ModelState.AddModelError("ClientId", "A client with this ID already exists.");
+            return View(model);
+        }
+
+        // Build the application descriptor
+        var descriptor = new OpenIddictApplicationDescriptor
+        {
+            ClientId = model.ClientId,
+            DisplayName = model.DisplayName,
+            ConsentType = model.RequireConsent ? OpenIddictConstants.ConsentTypes.Explicit : OpenIddictConstants.ConsentTypes.Implicit
+        };
+
+        // Set client type and secret
+        if (model.ClientType == "confidential")
+        {
+            descriptor.ClientType = OpenIddictConstants.ClientTypes.Confidential;
+            descriptor.ClientSecret = model.ClientSecret;
+        }
+        else
+        {
+            descriptor.ClientType = OpenIddictConstants.ClientTypes.Public;
+        }
+
+        // Add redirect URIs
+        if (!string.IsNullOrWhiteSpace(model.RedirectUris))
+        {
+            foreach (var uri in model.RedirectUris.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (Uri.TryCreate(uri, UriKind.Absolute, out var parsedUri))
+                {
+                    descriptor.RedirectUris.Add(parsedUri);
+                }
+            }
+        }
+
+        // Add post-logout redirect URIs
+        if (!string.IsNullOrWhiteSpace(model.PostLogoutRedirectUris))
+        {
+            foreach (var uri in model.PostLogoutRedirectUris.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (Uri.TryCreate(uri, UriKind.Absolute, out var parsedUri))
+                {
+                    descriptor.PostLogoutRedirectUris.Add(parsedUri);
+                }
+            }
+        }
+
+        // Add permissions
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Authorization);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Token);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Introspection);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Revocation);
+
+        if (model.AllowAuthorizationCodeFlow)
+        {
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode);
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.ResponseTypes.Code);
+        }
+
+        if (model.AllowClientCredentialsFlow)
+        {
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.ClientCredentials);
+        }
+
+        if (model.AllowRefreshTokens)
+        {
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.RefreshToken);
+        }
+
+        // Add scope permissions
+        if (model.AllowOpenIdScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Email);
+        if (model.AllowProfileScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Profile);
+        if (model.AllowEmailScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Email);
+        if (model.AllowRolesScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Roles);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access");
+
+        // Create the client
+        await _applicationManager.CreateAsync(descriptor);
+
+        await LogAuditAsync("ClientCreated", null, null, $"Client ID: {model.ClientId}, Display Name: {model.DisplayName}");
+
+        TempData["SuccessMessage"] = $"Client '{model.DisplayName}' created successfully.";
+        TempData["NewClientSecret"] = model.ClientType == "confidential" ? model.ClientSecret : null;
+        TempData["NewClientId"] = model.ClientId;
+
+        return RedirectToAction(nameof(Clients));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> EditClient(string id)
+    {
+        var application = await _applicationManager.FindByClientIdAsync(id);
+        if (application == null)
+        {
+            return NotFound();
+        }
+
+        var clientId = await _applicationManager.GetClientIdAsync(application);
+        var displayName = await _applicationManager.GetDisplayNameAsync(application);
+        var clientType = await _applicationManager.GetClientTypeAsync(application);
+        var redirectUris = await _applicationManager.GetRedirectUrisAsync(application);
+        var postLogoutRedirectUris = await _applicationManager.GetPostLogoutRedirectUrisAsync(application);
+        var permissions = await _applicationManager.GetPermissionsAsync(application);
+        var consentType = await _applicationManager.GetConsentTypeAsync(application);
+
+        var model = new EditClientViewModel
+        {
+            OriginalClientId = clientId!,
+            ClientId = clientId!,
+            DisplayName = displayName ?? "",
+            ClientType = clientType ?? "public",
+            RedirectUris = string.Join("\n", redirectUris),
+            PostLogoutRedirectUris = string.Join("\n", postLogoutRedirectUris),
+            RequireConsent = consentType == OpenIddictConstants.ConsentTypes.Explicit,
+            AllowAuthorizationCodeFlow = permissions.Contains(OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode),
+            AllowClientCredentialsFlow = permissions.Contains(OpenIddictConstants.Permissions.GrantTypes.ClientCredentials),
+            AllowRefreshTokens = permissions.Contains(OpenIddictConstants.Permissions.GrantTypes.RefreshToken),
+            AllowOpenIdScope = permissions.Contains(OpenIddictConstants.Permissions.Scopes.Email) || permissions.Any(p => p.Contains("openid")),
+            AllowProfileScope = permissions.Contains(OpenIddictConstants.Permissions.Scopes.Profile),
+            AllowEmailScope = permissions.Contains(OpenIddictConstants.Permissions.Scopes.Email),
+            AllowRolesScope = permissions.Contains(OpenIddictConstants.Permissions.Scopes.Roles)
+        };
+
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditClient(EditClientViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var application = await _applicationManager.FindByClientIdAsync(model.OriginalClientId);
+        if (application == null)
+        {
+            return NotFound();
+        }
+
+        // Build the updated descriptor
+        var descriptor = new OpenIddictApplicationDescriptor();
+        await _applicationManager.PopulateAsync(descriptor, application);
+
+        descriptor.DisplayName = model.DisplayName;
+        descriptor.ConsentType = model.RequireConsent ? OpenIddictConstants.ConsentTypes.Explicit : OpenIddictConstants.ConsentTypes.Implicit;
+
+        // Update redirect URIs
+        descriptor.RedirectUris.Clear();
+        if (!string.IsNullOrWhiteSpace(model.RedirectUris))
+        {
+            foreach (var uri in model.RedirectUris.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (Uri.TryCreate(uri, UriKind.Absolute, out var parsedUri))
+                {
+                    descriptor.RedirectUris.Add(parsedUri);
+                }
+            }
+        }
+
+        // Update post-logout redirect URIs
+        descriptor.PostLogoutRedirectUris.Clear();
+        if (!string.IsNullOrWhiteSpace(model.PostLogoutRedirectUris))
+        {
+            foreach (var uri in model.PostLogoutRedirectUris.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (Uri.TryCreate(uri, UriKind.Absolute, out var parsedUri))
+                {
+                    descriptor.PostLogoutRedirectUris.Add(parsedUri);
+                }
+            }
+        }
+
+        // Update permissions
+        descriptor.Permissions.Clear();
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Authorization);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Token);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Introspection);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Revocation);
+
+        if (model.AllowAuthorizationCodeFlow)
+        {
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode);
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.ResponseTypes.Code);
+        }
+
+        if (model.AllowClientCredentialsFlow)
+        {
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.ClientCredentials);
+        }
+
+        if (model.AllowRefreshTokens)
+        {
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.RefreshToken);
+        }
+
+        if (model.AllowOpenIdScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Email);
+        if (model.AllowProfileScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Profile);
+        if (model.AllowEmailScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Email);
+        if (model.AllowRolesScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Roles);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access");
+
+        // Update the client
+        await _applicationManager.UpdateAsync(application, descriptor);
+
+        await LogAuditAsync("ClientUpdated", null, null, $"Client ID: {model.ClientId}, Display Name: {model.DisplayName}");
+
+        TempData["SuccessMessage"] = $"Client '{model.DisplayName}' updated successfully.";
+        return RedirectToAction(nameof(Clients));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteClient(string clientId)
+    {
+        var application = await _applicationManager.FindByClientIdAsync(clientId);
+        if (application == null)
+        {
+            TempData["ErrorMessage"] = "Client not found.";
+            return RedirectToAction(nameof(Clients));
+        }
+
+        var displayName = await _applicationManager.GetDisplayNameAsync(application);
+
+        // Delete the client
+        await _applicationManager.DeleteAsync(application);
+
+        await LogAuditAsync("ClientDeleted", null, null, $"Client ID: {clientId}, Display Name: {displayName}");
+
+        TempData["SuccessMessage"] = $"Client '{displayName}' deleted successfully.";
+        return RedirectToAction(nameof(Clients));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RegenerateClientSecret(string clientId)
+    {
+        var application = await _applicationManager.FindByClientIdAsync(clientId);
+        if (application == null)
+        {
+            TempData["ErrorMessage"] = "Client not found.";
+            return RedirectToAction(nameof(Clients));
+        }
+
+        var clientType = await _applicationManager.GetClientTypeAsync(application);
+        if (clientType != OpenIddictConstants.ClientTypes.Confidential)
+        {
+            TempData["ErrorMessage"] = "Cannot regenerate secret for public clients.";
+            return RedirectToAction(nameof(Clients));
+        }
+
+        // Generate new secret
+        var newSecret = GenerateClientSecret();
+
+        // Update the client with new secret
+        var descriptor = new OpenIddictApplicationDescriptor();
+        await _applicationManager.PopulateAsync(descriptor, application);
+        descriptor.ClientSecret = newSecret;
+        await _applicationManager.UpdateAsync(application, descriptor);
+
+        var displayName = await _applicationManager.GetDisplayNameAsync(application);
+        await LogAuditAsync("ClientSecretRegenerated", null, null, $"Client ID: {clientId}, Display Name: {displayName}");
+
+        TempData["SuccessMessage"] = $"Client secret regenerated for '{displayName}'.";
+        TempData["NewClientSecret"] = newSecret;
+        TempData["NewClientId"] = clientId;
+
+        return RedirectToAction(nameof(Clients));
+    }
+
+    private static string GenerateClientSecret()
+    {
+        var bytes = new byte[32];
+        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+        rng.GetBytes(bytes);
+        return Convert.ToBase64String(bytes).Replace("+", "-").Replace("/", "_").TrimEnd('=');
     }
 
     public async Task<IActionResult> Users(int page = 1, int pageSize = 20, string? search = null, string sortBy = "CreatedAt", string sortOrder = "desc")
@@ -568,6 +870,79 @@ public class AdminController : Controller
         public string ClientId { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
         public List<string> RedirectUris { get; set; } = new();
+        public string ClientType { get; set; } = "public";
+        public List<string> Permissions { get; set; } = new();
+    }
+
+    public class CreateClientViewModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(100, MinimumLength = 3)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[a-z0-9\-_]+$", ErrorMessage = "Client ID can only contain lowercase letters, numbers, hyphens, and underscores.")]
+        public string ClientId { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(200)]
+        public string DisplayName { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string ClientType { get; set; } = "public";
+
+        public string? ClientSecret { get; set; }
+
+        public string? RedirectUris { get; set; }
+
+        public string? PostLogoutRedirectUris { get; set; }
+
+        public bool RequireConsent { get; set; } = true;
+
+        public bool AllowAuthorizationCodeFlow { get; set; } = true;
+
+        public bool AllowClientCredentialsFlow { get; set; } = false;
+
+        public bool AllowRefreshTokens { get; set; } = true;
+
+        public bool AllowOpenIdScope { get; set; } = true;
+
+        public bool AllowProfileScope { get; set; } = true;
+
+        public bool AllowEmailScope { get; set; } = true;
+
+        public bool AllowRolesScope { get; set; } = false;
+    }
+
+    public class EditClientViewModel
+    {
+        public string OriginalClientId { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string ClientId { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(200)]
+        public string DisplayName { get; set; } = string.Empty;
+
+        public string ClientType { get; set; } = "public";
+
+        public string? RedirectUris { get; set; }
+
+        public string? PostLogoutRedirectUris { get; set; }
+
+        public bool RequireConsent { get; set; }
+
+        public bool AllowAuthorizationCodeFlow { get; set; }
+
+        public bool AllowClientCredentialsFlow { get; set; }
+
+        public bool AllowRefreshTokens { get; set; }
+
+        public bool AllowOpenIdScope { get; set; }
+
+        public bool AllowProfileScope { get; set; }
+
+        public bool AllowEmailScope { get; set; }
+
+        public bool AllowRolesScope { get; set; }
     }
 
     public class TokenViewModel
