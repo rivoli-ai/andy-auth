@@ -17,6 +17,7 @@ public class DbSeederTests
     private readonly Mock<IOpenIddictApplicationManager> _mockAppManager;
     private readonly Mock<IOpenIddictScopeManager> _mockScopeManager;
     private readonly Mock<UserManager<ApplicationUser>> _mockUserManager;
+    private readonly Mock<RoleManager<IdentityRole>> _mockRoleManager;
     private readonly Mock<ILogger<DbSeeder>> _mockLogger;
     private readonly IServiceProvider _serviceProvider;
 
@@ -26,25 +27,41 @@ public class DbSeederTests
         _mockAppManager = new Mock<IOpenIddictApplicationManager>();
         _mockScopeManager = new Mock<IOpenIddictScopeManager>();
         _mockUserManager = MockUserManager();
+        _mockRoleManager = MockRoleManager();
         _mockLogger = new Mock<ILogger<DbSeeder>>();
+
+        // Setup role manager to return true for role existence checks
+        _mockRoleManager.Setup(r => r.RoleExistsAsync("Admin")).ReturnsAsync(true);
+        _mockRoleManager.Setup(r => r.RoleExistsAsync("User")).ReturnsAsync(true);
+
+        // Setup admin user mocks - these are created in ALL environments now
+        var adminEmails = new[] { "sam@rivoli.ai", "ty@rivoli.ai", "admin@andy-auth.local" };
+        foreach (var email in adminEmails)
+        {
+            _mockUserManager.Setup(m => m.FindByEmailAsync(email))
+                .ReturnsAsync((ApplicationUser?)null);
+        }
+        _mockUserManager.Setup(m => m.CreateAsync(It.Is<ApplicationUser>(u => adminEmails.Contains(u.Email!)), It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Success);
+        _mockUserManager.Setup(m => m.AddToRoleAsync(It.IsAny<ApplicationUser>(), "Admin"))
+            .ReturnsAsync(IdentityResult.Success);
+        _mockUserManager.Setup(m => m.AddToRoleAsync(It.IsAny<ApplicationUser>(), "User"))
+            .ReturnsAsync(IdentityResult.Success);
 
         // Setup service provider
         var services = new ServiceCollection();
         services.AddSingleton(_mockAppManager.Object);
         services.AddSingleton(_mockScopeManager.Object);
         services.AddSingleton(_mockUserManager.Object);
+        services.AddSingleton(_mockRoleManager.Object);
         _serviceProvider = services.BuildServiceProvider();
     }
 
     [Fact]
     public async Task SeedAsync_ShouldSeedClients_WhenClientsDoNotExist()
     {
-        // Arrange
-        _mockAppManager.Setup(m => m.FindByClientIdAsync("lexipro-api", default))
-            .ReturnsAsync((object?)null);
-        _mockAppManager.Setup(m => m.FindByClientIdAsync("wagram-web", default))
-            .ReturnsAsync((object?)null);
-        _mockAppManager.Setup(m => m.FindByClientIdAsync("claude-desktop", default))
+        // Arrange - All clients don't exist
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
             .ReturnsAsync((object?)null);
 
         var configuration = CreateConfiguration("Production");
@@ -53,9 +70,9 @@ public class DbSeederTests
         // Act
         await seeder.SeedAsync();
 
-        // Assert
+        // Assert - 7 clients are created: lexipro-api, wagram-web, claude-desktop, chatgpt, cline, roo, continue-dev
         _mockAppManager.Verify(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default),
-            Times.Exactly(3));
+            Times.Exactly(7));
     }
 
     [Fact]
@@ -72,27 +89,29 @@ public class DbSeederTests
         // Act
         await seeder.SeedAsync();
 
-        // Assert
+        // Assert - lexipro-api won't be recreated, but claude-desktop, chatgpt, cline, roo, continue-dev are always deleted and recreated
+        // So we expect 5 CreateAsync calls for the always-recreated clients
         _mockAppManager.Verify(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default),
-            Times.Never);
+            Times.Exactly(5));
+        // And 5 DeleteAsync calls
+        _mockAppManager.Verify(m => m.DeleteAsync(It.IsAny<object>(), default),
+            Times.Exactly(5));
     }
 
     [Fact]
     public async Task SeedAsync_ShouldCreateLexiproApiClient_WithCorrectConfiguration()
     {
-        // Arrange
+        // Arrange - lexipro-api doesn't exist, all others exist
         _mockAppManager.Setup(m => m.FindByClientIdAsync("lexipro-api", default))
             .ReturnsAsync((object?)null);
-        _mockAppManager.Setup(m => m.FindByClientIdAsync("wagram-web", default))
-            .ReturnsAsync(new object());
-        _mockAppManager.Setup(m => m.FindByClientIdAsync("claude-desktop", default))
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.Is<string>(s => s != "lexipro-api"), default))
             .ReturnsAsync(new object());
 
         var configuration = CreateConfiguration("Production");
 
-        OpenIddictApplicationDescriptor? capturedDescriptor = null;
+        var capturedDescriptors = new List<OpenIddictApplicationDescriptor>();
         _mockAppManager.Setup(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default))
-            .Callback<OpenIddictApplicationDescriptor, CancellationToken>((desc, _) => capturedDescriptor = desc)
+            .Callback<OpenIddictApplicationDescriptor, CancellationToken>((desc, _) => capturedDescriptors.Add(desc))
             .ReturnsAsync(new object());
 
         var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object);
@@ -100,32 +119,30 @@ public class DbSeederTests
         // Act
         await seeder.SeedAsync();
 
-        // Assert
-        Assert.NotNull(capturedDescriptor);
-        Assert.Equal("lexipro-api", capturedDescriptor.ClientId);
-        Assert.Equal("Lexipro API", capturedDescriptor.DisplayName);
-        Assert.Equal("lexipro-secret-change-in-production", capturedDescriptor.ClientSecret);
-        Assert.Contains(OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode, capturedDescriptor.Permissions);
-        Assert.Contains(OpenIddictConstants.Permissions.GrantTypes.RefreshToken, capturedDescriptor.Permissions);
-        Assert.Contains(OpenIddictConstants.Permissions.GrantTypes.ClientCredentials, capturedDescriptor.Permissions);
+        // Assert - find the lexipro-api descriptor among all created
+        var lexiproDescriptor = capturedDescriptors.FirstOrDefault(d => d.ClientId == "lexipro-api");
+        Assert.NotNull(lexiproDescriptor);
+        Assert.Equal("Lexipro API", lexiproDescriptor.DisplayName);
+        Assert.Equal("lexipro-secret-change-in-production", lexiproDescriptor.ClientSecret);
+        Assert.Contains(OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode, lexiproDescriptor.Permissions);
+        Assert.Contains(OpenIddictConstants.Permissions.GrantTypes.RefreshToken, lexiproDescriptor.Permissions);
+        Assert.Contains(OpenIddictConstants.Permissions.GrantTypes.ClientCredentials, lexiproDescriptor.Permissions);
     }
 
     [Fact]
     public async Task SeedAsync_ShouldCreateWagramWebClient_AsPublicClient()
     {
-        // Arrange
-        _mockAppManager.Setup(m => m.FindByClientIdAsync("lexipro-api", default))
-            .ReturnsAsync(new object());
+        // Arrange - wagram-web doesn't exist, all others exist
         _mockAppManager.Setup(m => m.FindByClientIdAsync("wagram-web", default))
             .ReturnsAsync((object?)null);
-        _mockAppManager.Setup(m => m.FindByClientIdAsync("claude-desktop", default))
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.Is<string>(s => s != "wagram-web"), default))
             .ReturnsAsync(new object());
 
         var configuration = CreateConfiguration("Production");
 
-        OpenIddictApplicationDescriptor? capturedDescriptor = null;
+        var capturedDescriptors = new List<OpenIddictApplicationDescriptor>();
         _mockAppManager.Setup(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default))
-            .Callback<OpenIddictApplicationDescriptor, CancellationToken>((desc, _) => capturedDescriptor = desc)
+            .Callback<OpenIddictApplicationDescriptor, CancellationToken>((desc, _) => capturedDescriptors.Add(desc))
             .ReturnsAsync(new object());
 
         var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object);
@@ -133,30 +150,26 @@ public class DbSeederTests
         // Act
         await seeder.SeedAsync();
 
-        // Assert
-        Assert.NotNull(capturedDescriptor);
-        Assert.Equal("wagram-web", capturedDescriptor.ClientId);
-        Assert.Equal("Wagram Web Application", capturedDescriptor.DisplayName);
-        Assert.Null(capturedDescriptor.ClientSecret); // Public client - no secret
-        Assert.Contains(new Uri("https://localhost:4200/callback"), capturedDescriptor.RedirectUris);
+        // Assert - find the wagram-web descriptor among all created
+        var wagramDescriptor = capturedDescriptors.FirstOrDefault(d => d.ClientId == "wagram-web");
+        Assert.NotNull(wagramDescriptor);
+        Assert.Equal("Wagram Web Application", wagramDescriptor.DisplayName);
+        Assert.Null(wagramDescriptor.ClientSecret); // Public client - no secret
+        Assert.Contains(new Uri("https://localhost:4200/callback"), wagramDescriptor.RedirectUris);
     }
 
     [Fact]
     public async Task SeedAsync_ShouldCreateClaudeDesktopClient_WithHttpRedirectUris()
     {
-        // Arrange
-        _mockAppManager.Setup(m => m.FindByClientIdAsync("lexipro-api", default))
+        // Arrange - all clients exist (claude-desktop is always deleted and recreated)
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
             .ReturnsAsync(new object());
-        _mockAppManager.Setup(m => m.FindByClientIdAsync("wagram-web", default))
-            .ReturnsAsync(new object());
-        _mockAppManager.Setup(m => m.FindByClientIdAsync("claude-desktop", default))
-            .ReturnsAsync((object?)null);
 
         var configuration = CreateConfiguration("Production");
 
-        OpenIddictApplicationDescriptor? capturedDescriptor = null;
+        var capturedDescriptors = new List<OpenIddictApplicationDescriptor>();
         _mockAppManager.Setup(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default))
-            .Callback<OpenIddictApplicationDescriptor, CancellationToken>((desc, _) => capturedDescriptor = desc)
+            .Callback<OpenIddictApplicationDescriptor, CancellationToken>((desc, _) => capturedDescriptors.Add(desc))
             .ReturnsAsync(new object());
 
         var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object);
@@ -164,12 +177,12 @@ public class DbSeederTests
         // Act
         await seeder.SeedAsync();
 
-        // Assert
-        Assert.NotNull(capturedDescriptor);
-        Assert.Equal("claude-desktop", capturedDescriptor.ClientId);
-        Assert.Null(capturedDescriptor.ClientSecret); // Public client
-        Assert.Contains(new Uri("http://127.0.0.1/callback"), capturedDescriptor.RedirectUris);
-        Assert.Contains(new Uri("http://localhost/callback"), capturedDescriptor.RedirectUris);
+        // Assert - claude-desktop is always recreated
+        var claudeDescriptor = capturedDescriptors.FirstOrDefault(d => d.ClientId == "claude-desktop");
+        Assert.NotNull(claudeDescriptor);
+        Assert.Null(claudeDescriptor.ClientSecret); // Public client
+        Assert.Contains(new Uri("http://127.0.0.1/callback"), claudeDescriptor.RedirectUris);
+        Assert.Contains(new Uri("http://localhost/callback"), claudeDescriptor.RedirectUris);
     }
 
     [Fact]
@@ -217,9 +230,11 @@ public class DbSeederTests
         // Act
         await seeder.SeedAsync();
 
-        // Assert
-        _mockUserManager.Verify(m => m.FindByEmailAsync(It.IsAny<string>()), Times.Never);
-        _mockUserManager.Verify(m => m.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
+        // Assert - Admin users are created in all environments, but test@andy.local should NOT be created in Production
+        _mockUserManager.Verify(m => m.FindByEmailAsync("test@andy.local"), Times.Never);
+        _mockUserManager.Verify(m => m.CreateAsync(
+            It.Is<ApplicationUser>(u => u.Email == "test@andy.local"),
+            It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -240,8 +255,11 @@ public class DbSeederTests
         // Act
         await seeder.SeedAsync();
 
-        // Assert
-        _mockUserManager.Verify(m => m.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
+        // Assert - test@andy.local should not be created since they already exist
+        // Note: Admin users (sam@rivoli.ai, ty@rivoli.ai, admin@andy-auth.local) are still created
+        _mockUserManager.Verify(m => m.CreateAsync(
+            It.Is<ApplicationUser>(u => u.Email == "test@andy.local"),
+            It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -299,5 +317,15 @@ public class DbSeederTests
         var store = new Mock<IUserStore<ApplicationUser>>();
         return new Mock<UserManager<ApplicationUser>>(
             store.Object, null, null, null, null, null, null, null, null);
+    }
+
+    /// <summary>
+    /// Helper method to create a mock RoleManager
+    /// </summary>
+    private static Mock<RoleManager<IdentityRole>> MockRoleManager()
+    {
+        var store = new Mock<IRoleStore<IdentityRole>>();
+        return new Mock<RoleManager<IdentityRole>>(
+            store.Object, null, null, null, null);
     }
 }
