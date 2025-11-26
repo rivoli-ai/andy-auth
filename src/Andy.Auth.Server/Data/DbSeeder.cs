@@ -202,12 +202,12 @@ public class DbSeeder
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
-                // Allow requesting resource servers (for MCP) - using audience prefix for OpenIddict 7.x
-                "aud:https://lexipro-uat.up.railway.app/mcp",
-                "aud:https://lexipro-api.rivoli.ai/mcp",
-                "aud:https://localhost:7001/mcp",
-                "aud:https://localhost:5154/mcp",
-                "aud:http://localhost:5154/mcp"
+                // Allow requesting resource servers (for MCP) - using rst: prefix for OpenIddict 7.x resource parameter
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-uat.up.railway.app/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-api.rivoli.ai/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp"
             },
             RedirectUris =
             {
@@ -253,9 +253,9 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
                 // Allow requesting resource servers (for MCP)
-                "aud:https://lexipro-uat.up.railway.app/mcp",
-                "aud:https://lexipro-api.rivoli.ai/mcp",
-                "aud:https://localhost:7001/mcp"
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-uat.up.railway.app/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-api.rivoli.ai/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp"
             },
             RedirectUris =
             {
@@ -300,11 +300,11 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
                 // Allow requesting resource servers (for MCP)
-                "aud:https://lexipro-uat.up.railway.app/mcp",
-                "aud:https://lexipro-api.rivoli.ai/mcp",
-                "aud:https://localhost:7001/mcp",
-                "aud:https://localhost:5154/mcp",
-                "aud:http://localhost:5154/mcp"
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-uat.up.railway.app/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-api.rivoli.ai/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp"
             },
             RedirectUris =
             {
@@ -352,11 +352,11 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
                 // Allow requesting resource servers (for MCP)
-                "aud:https://lexipro-uat.up.railway.app/mcp",
-                "aud:https://lexipro-api.rivoli.ai/mcp",
-                "aud:https://localhost:7001/mcp",
-                "aud:https://localhost:5154/mcp",
-                "aud:http://localhost:5154/mcp"
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-uat.up.railway.app/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-api.rivoli.ai/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp"
             },
             RedirectUris =
             {
@@ -404,11 +404,11 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
                 // Allow requesting resource servers (for MCP)
-                "aud:https://lexipro-uat.up.railway.app/mcp",
-                "aud:https://lexipro-api.rivoli.ai/mcp",
-                "aud:https://localhost:7001/mcp",
-                "aud:https://localhost:5154/mcp",
-                "aud:http://localhost:5154/mcp"
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-uat.up.railway.app/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-api.rivoli.ai/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp"
             },
             RedirectUris =
             {
