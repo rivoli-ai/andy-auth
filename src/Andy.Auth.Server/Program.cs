@@ -1,3 +1,4 @@
+using Andy.Auth.Server.Configuration;
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Middleware;
 using Andy.Auth.Server.Services;
@@ -176,6 +177,16 @@ builder.Services.AddOpenIddict()
         // Register scopes
         options.RegisterScopes("openid", "profile", "email", "roles", "offline_access");
 
+        // Register MCP resource servers (allows 'resource' parameter in authorization requests)
+        // These are the audience values that clients can request tokens for
+        options.RegisterResources(
+            "https://lexipro-uat.up.railway.app/mcp",
+            "https://lexipro-api.rivoli.ai/mcp",
+            "https://localhost:7001/mcp",
+            "https://localhost:5154/mcp",
+            "http://localhost:5154/mcp"
+        );
+
         // Enable reference tokens (opaque tokens stored in database)
         // Reference tokens can be revoked immediately and provide better security audit trails
         // Per-client: Use OpenIddictConstants.Settings.TokenFormat = "Opaque" for reference tokens
@@ -212,6 +223,10 @@ builder.Services.AddAuthorization();
 
 // Register session management service
 builder.Services.AddScoped<SessionService>();
+
+// Register Dynamic Client Registration (RFC 7591)
+builder.Services.Configure<DcrSettings>(builder.Configuration.GetSection(DcrSettings.SectionName));
+builder.Services.AddScoped<DcrService>();
 
 // Register token cleanup background service
 builder.Services.AddHostedService<TokenCleanupService>();

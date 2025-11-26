@@ -63,6 +63,9 @@ public class AdminController : Controller
     {
         var clients = new List<ClientViewModel>();
 
+        // Get all DCR metadata for lookup
+        var dcrMetadata = await _context.DynamicClientRegistrations.ToDictionaryAsync(d => d.ClientId);
+
         // Get all OpenIddict applications
         await foreach (var application in _applicationManager.ListAsync())
         {
@@ -72,14 +75,25 @@ public class AdminController : Controller
             var clientType = await _applicationManager.GetClientTypeAsync(application);
             var permissions = await _applicationManager.GetPermissionsAsync(application);
 
-            clients.Add(new ClientViewModel
+            var clientViewModel = new ClientViewModel
             {
                 ClientId = clientId ?? "Unknown",
                 DisplayName = displayName ?? "Unknown",
                 RedirectUris = redirectUris.Select(uri => uri.ToString()).ToList(),
                 ClientType = clientType ?? "public",
                 Permissions = permissions.ToList()
-            });
+            };
+
+            // Check if this client was dynamically registered
+            if (clientId != null && dcrMetadata.TryGetValue(clientId, out var dcr))
+            {
+                clientViewModel.IsDynamicallyRegistered = true;
+                clientViewModel.RegisteredAt = dcr.RegisteredAt;
+                clientViewModel.IsApproved = dcr.IsApproved;
+                clientViewModel.IsDisabled = dcr.IsDisabled;
+            }
+
+            clients.Add(clientViewModel);
         }
 
         return View(clients);
@@ -843,6 +857,85 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Tokens));
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ApproveDcrClient(string clientId)
+    {
+        var dcr = await _context.DynamicClientRegistrations
+            .FirstOrDefaultAsync(d => d.ClientId == clientId);
+
+        if (dcr == null)
+        {
+            TempData["ErrorMessage"] = "Client not found or was not dynamically registered.";
+            return RedirectToAction(nameof(Clients));
+        }
+
+        var currentUser = await _userManager.GetUserAsync(User);
+        dcr.IsApproved = true;
+        dcr.ApprovedById = currentUser?.Id;
+        dcr.ApprovedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        await LogAuditAsync("DcrClientApproved", null, null, $"Client ID: {clientId}");
+
+        TempData["SuccessMessage"] = $"DCR client '{clientId}' has been approved.";
+        return RedirectToAction(nameof(Clients));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DisableDcrClient(string clientId, string? reason)
+    {
+        var dcr = await _context.DynamicClientRegistrations
+            .FirstOrDefaultAsync(d => d.ClientId == clientId);
+
+        if (dcr == null)
+        {
+            TempData["ErrorMessage"] = "Client not found or was not dynamically registered.";
+            return RedirectToAction(nameof(Clients));
+        }
+
+        var currentUser = await _userManager.GetUserAsync(User);
+        dcr.IsDisabled = true;
+        dcr.DisabledAt = DateTime.UtcNow;
+        dcr.DisabledBy = currentUser?.Id;
+        dcr.DisabledReason = reason;
+
+        await _context.SaveChangesAsync();
+
+        await LogAuditAsync("DcrClientDisabled", null, null, $"Client ID: {clientId}, Reason: {reason ?? "No reason provided"}");
+
+        TempData["SuccessMessage"] = $"DCR client '{clientId}' has been disabled.";
+        return RedirectToAction(nameof(Clients));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EnableDcrClient(string clientId)
+    {
+        var dcr = await _context.DynamicClientRegistrations
+            .FirstOrDefaultAsync(d => d.ClientId == clientId);
+
+        if (dcr == null)
+        {
+            TempData["ErrorMessage"] = "Client not found or was not dynamically registered.";
+            return RedirectToAction(nameof(Clients));
+        }
+
+        dcr.IsDisabled = false;
+        dcr.DisabledAt = null;
+        dcr.DisabledBy = null;
+        dcr.DisabledReason = null;
+
+        await _context.SaveChangesAsync();
+
+        await LogAuditAsync("DcrClientEnabled", null, null, $"Client ID: {clientId}");
+
+        TempData["SuccessMessage"] = $"DCR client '{clientId}' has been enabled.";
+        return RedirectToAction(nameof(Clients));
+    }
+
     private async Task LogAuditAsync(string action, string? targetUserId = null, string? targetUserEmail = null, string? details = null)
     {
         var currentUser = await _userManager.GetUserAsync(User);
@@ -872,6 +965,10 @@ public class AdminController : Controller
         public List<string> RedirectUris { get; set; } = new();
         public string ClientType { get; set; } = "public";
         public List<string> Permissions { get; set; } = new();
+        public bool IsDynamicallyRegistered { get; set; } = false;
+        public DateTime? RegisteredAt { get; set; }
+        public bool IsApproved { get; set; } = true;
+        public bool IsDisabled { get; set; } = false;
     }
 
     public class CreateClientViewModel

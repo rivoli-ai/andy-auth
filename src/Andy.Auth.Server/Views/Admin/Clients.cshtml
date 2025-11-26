@@ -195,6 +195,36 @@
         color: var(--success);
     }
 
+    .client-type.dcr {
+        background: rgba(255, 193, 7, 0.1);
+        color: #856404;
+    }
+
+    .client-status {
+        display: inline-block;
+        padding: 0.25rem 0.625rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+
+    .client-status.pending {
+        background: rgba(255, 193, 7, 0.1);
+        color: #856404;
+    }
+
+    .client-status.disabled {
+        background: rgba(220, 53, 69, 0.1);
+        color: var(--danger);
+    }
+
+    .dcr-info {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 0.5rem;
+    }
+
     .client-actions {
         display: flex;
         gap: 0.5rem;
@@ -344,6 +374,18 @@
                             <h3>@client.DisplayName</h3>
                             <span class="client-id">@client.ClientId</span>
                             <span class="client-type @client.ClientType.ToLower()">@client.ClientType</span>
+                            @if (client.IsDynamicallyRegistered)
+                            {
+                                <span class="client-type dcr">DCR</span>
+                                @if (!client.IsApproved)
+                                {
+                                    <span class="client-status pending">Pending Approval</span>
+                                }
+                                @if (client.IsDisabled)
+                                {
+                                    <span class="client-status disabled">Disabled</span>
+                                }
+                            }
                         </div>
                         <div class="client-actions">
                             <a asp-action="EditClient" asp-route-id="@client.ClientId" class="btn btn-secondary btn-sm">
@@ -364,9 +406,45 @@
                                     Delete
                                 </button>
                             </form>
+                            @if (client.IsDynamicallyRegistered)
+                            {
+                                @if (!client.IsApproved)
+                                {
+                                    <form asp-action="ApproveDcrClient" method="post" style="display: inline;">
+                                        <input type="hidden" name="clientId" value="@client.ClientId" />
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            Approve
+                                        </button>
+                                    </form>
+                                }
+                                @if (!client.IsDisabled)
+                                {
+                                    <form asp-action="DisableDcrClient" method="post" style="display: inline;">
+                                        <input type="hidden" name="clientId" value="@client.ClientId" />
+                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to disable this DCR client?');">
+                                            Disable
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form asp-action="EnableDcrClient" method="post" style="display: inline;">
+                                        <input type="hidden" name="clientId" value="@client.ClientId" />
+                                        <button type="submit" class="btn btn-secondary btn-sm">
+                                            Enable
+                                        </button>
+                                    </form>
+                                }
+                            }
                         </div>
                     </div>
                     <div class="client-details">
+                        @if (client.IsDynamicallyRegistered && client.RegisteredAt.HasValue)
+                        {
+                            <div class="dcr-info">
+                                Dynamically registered on @client.RegisteredAt.Value.ToString("MMM dd, yyyy 'at' HH:mm") UTC
+                            </div>
+                        }
                         <div class="detail-section">
                             <strong>Redirect URIs:</strong>
                             @if (client.RedirectUris.Any())

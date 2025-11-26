@@ -29,6 +29,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     /// </summary>
     public DbSet<UserSession> UserSessions { get; set; }
 
+    /// <summary>
+    /// Registration access tokens for dynamically registered clients.
+    /// </summary>
+    public DbSet<RegistrationAccessToken> RegistrationAccessTokens { get; set; }
+
+    /// <summary>
+    /// Initial access tokens for controlled client registration.
+    /// </summary>
+    public DbSet<InitialAccessToken> InitialAccessTokens { get; set; }
+
+    /// <summary>
+    /// Metadata for dynamically registered clients.
+    /// </summary>
+    public DbSet<DynamicClientRegistration> DynamicClientRegistrations { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -64,6 +79,40 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasOne(s => s.User)
                 .WithMany()
                 .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure RegistrationAccessToken entity
+        builder.Entity<RegistrationAccessToken>(entity =>
+        {
+            entity.HasIndex(t => t.ClientId).IsUnique();
+            entity.HasIndex(t => t.TokenHash);
+            entity.Property(t => t.ClientId).HasMaxLength(100).IsRequired();
+            entity.Property(t => t.TokenHash).HasMaxLength(128).IsRequired();
+        });
+
+        // Configure InitialAccessToken entity
+        builder.Entity<InitialAccessToken>(entity =>
+        {
+            entity.HasIndex(t => t.TokenHash);
+            entity.Property(t => t.Name).HasMaxLength(200).IsRequired();
+            entity.Property(t => t.TokenHash).HasMaxLength(128).IsRequired();
+            entity.Property(t => t.CreatedById).HasMaxLength(450).IsRequired();
+            entity.Property(t => t.CreatedByEmail).HasMaxLength(256).IsRequired();
+        });
+
+        // Configure DynamicClientRegistration entity
+        builder.Entity<DynamicClientRegistration>(entity =>
+        {
+            entity.HasIndex(d => d.ClientId).IsUnique();
+            entity.Property(d => d.ClientId).HasMaxLength(100).IsRequired();
+            entity.HasOne(d => d.InitialAccessToken)
+                .WithMany()
+                .HasForeignKey(d => d.InitialAccessTokenId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(d => d.RegistrationAccessToken)
+                .WithMany()
+                .HasForeignKey("RegistrationAccessTokenId")
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
