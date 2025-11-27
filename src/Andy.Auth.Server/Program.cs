@@ -286,15 +286,12 @@ else
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-// Add security headers
+// Security headers temporarily disabled for Safari debugging
+// TODO: Re-enable after fixing Safari issue
 app.Use(async (context, next) =>
 {
-    context.Response.Headers["X-Frame-Options"] = "DENY";
+    // Minimal headers only
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
-    context.Response.Headers["Referrer-Policy"] = "no-referrer";
-    context.Response.Headers["Content-Security-Policy"] =
-        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self';";
     await next();
 });
 
