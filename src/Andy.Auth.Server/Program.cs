@@ -137,6 +137,17 @@ builder.Services.AddOpenIddict()
             .SetIntrospectionEndpointUris("connect/introspect")
             .SetRevocationEndpointUris("connect/revoke");
 
+        // Add registration_endpoint to discovery document for DCR (RFC 7591)
+        // OpenIddict doesn't natively support DCR, so we add it via a custom handler
+        options.AddEventHandler<OpenIddict.Server.OpenIddictServerEvents.HandleConfigurationRequestContext>(builder =>
+            builder.UseInlineHandler(context =>
+            {
+                var baseUri = context.BaseUri?.ToString().TrimEnd('/') ?? "";
+                context.Metadata["registration_endpoint"] = $"{baseUri}/connect/register";
+                return default;
+            })
+            .SetOrder(OpenIddict.Server.OpenIddictServerHandlers.Discovery.AttachEndpoints.Descriptor.Order + 1));
+
         // Enable the authorization code flow and refresh token flow
         options.AllowAuthorizationCodeFlow()
             .AllowRefreshTokenFlow()
