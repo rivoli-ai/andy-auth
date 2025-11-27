@@ -306,6 +306,11 @@ app.UseAuthentication();
 app.UseSessionTracking();
 app.UseAuthorization();
 
+// Static test endpoint to debug Safari crash - bypasses all middleware
+app.MapGet("/safari-test", () => Results.Content(
+    "<!DOCTYPE html><html><head><title>Test</title></head><body><h1>Hello Safari</h1><p>If you see this, the page works.</p></body></html>",
+    "text/html"));
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
