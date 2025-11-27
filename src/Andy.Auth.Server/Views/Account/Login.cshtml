@@ -1,144 +1,35 @@
 @model LoginViewModel
-@using Microsoft.AspNetCore.Authentication
-@using Microsoft.AspNetCore.Identity
-@using Andy.Auth.Server.Data
-@inject SignInManager<ApplicationUser> SignInManager
 @{
     ViewData["Title"] = "Login";
-    var externalProviders = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 }
 
-<div class="card">
-    <h2>Login</h2>
+<h2>Login</h2>
 
-    <div asp-validation-summary="All" class="validation-summary-errors"></div>
+<div asp-validation-summary="All"></div>
 
-    <form asp-controller="Account" asp-action="Login" method="post">
-        <input type="hidden" asp-for="ReturnUrl" />
+<form asp-controller="Account" asp-action="Login" method="post">
+    <input type="hidden" asp-for="ReturnUrl" />
 
-        <div class="form-group">
-            <label asp-for="Email">Email</label>
-            <input asp-for="Email" type="email" placeholder="Enter your email" autofocus />
-            <span asp-validation-for="Email" class="text-danger"></span>
-        </div>
+    <div>
+        <label asp-for="Email">Email</label>
+        <input asp-for="Email" type="email" />
+        <span asp-validation-for="Email"></span>
+    </div>
 
-        <div class="form-group">
-            <label asp-for="Password">Password</label>
-            <input asp-for="Password" type="password" placeholder="Enter your password" />
-            <span asp-validation-for="Password" class="text-danger"></span>
-        </div>
+    <div>
+        <label asp-for="Password">Password</label>
+        <input asp-for="Password" type="password" />
+        <span asp-validation-for="Password"></span>
+    </div>
 
-        <div class="form-group">
-            <label>
-                <input asp-for="RememberMe" type="checkbox" />
-                Remember me
-            </label>
-        </div>
+    <div>
+        <label>
+            <input asp-for="RememberMe" type="checkbox" />
+            Remember me
+        </label>
+    </div>
 
-        <button type="submit" class="btn btn-primary">Login</button>
+    <button type="submit">Login</button>
 
-        <div class="text-center mt-3">
-            <p>Don't have an account? <a asp-controller="Account" asp-action="Register" asp-route-returnUrl="@Model.ReturnUrl">Register here</a></p>
-        </div>
-    </form>
-
-    @if (externalProviders.Any())
-    {
-        <div class="external-login-section">
-            <div class="divider">
-                <span>or</span>
-            </div>
-
-            <form asp-controller="Account" asp-action="ExternalLogin" method="post">
-                <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
-                @foreach (var provider in externalProviders)
-                {
-                    <button type="submit" name="provider" value="@provider.Name" class="btn btn-external btn-@provider.Name.ToLower()" title="Sign in with @provider.DisplayName">
-                        @if (provider.Name == "Microsoft")
-                        {
-                            <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 21 21">
-                                <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
-                                <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
-                                <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
-                                <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
-                            </svg>
-                            <span>Sign in with Microsoft</span>
-                        }
-                        else
-                        {
-                            <span>Sign in with @provider.DisplayName</span>
-                        }
-                    </button>
-                }
-            </form>
-        </div>
-    }
-</div>
-
-<style>
-    .external-login-section {
-        margin-top: 1.5rem;
-    }
-
-    .divider {
-        display: flex;
-        align-items: center;
-        text-align: center;
-        margin: 1.5rem 0;
-        color: #6c757d;
-    }
-
-    .divider::before,
-    .divider::after {
-        content: '';
-        flex: 1;
-        border-bottom: 1px solid #dee2e6;
-    }
-
-    .divider span {
-        padding: 0 1rem;
-        font-size: 0.875rem;
-        text-transform: uppercase;
-    }
-
-    .btn-external {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.75rem;
-        width: 100%;
-        padding: 0.75rem 1rem;
-        margin-bottom: 0.5rem;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        background-color: #fff;
-        color: #333;
-        font-size: 0.95rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
-    }
-
-    .btn-external:hover {
-        background-color: #f8f9fa;
-        border-color: #adb5bd;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .btn-external:focus {
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.25);
-    }
-
-    .btn-microsoft {
-        border-color: #8c8c8c;
-    }
-
-    .btn-microsoft:hover {
-        border-color: #0078d4;
-    }
-
-    .btn-external svg {
-        flex-shrink: 0;
-    }
-</style>
+    <p>Don't have an account? <a asp-controller="Account" asp-action="Register" asp-route-returnUrl="@Model.ReturnUrl">Register here</a></p>
+</form>
