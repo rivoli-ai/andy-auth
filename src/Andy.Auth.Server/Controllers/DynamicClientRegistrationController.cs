@@ -191,6 +191,21 @@ public class DynamicClientRegistrationController : ControllerBase
             }
         }
 
+        // Add resource/audience permissions for MCP resource servers
+        // This allows DCR clients to use the OAuth 2.0 resource parameter (RFC 8707)
+        var mcpResources = new[]
+        {
+            "https://lexipro-uat.up.railway.app/mcp",
+            "https://lexipro-api.rivoli.ai/mcp",
+            "https://localhost:7001/mcp",
+            "https://localhost:5154/mcp",
+            "http://localhost:5154/mcp"
+        };
+        foreach (var resource in mcpResources)
+        {
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.Prefixes.Resource + resource);
+        }
+
         // Create the client
         await _applicationManager.CreateAsync(descriptor);
 
