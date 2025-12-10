@@ -227,6 +227,14 @@ public class AuthorizationController : ControllerBase
 
             var principal = await CreateClaimsPrincipalAsync(user, result.Principal.GetScopes());
 
+            // Handle resource parameter (RFC 8707 - MCP requirement)
+            var requestedResources = request.GetResources();
+            if (requestedResources.Any())
+            {
+                // Explicit resource parameter provided - use those resources
+                principal.SetResources(requestedResources);
+            }
+
             // Always include lexipro-api audience for wagram-web client
             if (request.ClientId == "wagram-web")
             {
@@ -268,11 +276,24 @@ public class AuthorizationController : ControllerBase
             var principal = new ClaimsPrincipal(identity);
             principal.SetScopes(request.GetScopes());
 
+            // Set resources from explicit resource parameter (RFC 8707) or from scopes
             var resources = new List<string>();
-            await foreach (var resource in _scopeManager.ListResourcesAsync(principal.GetScopes()))
+
+            // First, check if explicit resource parameter was provided (RFC 8707 - MCP requirement)
+            var requestedResources = request.GetResources();
+            if (requestedResources.Any())
             {
-                resources.Add(resource);
+                resources.AddRange(requestedResources);
             }
+            else
+            {
+                // Fallback: Get resources associated with requested scopes
+                await foreach (var resource in _scopeManager.ListResourcesAsync(principal.GetScopes()))
+                {
+                    resources.Add(resource);
+                }
+            }
+
             principal.SetResources(resources);
 
             return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);

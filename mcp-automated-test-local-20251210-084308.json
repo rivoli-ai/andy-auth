@@ -1,0 +1,18 @@
+{
+  "test_timestamp": "2025-12-10T16:43:08Z",
+  "environment": "local",
+  "authorization_server": "https://localhost:7088",
+  "resource": "https://localhost:7001/mcp",
+  "test_type": "automated",
+  "results": {
+    "discovery": "PASS",
+    "client_registration": "PASS",
+    "client_credentials_flow": "PASS",
+    "resource_parameter": "PASS",
+    "token_introspection": "PASS",
+    "audience_binding": "PASS",
+    "token_revocation": "PASS",
+    "client_cleanup": "PASS"
+  },
+  "mcp_compliance": "FULL"
+}
