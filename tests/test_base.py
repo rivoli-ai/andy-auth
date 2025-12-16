@@ -25,6 +25,7 @@ class TestResult:
     passed: bool
     duration_ms: float
     message: str = ""
+    description: str = ""  # Human-readable description of what the test does
     details: Dict[str, Any] = field(default_factory=dict)
     error: Optional[str] = None
 

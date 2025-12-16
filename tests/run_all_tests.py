@@ -179,6 +179,12 @@ def generate_html_report(
             font-size: 0.9em;
             margin-top: 3px;
         }}
+        .test-description {{
+            color: #4b5563;
+            font-size: 0.85em;
+            margin-top: 2px;
+            font-style: italic;
+        }}
         .test-error {{
             color: #ef4444;
             font-size: 0.85em;
@@ -265,12 +271,16 @@ def generate_html_report(
             error_html = ""
             if result.error:
                 error_html = f'<div class="test-error">{result.error[:300]}</div>'
+            description_html = ""
+            if result.description:
+                description_html = f'<div class="test-description">{result.description}</div>'
 
             html += f"""
                 <li class="test-item">
                     <div class="test-status {status_class}">{icon}</div>
                     <div class="test-info">
                         <div class="test-name">{result.name}</div>
+                        {description_html}
                         <div class="test-message">{result.message}</div>
                         {error_html}
                     </div>

@@ -16,6 +16,7 @@ from config import (
 def test_discovery_endpoint(client: OAuthTestClient, runner: TestRunner) -> Dict[str, Any]:
     """Test OpenID Connect discovery document"""
     start = time.time()
+    desc = "Fetches the OpenID Connect discovery document from /.well-known/openid-configuration to verify the server is properly configured."
 
     try:
         response = client.get("/.well-known/openid-configuration")
@@ -36,6 +37,7 @@ def test_discovery_endpoint(client: OAuthTestClient, runner: TestRunner) -> Dict
                     passed=True,
                     duration_ms=duration,
                     message=f"All required fields present",
+                    description=desc,
                     details={"issuer": data.get("issuer")}
                 ))
             else:
@@ -43,7 +45,8 @@ def test_discovery_endpoint(client: OAuthTestClient, runner: TestRunner) -> Dict
                     name="Discovery - Document Available",
                     passed=False,
                     duration_ms=duration,
-                    message=f"Missing fields: {missing_fields}"
+                    message=f"Missing fields: {missing_fields}",
+                    description=desc
                 ))
 
             return data
@@ -53,6 +56,7 @@ def test_discovery_endpoint(client: OAuthTestClient, runner: TestRunner) -> Dict
                 passed=False,
                 duration_ms=duration,
                 message=f"Expected 200, got {response.status_code}",
+                description=desc,
                 error=response.text[:500]
             ))
             return {}
@@ -62,6 +66,7 @@ def test_discovery_endpoint(client: OAuthTestClient, runner: TestRunner) -> Dict
             name="Discovery - Document Available",
             passed=False,
             duration_ms=(time.time() - start) * 1000,
+            description=desc,
             error=str(e)
         ))
         return {}
