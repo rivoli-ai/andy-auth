@@ -100,13 +100,13 @@ public class AuthorizationControllerTests
 
         var claims = new List<Claim>
         {
-            new Claim(Claims.Subject, userId),
-            new Claim(Claims.Scope, Scopes.Email),
-            new Claim(Claims.Scope, Scopes.Profile),
-            new Claim(Claims.Scope, Scopes.Roles)
+            new Claim(Claims.Subject, userId)
         };
         var identity = new ClaimsIdentity(claims, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
+
+        // Set scopes using OpenIddict's SetScopes extension to ensure proper claim type
+        principal.SetScopes(Scopes.Email, Scopes.Profile, Scopes.Roles);
 
         _httpContext.User = principal;
         _mockUserManager.Setup(m => m.FindByIdAsync(userId))
@@ -150,11 +150,13 @@ public class AuthorizationControllerTests
 
         var claims = new List<Claim>
         {
-            new Claim(Claims.Subject, userId),
-            new Claim(Claims.Scope, Scopes.Email)
+            new Claim(Claims.Subject, userId)
         };
         var identity = new ClaimsIdentity(claims, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
+
+        // Set scopes using OpenIddict's SetScopes extension to ensure proper claim type
+        principal.SetScopes(Scopes.Email);
 
         _httpContext.User = principal;
         _mockUserManager.Setup(m => m.FindByIdAsync(userId))
@@ -196,11 +198,13 @@ public class AuthorizationControllerTests
 
         var claims = new List<Claim>
         {
-            new Claim(Claims.Subject, userId),
-            new Claim(Claims.Scope, Scopes.Profile)
+            new Claim(Claims.Subject, userId)
         };
         var identity = new ClaimsIdentity(claims, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
+
+        // Set scopes using OpenIddict's SetScopes extension to ensure proper claim type
+        principal.SetScopes(Scopes.Profile);
 
         _httpContext.User = principal;
         _mockUserManager.Setup(m => m.FindByIdAsync(userId))
@@ -238,11 +242,13 @@ public class AuthorizationControllerTests
 
         var claims = new List<Claim>
         {
-            new Claim(Claims.Subject, userId),
-            new Claim(Claims.Scope, Scopes.Roles)
+            new Claim(Claims.Subject, userId)
         };
         var identity = new ClaimsIdentity(claims, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
+
+        // Set scopes using OpenIddict's SetScopes extension to ensure proper claim type
+        principal.SetScopes(Scopes.Roles);
 
         _httpContext.User = principal;
         _mockUserManager.Setup(m => m.FindByIdAsync(userId))

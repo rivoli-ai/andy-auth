@@ -131,9 +131,11 @@ builder.Services.AddOpenIddict()
     // Register the OpenIddict server components
     .AddServer(options =>
     {
-        // Enable the authorization, token, userinfo, and logout endpoints
+        // Enable the authorization, token, userinfo, logout, introspection, and revocation endpoints
         options.SetAuthorizationEndpointUris("connect/authorize")
             .SetTokenEndpointUris("connect/token")
+            .SetUserinfoEndpointUris("connect/userinfo")
+            .SetLogoutEndpointUris("connect/logout")
             .SetIntrospectionEndpointUris("connect/introspect")
             .SetRevocationEndpointUris("connect/revoke");
 
@@ -208,6 +210,8 @@ builder.Services.AddOpenIddict()
         var aspNetCoreBuilder = options.UseAspNetCore()
             .EnableAuthorizationEndpointPassthrough()
             .EnableTokenEndpointPassthrough()
+            .EnableUserinfoEndpointPassthrough()
+            .EnableLogoutEndpointPassthrough()
             .EnableStatusCodePagesIntegration();
 
         // Allow HTTP for local development and testing (CI environment)

@@ -89,13 +89,13 @@ public class DbSeederTests
         // Act
         await seeder.SeedAsync();
 
-        // Assert - lexipro-api won't be recreated, but claude-desktop, chatgpt, cline, roo, continue-dev are always deleted and recreated
-        // So we expect 5 CreateAsync calls for the always-recreated clients
+        // Assert - lexipro-api, claude-desktop, chatgpt, cline, roo, continue-dev are always deleted and recreated
+        // So we expect 6 CreateAsync calls for the always-recreated clients
         _mockAppManager.Verify(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default),
-            Times.Exactly(5));
-        // And 5 DeleteAsync calls
+            Times.Exactly(6));
+        // And 6 DeleteAsync calls
         _mockAppManager.Verify(m => m.DeleteAsync(It.IsAny<object>(), default),
-            Times.Exactly(5));
+            Times.Exactly(6));
     }
 
     [Fact]

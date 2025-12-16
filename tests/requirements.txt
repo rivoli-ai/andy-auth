@@ -1,0 +1,18 @@
+# Andy Auth Test Suite Dependencies
+#
+# Install with: pip install -r requirements.txt
+
+# HTTP client for API testing
+requests>=2.31.0
+
+# HTML parsing for form handling
+beautifulsoup4>=4.12.0
+
+# Disable SSL warnings
+urllib3>=2.0.0
+
+# For better HTML parsing
+lxml>=4.9.0
+
+# Optional: for JWT decoding to inspect tokens (not required)
+# PyJWT>=2.8.0

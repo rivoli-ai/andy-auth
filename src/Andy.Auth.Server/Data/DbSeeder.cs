@@ -72,47 +72,53 @@ public class DbSeeder
         var manager = _serviceProvider.GetRequiredService<IOpenIddictApplicationManager>();
 
         // Lexipro API Client (for MCP)
-        if (await manager.FindByClientIdAsync("lexipro-api") == null)
+        // Delete existing client if it exists (to ensure clean slate with updated permissions)
+        var lexiproApiClient = await manager.FindByClientIdAsync("lexipro-api");
+        if (lexiproApiClient != null)
         {
-            await manager.CreateAsync(new OpenIddictApplicationDescriptor
-            {
-                ClientId = "lexipro-api",
-                ClientSecret = "lexipro-secret-change-in-production",
-                DisplayName = "Lexipro API",
-                ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-                Permissions =
-                {
-                    OpenIddictConstants.Permissions.Endpoints.Authorization,
-                    OpenIddictConstants.Permissions.Endpoints.Token,
-                    OpenIddictConstants.Permissions.Endpoints.Introspection,
-                    OpenIddictConstants.Permissions.Endpoints.Revocation,
-
-                    OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                    OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-                    OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
-
-                    OpenIddictConstants.Permissions.Scopes.Email,
-                    OpenIddictConstants.Permissions.Scopes.Profile,
-                    OpenIddictConstants.Permissions.Scopes.Roles,
-
-                    OpenIddictConstants.Permissions.ResponseTypes.Code
-                },
-                RedirectUris =
-                {
-                    new Uri("https://localhost:7001/callback"),
-                    new Uri("https://lexipro-api-uat.rivoli.ai/callback"),
-                    new Uri("https://lexipro-api.rivoli.ai/callback")
-                },
-                PostLogoutRedirectUris =
-                {
-                    new Uri("https://localhost:7001/"),
-                    new Uri("https://lexipro-api-uat.rivoli.ai/"),
-                    new Uri("https://lexipro-api.rivoli.ai/")
-                }
-            });
-
-            _logger.LogInformation("Created OAuth client: lexipro-api");
+            await manager.DeleteAsync(lexiproApiClient);
+            _logger.LogInformation("Deleted existing OAuth client: lexipro-api");
         }
+
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "lexipro-api",
+            ClientSecret = "lexipro-secret-change-in-production",
+            DisplayName = "Lexipro API",
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+                OpenIddictConstants.Permissions.Endpoints.Introspection,
+                OpenIddictConstants.Permissions.Endpoints.Revocation,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+                OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Scopes.Roles,
+                "scp:urn:lexipro-api",  // Permission to request lexipro-api resource
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                new Uri("https://localhost:7001/callback"),
+                new Uri("https://lexipro-api-uat.rivoli.ai/callback"),
+                new Uri("https://lexipro-api.rivoli.ai/callback")
+            },
+            PostLogoutRedirectUris =
+            {
+                new Uri("https://localhost:7001/"),
+                new Uri("https://lexipro-api-uat.rivoli.ai/"),
+                new Uri("https://lexipro-api.rivoli.ai/")
+            }
+        });
+
+        _logger.LogInformation("Created OAuth client: lexipro-api with updated permissions");
 
         // Wagram Web Client
         var wagramClient = await manager.FindByClientIdAsync("wagram-web");
@@ -516,12 +522,17 @@ public class DbSeeder
             }
         }
 
-        // Create test user only in development
-        var isDevelopment = _configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Development";
-        if (isDevelopment)
+        // Create test user in non-production environments (Development, UAT, Staging)
+        var environment = _configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") ??
+                          Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+        var isNonProduction = environment != "Production";
+
+        if (isNonProduction)
         {
             const string testEmail = "test@andy.local";
-            if (await userManager.FindByEmailAsync(testEmail) == null)
+            var existingTestUser = await userManager.FindByEmailAsync(testEmail);
+
+            if (existingTestUser == null)
             {
                 var testUser = new ApplicationUser
                 {
@@ -538,11 +549,30 @@ public class DbSeeder
                 {
                     // Assign User role to test user (not Admin)
                     await userManager.AddToRoleAsync(testUser, "User");
-                    _logger.LogInformation("Created test user: {Email} with password 'Test123!'", testEmail);
+                    _logger.LogInformation("Created test user: {Email} with password 'Test123!' in {Environment} environment", testEmail, environment);
                 }
                 else
                 {
                     _logger.LogWarning("Failed to create test user: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
+                }
+            }
+            else
+            {
+                // Reset password for existing test user to ensure it's always Test123!
+                var token = await userManager.GeneratePasswordResetTokenAsync(existingTestUser);
+                var resetResult = await userManager.ResetPasswordAsync(existingTestUser, token, "Test123!");
+                if (resetResult.Succeeded)
+                {
+                    _logger.LogInformation("Reset password for test user: {Email}", testEmail);
+                }
+
+                // Clear any lockout
+                if (existingTestUser.AccessFailedCount > 0 || existingTestUser.LockoutEnd != null)
+                {
+                    existingTestUser.AccessFailedCount = 0;
+                    existingTestUser.LockoutEnd = null;
+                    await userManager.UpdateAsync(existingTestUser);
+                    _logger.LogInformation("Cleared lockout for test user: {Email}", testEmail);
                 }
             }
         }
