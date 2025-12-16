@@ -424,16 +424,72 @@ public class DbSeeder
         _logger.LogInformation("Created OAuth client: continue-dev");
     }
 
+    /// <summary>
+    /// Generates a random password that meets ASP.NET Identity requirements
+    /// </summary>
+    private static string GenerateRandomPassword()
+    {
+        const string upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const string lowerCase = "abcdefghijklmnopqrstuvwxyz";
+        const string digits = "0123456789";
+        const string special = "!@#$%^&*";
+
+        var random = new Random();
+        var password = new char[16];
+
+        // Ensure at least one of each required character type
+        password[0] = upperCase[random.Next(upperCase.Length)];
+        password[1] = lowerCase[random.Next(lowerCase.Length)];
+        password[2] = digits[random.Next(digits.Length)];
+        password[3] = special[random.Next(special.Length)];
+
+        // Fill the rest with random characters from all types
+        var allChars = upperCase + lowerCase + digits + special;
+        for (int i = 4; i < password.Length; i++)
+        {
+            password[i] = allChars[random.Next(allChars.Length)];
+        }
+
+        // Shuffle the password
+        for (int i = password.Length - 1; i > 0; i--)
+        {
+            int j = random.Next(i + 1);
+            (password[i], password[j]) = (password[j], password[i]);
+        }
+
+        return new string(password);
+    }
+
     private async Task SeedTestUserAsync()
     {
         var userManager = _serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-        // Create admin users (sam@rivoli.ai, ty@rivoli.ai, and admin@andy-auth.local)
+        // Admin user configuration
+        // Passwords are read from environment variables for security
+        // Set these in your environment or Railway variables:
+        //   ADMIN_PASSWORD_SAM - Password for sam@rivoli.ai
+        //   ADMIN_PASSWORD_TY - Password for ty@rivoli.ai
+        //   ADMIN_PASSWORD_DEFAULT - Password for admin@andy-auth.local
         var adminUsers = new[]
         {
-            new { Email = "sam@rivoli.ai", FullName = "Sam Ben Grine", Password = "REDACTED_ADMIN_PASSWORD" },
-            new { Email = "ty@rivoli.ai", FullName = "Ty Morrow", Password = "wonpic-bopjev-nuRgo2" },
-            new { Email = "admin@andy-auth.local", FullName = "System Administrator", Password = "Admin123!ChangeMe" }
+            new {
+                Email = "sam@rivoli.ai",
+                FullName = "Sam Ben Grine",
+                PasswordEnvVar = "ADMIN_PASSWORD_SAM",
+                DefaultPassword = GenerateRandomPassword() // Only used if env var not set
+            },
+            new {
+                Email = "ty@rivoli.ai",
+                FullName = "Ty Morrow",
+                PasswordEnvVar = "ADMIN_PASSWORD_TY",
+                DefaultPassword = GenerateRandomPassword()
+            },
+            new {
+                Email = "admin@andy-auth.local",
+                FullName = "System Administrator",
+                PasswordEnvVar = "ADMIN_PASSWORD_DEFAULT",
+                DefaultPassword = GenerateRandomPassword()
+            }
         };
 
         foreach (var userInfo in adminUsers)
@@ -441,6 +497,19 @@ public class DbSeeder
             var existingUser = await userManager.FindByEmailAsync(userInfo.Email);
             if (existingUser == null)
             {
+                // Get password from environment variable, or use generated default
+                var password = Environment.GetEnvironmentVariable(userInfo.PasswordEnvVar);
+                var usingEnvVar = !string.IsNullOrEmpty(password);
+
+                if (!usingEnvVar)
+                {
+                    password = userInfo.DefaultPassword;
+                    _logger.LogWarning(
+                        "No password set for {Email} via {EnvVar}. Using generated password: {Password}. " +
+                        "Set the environment variable to use a specific password.",
+                        userInfo.Email, userInfo.PasswordEnvVar, password);
+                }
+
                 var adminUser = new ApplicationUser
                 {
                     UserName = userInfo.Email,
@@ -452,12 +521,15 @@ public class DbSeeder
                     CreatedAt = DateTime.UtcNow
                 };
 
-                var result = await userManager.CreateAsync(adminUser, userInfo.Password);
+                var result = await userManager.CreateAsync(adminUser, password);
                 if (result.Succeeded)
                 {
                     // Assign Admin role
                     await userManager.AddToRoleAsync(adminUser, "Admin");
-                    _logger.LogInformation("Created system admin user: {Email} with Admin role", userInfo.Email);
+                    _logger.LogInformation(
+                        "Created system admin user: {Email} with Admin role (password from {Source})",
+                        userInfo.Email,
+                        usingEnvVar ? "environment variable" : "generated default");
                 }
                 else
                 {
@@ -467,7 +539,8 @@ public class DbSeeder
             }
             else
             {
-                // Ensure existing user has Admin role and IsSystemUser flag
+                // User already exists - just ensure they have admin role and system user flag
+                // DO NOT reset password - use the Admin UI to change passwords
                 bool needsUpdate = false;
 
                 if (!await userManager.IsInRoleAsync(existingUser, "Admin"))
@@ -490,19 +563,6 @@ public class DbSeeder
                     existingUser.LockoutEnd = null;
                     needsUpdate = true;
                     _logger.LogInformation("Cleared lockout for system user: {Email}", userInfo.Email);
-                }
-
-                // Reset password for system users to ensure it matches the expected password
-                var passwordResetToken = await userManager.GeneratePasswordResetTokenAsync(existingUser);
-                var passwordResetResult = await userManager.ResetPasswordAsync(existingUser, passwordResetToken, userInfo.Password);
-                if (passwordResetResult.Succeeded)
-                {
-                    _logger.LogInformation("Reset password for system user: {Email}", userInfo.Email);
-                }
-                else
-                {
-                    _logger.LogWarning("Failed to reset password for system user {Email}: {Errors}",
-                        userInfo.Email, string.Join(", ", passwordResetResult.Errors.Select(e => e.Description)));
                 }
 
                 if (needsUpdate)
