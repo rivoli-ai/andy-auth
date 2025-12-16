@@ -38,6 +38,7 @@ def test_client_credentials_valid(client: OAuthTestClient, runner: TestRunner):
                     passed=True,
                     duration_ms=duration,
                     message=f"Token received, expires in {data.get('expires_in')}s",
+                    description="Tests that a confidential client can obtain an access token using the client_credentials grant type with valid credentials.",
                     details={"token_type": data.get("token_type"), "expires_in": data.get("expires_in")}
                 ))
                 return data.get("access_token")
@@ -89,7 +90,8 @@ def test_client_credentials_invalid_secret(client: OAuthTestClient, runner: Test
                 name="Client Credentials - Invalid Secret",
                 passed=True,
                 duration_ms=duration,
-                message=f"Correctly rejected with {response.status_code}"
+                message=f"Correctly rejected with {response.status_code}",
+                description="Verifies the server rejects client_credentials requests with an incorrect client secret."
             ))
         else:
             runner.add_result(TestResult(
@@ -127,7 +129,8 @@ def test_client_credentials_unknown_client(client: OAuthTestClient, runner: Test
                 name="Client Credentials - Unknown Client",
                 passed=True,
                 duration_ms=duration,
-                message=f"Correctly rejected with {response.status_code}"
+                message=f"Correctly rejected with {response.status_code}",
+                description="Verifies the server rejects client_credentials requests with an unregistered client ID."
             ))
         else:
             runner.add_result(TestResult(
@@ -165,7 +168,8 @@ def test_client_credentials_public_client(client: OAuthTestClient, runner: TestR
                 name="Client Credentials - Public Client Rejection",
                 passed=True,
                 duration_ms=duration,
-                message="Public client correctly rejected"
+                message="Public client correctly rejected",
+                description="Verifies that public clients (without secrets) cannot use the client_credentials grant type."
             ))
         else:
             runner.add_result(TestResult(
@@ -202,7 +206,8 @@ def test_client_credentials_missing_params(client: OAuthTestClient, runner: Test
                 name="Client Credentials - Missing Params",
                 passed=True,
                 duration_ms=duration,
-                message="Correctly rejected missing parameters"
+                message="Correctly rejected missing parameters",
+                description="Verifies the server rejects client_credentials requests missing required client_id and client_secret."
             ))
         else:
             runner.add_result(TestResult(
@@ -243,7 +248,8 @@ def test_client_credentials_with_resource(client: OAuthTestClient, runner: TestR
                 name="Client Credentials - With Resource (MCP)",
                 passed=True,
                 duration_ms=duration,
-                message="Token received with resource parameter"
+                message="Token received with resource parameter",
+                description="Tests that client_credentials can include a resource parameter for MCP (Model Context Protocol) audience specification."
             ))
         else:
             # Resource may not be configured, log as info
@@ -252,6 +258,7 @@ def test_client_credentials_with_resource(client: OAuthTestClient, runner: TestR
                 passed=response.status_code in [200, 400],  # 400 if resource not allowed
                 duration_ms=duration,
                 message=f"Response: {response.status_code}",
+                description="Tests that client_credentials can include a resource parameter for MCP (Model Context Protocol) audience specification.",
                 details={"response": response.text[:200]}
             ))
     except Exception as e:

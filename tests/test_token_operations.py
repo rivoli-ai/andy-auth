@@ -85,7 +85,8 @@ def test_refresh_token_invalid(client: OAuthTestClient, runner: TestRunner):
                 name="Refresh Token - Invalid Token Rejected",
                 passed=True,
                 duration_ms=duration,
-                message=f"Correctly rejected with {response.status_code}"
+                message=f"Correctly rejected with {response.status_code}",
+                description="Verifies the token endpoint rejects refresh_token grants with invalid/expired refresh tokens."
             ))
         else:
             runner.add_result(TestResult(
@@ -131,6 +132,7 @@ def test_token_introspection_valid(
                 passed=is_active,
                 duration_ms=duration,
                 message=f"Token active: {is_active}",
+                description="Verifies the introspection endpoint correctly identifies valid tokens as active (RFC 7662).",
                 details=data
             ))
         else:
@@ -173,7 +175,8 @@ def test_token_introspection_invalid(client: OAuthTestClient, runner: TestRunner
                 name="Token Introspection - Invalid Token",
                 passed=not is_active,  # Should be inactive
                 duration_ms=duration,
-                message=f"Token correctly marked inactive: {not is_active}"
+                message=f"Token correctly marked inactive: {not is_active}",
+                description="Verifies the introspection endpoint correctly identifies invalid/expired tokens as inactive (RFC 7662)."
             ))
         else:
             runner.add_result(TestResult(
@@ -208,7 +211,8 @@ def test_token_introspection_no_credentials(client: OAuthTestClient, runner: Tes
                 name="Token Introspection - No Credentials Rejected",
                 passed=True,
                 duration_ms=duration,
-                message=f"Correctly rejected with {response.status_code}"
+                message=f"Correctly rejected with {response.status_code}",
+                description="Verifies the introspection endpoint requires client authentication and rejects unauthenticated requests."
             ))
         else:
             runner.add_result(TestResult(
@@ -251,7 +255,8 @@ def test_token_revocation_valid(
                 name="Token Revocation - Valid Token",
                 passed=True,
                 duration_ms=duration,
-                message="Token revoked successfully"
+                message="Token revoked successfully",
+                description="Tests that valid tokens can be revoked through the revocation endpoint (RFC 7009)."
             ))
 
             # Verify token is now inactive
@@ -268,7 +273,8 @@ def test_token_revocation_valid(
                         name="Token Revocation - Verify Inactive",
                         passed=True,
                         duration_ms=(time.time() - start) * 1000 - duration,
-                        message="Revoked token correctly shows as inactive"
+                        message="Revoked token correctly shows as inactive",
+                        description="Confirms that after revocation, token introspection correctly reports the token as inactive."
                     ))
                 else:
                     runner.add_result(TestResult(
@@ -315,7 +321,8 @@ def test_token_revocation_invalid(client: OAuthTestClient, runner: TestRunner):
                 name="Token Revocation - Invalid Token (RFC 7009)",
                 passed=True,
                 duration_ms=duration,
-                message="Returns 200 for invalid token (per RFC 7009)"
+                message="Returns 200 for invalid token (per RFC 7009)",
+                description="Verifies RFC 7009 compliance: revocation should return 200 OK even for invalid/unknown tokens."
             ))
         else:
             runner.add_result(TestResult(
@@ -371,7 +378,8 @@ def test_userinfo_valid_token(
                 name="Userinfo - Client Credentials Token (No User Context)",
                 passed=True,
                 duration_ms=duration,
-                message=f"Correctly rejected client credentials token ({response.status_code})"
+                message=f"Correctly rejected client credentials token ({response.status_code})",
+                description="Verifies the userinfo endpoint correctly rejects client credentials tokens which have no user context."
             ))
         else:
             runner.add_result(TestResult(
@@ -405,7 +413,8 @@ def test_userinfo_no_token(client: OAuthTestClient, runner: TestRunner):
                 name="Userinfo - No Token Rejected",
                 passed=True,
                 duration_ms=duration,
-                message=f"Correctly rejected with {response.status_code}"
+                message=f"Correctly rejected with {response.status_code}",
+                description="Verifies the userinfo endpoint requires a Bearer token and rejects requests without authentication."
             ))
         else:
             runner.add_result(TestResult(
@@ -441,7 +450,8 @@ def test_userinfo_invalid_token(client: OAuthTestClient, runner: TestRunner):
                 name="Userinfo - Invalid Token Rejected",
                 passed=True,
                 duration_ms=duration,
-                message=f"Correctly rejected with {response.status_code}"
+                message=f"Correctly rejected with {response.status_code}",
+                description="Verifies the userinfo endpoint validates tokens and rejects invalid/malformed tokens."
             ))
         else:
             runner.add_result(TestResult(
