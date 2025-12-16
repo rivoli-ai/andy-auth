@@ -4,6 +4,9 @@ __pycache__/
 *$py.class
 *.so
 
+# Environment files with secrets (use .env.example as template)
+.env
+
 # Virtual environments
 .venv/
 venv/

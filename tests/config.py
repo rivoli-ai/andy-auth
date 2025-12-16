@@ -2,10 +2,21 @@
 Andy Auth Test Configuration
 
 Configuration for testing Andy Auth server in different environments.
+
+IMPORTANT: Credentials are loaded from environment variables or .env file.
+Never commit actual passwords to the repository.
 """
 
+import os
 from dataclasses import dataclass
 from typing import Dict, List, Optional
+
+# Try to load from .env file if python-dotenv is available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not required, can use environment variables directly
 
 
 @dataclass
@@ -38,7 +49,7 @@ class EnvironmentConfig:
 CLIENTS: Dict[str, ClientConfig] = {
     "lexipro-api": ClientConfig(
         client_id="lexipro-api",
-        client_secret="lexipro-secret-change-in-production",
+        client_secret=os.environ.get("ANDY_AUTH_CLIENT_SECRET", "lexipro-secret-change-in-production"),
         is_confidential=True,
         redirect_uris=[
             "https://localhost:7001/callback",
@@ -137,24 +148,34 @@ CLIENTS: Dict[str, ClientConfig] = {
 }
 
 # Environment configurations
+# Credentials are loaded from environment variables for security
+# Set these in your environment or in a .env file (not committed to git):
+#   ANDY_AUTH_TEST_PASSWORD - Password for test@andy.local
+#   ANDY_AUTH_ADMIN_PASSWORD - Password for admin user (optional, for admin tests)
+#   ANDY_AUTH_CLIENT_SECRET - Client secret for lexipro-api (optional)
+
+def _get_env(key: str, default: str = "") -> str:
+    """Get environment variable with fallback"""
+    return os.environ.get(key, default)
+
 ENVIRONMENTS: Dict[str, EnvironmentConfig] = {
     "local": EnvironmentConfig(
         name="Local Development",
         base_url="https://localhost:7088",
         verify_ssl=False,
         test_username="test@andy.local",
-        test_password="Test123!",
+        test_password=_get_env("ANDY_AUTH_TEST_PASSWORD", "Test123!"),
         admin_username="sam@rivoli.ai",
-        admin_password="REDACTED_ADMIN_PASSWORD"
+        admin_password=_get_env("ANDY_AUTH_ADMIN_PASSWORD", "")  # Must be set via env var
     ),
     "uat": EnvironmentConfig(
         name="UAT (Railway)",
         base_url="https://andy-auth-uat-api-production.up.railway.app",
         verify_ssl=True,
         test_username="test@andy.local",  # Test user created in UAT
-        test_password="Test123!",
+        test_password=_get_env("ANDY_AUTH_TEST_PASSWORD", "Test123!"),
         admin_username="sam@rivoli.ai",
-        admin_password="REDACTED_ADMIN_PASSWORD",
+        admin_password=_get_env("ANDY_AUTH_ADMIN_PASSWORD", ""),  # Must be set via env var
         rate_limit_delay=2.5  # Increased rate limits: 30 req/min for most endpoints
     ),
 }
