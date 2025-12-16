@@ -470,22 +470,24 @@ def run_token_operations_tests(
     rate_limit = getattr(env, 'rate_limit_delay', 0.5)
     client = OAuthTestClient(env.base_url, env.verify_ssl, rate_limit)
 
-    # If no tokens provided, get one via client credentials for testing
-    if not access_token:
-        config = get_client("lexipro-api")
-        response = client.post("/connect/token", data={
-            "grant_type": "client_credentials",
-            "client_id": config.client_id,
-            "client_secret": config.client_secret,
-            "scope": "urn:lexipro-api"
-        })
-        if response.status_code == 200:
-            data = response.json()
-            access_token = data.get("access_token")
+    # Get a fresh client credentials token for introspection tests
+    # Note: Tokens from auth code flow may be reference tokens that can only be introspected
+    # by the issuing client, so we use a client credentials token for reliable testing
+    introspection_token = None
+    config = get_client("lexipro-api")
+    response = client.post("/connect/token", data={
+        "grant_type": "client_credentials",
+        "client_id": config.client_id,
+        "client_secret": config.client_secret,
+        "scope": "urn:lexipro-api"
+    })
+    if response.status_code == 200:
+        data = response.json()
+        introspection_token = data.get("access_token")
 
-    # Run introspection tests
-    if access_token:
-        test_token_introspection_valid(client, runner, access_token)
+    # Run introspection tests with the client credentials token
+    if introspection_token:
+        test_token_introspection_valid(client, runner, introspection_token)
     test_token_introspection_invalid(client, runner)
     test_token_introspection_no_credentials(client, runner)
 

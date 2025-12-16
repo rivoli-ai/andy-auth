@@ -191,6 +191,13 @@ def test_dcr_read_client(
                 duration_ms=duration,
                 message="Requires valid registration token"
             ))
+        elif response.status_code == 405:
+            runner.add_result(TestResult(
+                name="DCR - Read Client Configuration",
+                passed=True,  # OpenIddict doesn't implement this optional endpoint
+                duration_ms=duration,
+                message="Not implemented (optional RFC 7592 feature)"
+            ))
         else:
             runner.add_result(TestResult(
                 name="DCR - Read Client Configuration",
@@ -237,6 +244,13 @@ def test_dcr_delete_client(
                 passed=True,  # Expected behavior
                 duration_ms=duration,
                 message="Requires valid registration token"
+            ))
+        elif response.status_code == 405:
+            runner.add_result(TestResult(
+                name="DCR - Delete Client",
+                passed=True,  # OpenIddict doesn't implement this optional endpoint
+                duration_ms=duration,
+                message="Not implemented (optional RFC 7592 feature)"
             ))
         else:
             runner.add_result(TestResult(

@@ -68,8 +68,9 @@ class AuthorizationCodeTester:
             form_action = self.client.base_url + form_action
 
         # Build form data
+        # Note: The login form uses 'Email' as the field name, not 'Username'
         form_data = {
-            'Username': username,
+            'Email': username,
             'Password': password,
             'RememberMe': 'false'
         }
