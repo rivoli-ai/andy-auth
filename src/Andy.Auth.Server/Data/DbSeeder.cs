@@ -121,62 +121,52 @@ public class DbSeeder
         _logger.LogInformation("Created OAuth client: lexipro-api with updated permissions");
 
         // Wagram Web Client
+        // Delete and recreate to ensure latest configuration
         var wagramClient = await manager.FindByClientIdAsync("wagram-web");
-        if (wagramClient == null)
+        if (wagramClient != null)
         {
-            await manager.CreateAsync(new OpenIddictApplicationDescriptor
-            {
-                ClientId = "wagram-web",
-                DisplayName = "Wagram Web Application",
-                ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-                // Public client - no secret
-                Permissions =
-                {
-                    OpenIddictConstants.Permissions.Endpoints.Authorization,
-                    OpenIddictConstants.Permissions.Endpoints.Token,
-
-                    OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                    OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-
-                    OpenIddictConstants.Permissions.Scopes.Email,
-                    OpenIddictConstants.Permissions.Scopes.Profile,
-                    OpenIddictConstants.Permissions.Scopes.Roles,
-                    "scp:urn:lexipro-api",  // Permission to request lexipro-api resource
-
-                    OpenIddictConstants.Permissions.ResponseTypes.Code
-                },
-                RedirectUris =
-                {
-                    new Uri("https://localhost:4200/callback"),
-                    new Uri("https://wagram-uat.vercel.app/callback"),
-                    new Uri("https://wargram-ai-uat.vercel.app/callback"),
-                    new Uri("https://wagram.ai/callback")
-                },
-                PostLogoutRedirectUris =
-                {
-                    new Uri("https://localhost:4200/"),
-                    new Uri("https://wagram-uat.vercel.app/"),
-                    new Uri("https://wargram-ai-uat.vercel.app/"),
-                    new Uri("https://wagram.ai/")
-                }
-            });
-
-            _logger.LogInformation("Created OAuth client: wagram-web");
+            await manager.DeleteAsync(wagramClient);
+            _logger.LogInformation("Deleted existing OAuth client: wagram-web");
         }
-        else
-        {
-            // Update existing client to add permission for urn:lexipro-api resource
-            var descriptor = new OpenIddictApplicationDescriptor();
-            await manager.PopulateAsync(descriptor, wagramClient);
 
-            const string lexiproPermission = "scp:urn:lexipro-api";
-            if (!descriptor.Permissions.Contains(lexiproPermission))
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "wagram-web",
+            DisplayName = "Wagram Web Application",
+            ClientType = OpenIddictConstants.ClientTypes.Public, // Public client - no secret
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
             {
-                descriptor.Permissions.Add(lexiproPermission);
-                await manager.UpdateAsync(wagramClient, descriptor);
-                _logger.LogInformation("Updated OAuth client: wagram-web - added urn:lexipro-api permission");
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Scopes.Roles,
+                "scp:urn:lexipro-api",  // Permission to request lexipro-api resource
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                new Uri("https://localhost:4200/callback"),
+                new Uri("https://wagram-uat.vercel.app/callback"),
+                new Uri("https://wargram-ai-uat.vercel.app/callback"),
+                new Uri("https://wagram.ai/callback")
+            },
+            PostLogoutRedirectUris =
+            {
+                new Uri("https://localhost:4200/"),
+                new Uri("https://wagram-uat.vercel.app/"),
+                new Uri("https://wargram-ai-uat.vercel.app/"),
+                new Uri("https://wagram.ai/")
             }
-        }
+        });
+
+        _logger.LogInformation("Created OAuth client: wagram-web with updated redirect URIs");
 
         // Claude Desktop Client (for MCP)
         // Delete existing client if it exists (to ensure clean slate)
