@@ -89,13 +89,13 @@ public class DbSeederTests
         // Act
         await seeder.SeedAsync();
 
-        // Assert - lexipro-api, claude-desktop, chatgpt, cline, roo, continue-dev are always deleted and recreated
-        // So we expect 6 CreateAsync calls for the always-recreated clients
+        // Assert - lexipro-api, wagram-web, claude-desktop, chatgpt, cline, roo, continue-dev are always deleted and recreated
+        // So we expect 7 CreateAsync calls for the always-recreated clients
         _mockAppManager.Verify(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default),
-            Times.Exactly(6));
-        // And 6 DeleteAsync calls
+            Times.Exactly(7));
+        // And 7 DeleteAsync calls
         _mockAppManager.Verify(m => m.DeleteAsync(It.IsAny<object>(), default),
-            Times.Exactly(6));
+            Times.Exactly(7));
     }
 
     [Fact]
@@ -246,9 +246,15 @@ public class DbSeederTests
 
         var configuration = CreateConfiguration("Development");
 
-        var existingUser = new ApplicationUser { Email = "test@andy.local" };
+        var existingUser = new ApplicationUser { Email = "test@andy.local", AccessFailedCount = 0 };
         _mockUserManager.Setup(m => m.FindByEmailAsync("test@andy.local"))
             .ReturnsAsync(existingUser);
+
+        // Mock password reset methods (DbSeeder resets test user password on startup)
+        _mockUserManager.Setup(m => m.GeneratePasswordResetTokenAsync(existingUser))
+            .ReturnsAsync("reset-token");
+        _mockUserManager.Setup(m => m.ResetPasswordAsync(existingUser, "reset-token", "Test123!"))
+            .ReturnsAsync(IdentityResult.Success);
 
         var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object);
 
