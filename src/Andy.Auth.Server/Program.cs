@@ -199,11 +199,9 @@ builder.Services.AddOpenIddict()
             "http://localhost:5154/mcp"
         );
 
-        // Enable reference tokens (opaque tokens stored in database)
-        // Reference tokens can be revoked immediately and provide better security audit trails
-        // Per-client: Use OpenIddictConstants.Settings.TokenFormat = "Opaque" for reference tokens
-        options.UseReferenceAccessTokens()
-            .UseReferenceRefreshTokens();
+        // Use reference tokens for refresh tokens only (stored in database, can be revoked)
+        // Access tokens are JWTs so they can be validated by external APIs without introspection
+        options.UseReferenceRefreshTokens();
 
         // Register the ASP.NET Core host and configure based on environment
         // Note: userinfo and logout endpoints are custom controllers, not OpenIddict passthrough
