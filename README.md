@@ -4,14 +4,14 @@ Self-hosted OAuth 2.0 / OpenID Connect server built with ASP.NET Core and OpenId
 
 ## Features
 
-- 🔐 **OAuth 2.0 & OpenID Connect** - Standards-compliant authentication server
-- 🎯 **Multiple Grant Types** - Authorization Code, Client Credentials, Refresh Tokens
-- 🔒 **PKCE Support** - Secure authentication for public clients
-- 👥 **User Management** - Complete admin UI for managing users and OAuth clients
-- 📊 **Audit Logging** - Track all authentication and authorization events
-- 🛡️ **Security Hardened** - Rate limiting, account lockout, security headers
-- 🎨 **Modern UI** - Clean, responsive design with Lexipro aesthetic
-- 🧪 **Well Tested** - 77+ passing tests with 95% success rate
+- **OAuth 2.0 & OpenID Connect** - Standards-compliant authentication server
+- **Multiple Grant Types** - Authorization Code, Client Credentials, Refresh Tokens
+- **PKCE Support** - Secure authentication for public clients
+- **MCP Compatible** - Full Model Context Protocol OAuth 2.1 support for AI assistants
+- **Dynamic Client Registration** - RFC 7591/7592 compliant DCR
+- **User Management** - Complete admin UI for managing users and OAuth clients
+- **Audit Logging** - Track all authentication and authorization events
+- **Security Hardened** - Rate limiting, account lockout, security headers
 
 ## Quick Start
 
@@ -55,13 +55,7 @@ dotnet add package Andy.Auth
 builder.Services.AddAndyAuth(builder.Configuration);
 ```
 
-**Benefits:**
-- 🚀 **One-line integration** - Configure authentication with a single method call
-- 🎭 **Multi-provider support** - Andy Auth, Azure AD, Clerk, or custom OAuth
-- 📦 **ICurrentUserService** - Easy access to authenticated user claims
-- ⚡ **95% less code** - Reduces ~50 lines of JWT configuration to 1 line
-
-See [docs/LIBRARY.md](./docs/LIBRARY.md) for complete documentation and [examples/LexiproIntegration/](./examples/LexiproIntegration/) for integration guide.
+See [docs/LIBRARY.md](./docs/LIBRARY.md) for complete documentation.
 
 ## What's Included
 
@@ -70,44 +64,40 @@ See [docs/LIBRARY.md](./docs/LIBRARY.md) for complete documentation and [example
 - Token endpoint (`/connect/token`)
 - Introspection endpoint (`/connect/introspect`)
 - Revocation endpoint (`/connect/revoke`)
+- Dynamic Client Registration (`/connect/register`)
 - OpenID Discovery (`/.well-known/openid-configuration`)
 - JWKS endpoint (`/.well-known/jwks`)
 
 ### Admin Dashboard
 - **Users**: View, suspend, expire, soft delete users
 - **OAuth Clients**: Manage registered applications
+- **Tokens**: View and revoke active tokens
 - **Audit Logs**: Track all authentication events
-- **Dashboard**: Quick stats and recent activity
 
 Access at: **/Admin**
 
 ### Seeded OAuth Clients
 
-**lexipro-api** (Confidential)
-- For server-to-server communication
-- Has client secret
-- Supports authorization code + client credentials flows
-
-**wagram-web** (Public SPA)
-- For Angular/React web applications
-- PKCE required
-- Authorization code flow
-
-**claude-desktop** (Public Desktop)
-- For Claude Desktop MCP integration
-- PKCE required
-- Supports `http://127.0.0.1:*` redirect URIs
+| Client | Type | Use Case |
+|--------|------|----------|
+| `lexipro-api` | Confidential | Server-to-server communication |
+| `wagram-web` | Public SPA | Angular/React web applications |
+| `claude-desktop` | Public | Claude Desktop MCP integration |
+| `chatgpt` | Public | ChatGPT MCP integration |
+| `cline` | Public | Cline VS Code extension |
+| `roo` | Public | Roo VS Code extension |
+| `continue-dev` | Public | Continue.dev extension |
 
 ## Security Features
 
-- ✅ Rate limiting on all auth endpoints
-- ✅ Account lockout (30 min after 5 failed attempts)
-- ✅ Password requirements (8+ chars, uppercase, lowercase, digit)
-- ✅ Security headers (CSP, X-Frame-Options, HSTS, etc.)
-- ✅ CSRF protection on all forms
-- ✅ SQL injection protection (EF Core)
-- ✅ XSS protection (Razor auto-encoding)
-- ✅ HTTPS enforcement in production
+- Rate limiting on all auth endpoints
+- Account lockout (30 min after 5 failed attempts)
+- Password requirements (8+ chars, uppercase, lowercase, digit)
+- Security headers (CSP, X-Frame-Options, HSTS)
+- CSRF protection on all forms
+- SQL injection protection (EF Core)
+- XSS protection (Razor auto-encoding)
+- HTTPS enforcement in production
 
 See [docs/SECURITY.md](./docs/SECURITY.md) for complete security documentation.
 
@@ -122,9 +112,9 @@ See [docs/SECURITY.md](./docs/SECURITY.md) for complete security documentation.
 
 ## Deployment
 
-### Railway (Recommended)
+### Railway
 
-Deploy to Railway with one click:
+Deploy to Railway:
 
 1. Push to GitHub
 2. Connect Railway project
@@ -136,79 +126,40 @@ See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for complete deployment guide.
 ### Docker
 
 ```bash
-# Build image
 docker build -t andy-auth .
-
-# Run container
 docker run -p 8080:8080 andy-auth
 ```
 
 ## Documentation
 
-- [docs/LOCAL-SETUP.md](./docs/LOCAL-SETUP.md) - Development setup guide
-- [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) - System architecture
-- [docs/SECURITY.md](./docs/SECURITY.md) - Security features and best practices
-- [docs/ADMIN.md](./docs/ADMIN.md) - Admin UI documentation
-- [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) - Production deployment
-- [docs/TESTING.md](./docs/TESTING.md) - Testing guide
-- [docs/PASSKEYS.md](./docs/PASSKEYS.md) - WebAuthn/Passkeys (future)
-- [ROADMAP.md](./ROADMAP.md) - Feature roadmap
-
-## API Endpoints
-
-### OpenID Discovery
-```bash
-curl https://localhost:7088/.well-known/openid-configuration
-```
-
-### OAuth Authorization
-```
-https://localhost:7088/connect/authorize?
-  client_id=your-client-id&
-  redirect_uri=https://your-app/callback&
-  response_type=code&
-  scope=openid profile email&
-  code_challenge=...&
-  code_challenge_method=S256
-```
-
-### Token Exchange
-```bash
-curl -X POST https://localhost:7088/connect/token \
-  -d "grant_type=authorization_code" \
-  -d "code=..." \
-  -d "client_id=your-client-id" \
-  -d "redirect_uri=https://your-app/callback" \
-  -d "code_verifier=..."
-```
+| Document | Description |
+|----------|-------------|
+| [LOCAL-SETUP.md](./docs/LOCAL-SETUP.md) | Development setup guide |
+| [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture |
+| [SECURITY.md](./docs/SECURITY.md) | Security features |
+| [ADMIN.md](./docs/ADMIN.md) | Admin UI documentation |
+| [DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Production deployment |
+| [TESTING.md](./docs/TESTING.md) | Testing guide |
+| [LIBRARY.md](./docs/LIBRARY.md) | Client library documentation |
+| [ASSISTANT-INTEGRATION.md](./docs/ASSISTANT-INTEGRATION.md) | AI assistant setup |
 
 ## Testing
 
 Run all tests:
 ```bash
+# .NET unit tests
 dotnet test
+
+# Python OAuth tests (against UAT)
+cd tests/oauth-python
+ANDY_AUTH_TEST_PASSWORD="Test123!" python3 run_all_tests.py --env uat
 ```
 
-Run with coverage:
-```bash
-dotnet test --collect:"XPlat Code Coverage"
-```
-
-**Current Status:** 77/81 tests passing (95% success rate)
+**Current Status:**
+- .NET unit tests: 54/54 passed (100%)
+- Python OAuth tests: 42/42 passed (100%)
 
 See [docs/TESTING.md](./docs/TESTING.md) for testing guide.
-
-## Development Roadmap
-
-See [ROADMAP.md](./ROADMAP.md) for complete feature roadmap.
-
-**Current Phase:** Pre-UAT (Security & Testing)
-
-**Next Steps:**
-1. Complete remaining tests (Issue #1)
-2. UAT deployment to Railway (Issue #3)
-3. Multi-assistant compatibility testing (Issue #7)
-4. Production deployment (Issue #8)
 
 ## Contributing
 
@@ -220,6 +171,6 @@ Apache 2.0
 
 ---
 
-**Status:** ✅ Production-ready
+**Status:** Production (UAT deployed)
 **Version:** 1.0.0
-**Last Updated:** 2025-11-16
+**Last Updated:** 2025-12-16

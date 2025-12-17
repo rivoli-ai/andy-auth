@@ -52,3 +52,31 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xmlcoverage/
+
+# macOS
+.DS_Store
+*/.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.user
+*.suo
+
+# Coverage reports
+coverage/
+*.coverage
+*.coveragexml
+
+# NuGet package output
+nupkg/
+
+# Test reports
+*.html
+!src/**/*.html
+!docs/**/*.html
+
+# Python
+__pycache__/
+*.pyc
+.env

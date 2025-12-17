@@ -668,94 +668,95 @@ public class AdminController : Controller
 
     public async Task<IActionResult> Tokens(int page = 1, int pageSize = 50, string? search = null, string? status = null)
     {
-        var tokens = new List<TokenViewModel>();
-        var allTokens = new List<TokenViewModel>();
+        // Use EF Core directly for efficient database queries instead of loading all tokens into memory
+        var tokenDbSet = _context.Set<OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreToken>();
+        var appDbSet = _context.Set<OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication>();
 
-        // Collect all tokens
-        await foreach (var token in _tokenManager.ListAsync())
+        // Build base query
+        var query = tokenDbSet.AsQueryable();
+
+        // Apply status filter at database level
+        if (!string.IsNullOrWhiteSpace(status))
         {
-            var tokenId = await _tokenManager.GetIdAsync(token);
-            var subject = await _tokenManager.GetSubjectAsync(token);
-            var applicationId = await _tokenManager.GetApplicationIdAsync(token);
-            var createdAt = await _tokenManager.GetCreationDateAsync(token);
-            var expiresAt = await _tokenManager.GetExpirationDateAsync(token);
-            var tokenStatus = await _tokenManager.GetStatusAsync(token);
-            var tokenType = await _tokenManager.GetTypeAsync(token);
-
-            // Get application name
-            string? applicationName = null;
-            if (!string.IsNullOrEmpty(applicationId))
-            {
-                var app = await _applicationManager.FindByIdAsync(applicationId);
-                if (app != null)
-                {
-                    applicationName = await _applicationManager.GetDisplayNameAsync(app);
-                }
-            }
-
-            // Get user email
-            string? userEmail = null;
-            if (!string.IsNullOrEmpty(subject))
-            {
-                var user = await _userManager.FindByIdAsync(subject);
-                if (user != null)
-                {
-                    userEmail = user.Email;
-                }
-            }
-
-            allTokens.Add(new TokenViewModel
-            {
-                Id = tokenId ?? "",
-                Subject = subject,
-                UserEmail = userEmail,
-                ApplicationId = applicationId,
-                ApplicationName = applicationName,
-                CreatedAt = createdAt?.DateTime,
-                ExpiresAt = expiresAt?.DateTime,
-                Status = tokenStatus ?? "Unknown",
-                Type = tokenType ?? "Unknown"
-            });
+            query = query.Where(t => t.Status == status.ToLower());
         }
 
-        // Apply filters
-        var filtered = allTokens.AsEnumerable();
+        // Get total counts for statistics (efficient COUNT queries)
+        var totalTokens = await tokenDbSet.CountAsync();
+        var activeTokens = await tokenDbSet.CountAsync(t => t.Status == "valid");
+        var expiredTokens = await tokenDbSet.CountAsync(t => t.ExpirationDate != null && t.ExpirationDate < DateTime.UtcNow);
+        var revokedTokens = await tokenDbSet.CountAsync(t => t.Status == "revoked" || t.Status == "redeemed");
+
+        var stats = new TokenStatsViewModel
+        {
+            TotalTokens = totalTokens,
+            ActiveTokens = activeTokens,
+            ExpiredTokens = expiredTokens,
+            RevokedTokens = revokedTokens
+        };
+
+        // Apply search filter if provided (requires joining with users/apps)
+        IQueryable<TokenViewModel> tokenQuery;
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             var searchLower = search.ToLower();
-            filtered = filtered.Where(t =>
-                (t.UserEmail != null && t.UserEmail.ToLower().Contains(searchLower)) ||
-                (t.ApplicationName != null && t.ApplicationName.ToLower().Contains(searchLower)) ||
-                (t.Subject != null && t.Subject.ToLower().Contains(searchLower))
-            );
+            tokenQuery = from t in query
+                         join app in appDbSet on t.Application!.Id equals app.Id into apps
+                         from app in apps.DefaultIfEmpty()
+                         join user in _userManager.Users on t.Subject equals user.Id into users
+                         from user in users.DefaultIfEmpty()
+                         where (user != null && user.Email != null && user.Email.ToLower().Contains(searchLower)) ||
+                               (app != null && app.DisplayName != null && app.DisplayName.ToLower().Contains(searchLower)) ||
+                               (t.Subject != null && t.Subject.ToLower().Contains(searchLower))
+                         orderby t.CreationDate descending
+                         select new TokenViewModel
+                         {
+                             Id = t.Id,
+                             Subject = t.Subject,
+                             UserEmail = user != null ? user.Email : null,
+                             ApplicationId = app != null ? app.Id : null,
+                             ApplicationName = app != null ? app.DisplayName : null,
+                             CreatedAt = t.CreationDate,
+                             ExpiresAt = t.ExpirationDate,
+                             Status = t.Status ?? "Unknown",
+                             Type = t.Type ?? "Unknown"
+                         };
+        }
+        else
+        {
+            tokenQuery = from t in query
+                         join app in appDbSet on t.Application!.Id equals app.Id into apps
+                         from app in apps.DefaultIfEmpty()
+                         join user in _userManager.Users on t.Subject equals user.Id into users
+                         from user in users.DefaultIfEmpty()
+                         orderby t.CreationDate descending
+                         select new TokenViewModel
+                         {
+                             Id = t.Id,
+                             Subject = t.Subject,
+                             UserEmail = user != null ? user.Email : null,
+                             ApplicationId = app != null ? app.Id : null,
+                             ApplicationName = app != null ? app.DisplayName : null,
+                             CreatedAt = t.CreationDate,
+                             ExpiresAt = t.ExpirationDate,
+                             Status = t.Status ?? "Unknown",
+                             Type = t.Type ?? "Unknown"
+                         };
         }
 
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            filtered = filtered.Where(t => t.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
-        }
+        // Get filtered count for pagination
+        var filteredCount = await tokenQuery.CountAsync();
 
-        // Sort by creation date descending
-        var sortedTokens = filtered.OrderByDescending(t => t.CreatedAt).ToList();
-
-        // Apply pagination
-        var totalTokens = sortedTokens.Count;
-        tokens = sortedTokens.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-
-        // Calculate statistics
-        var stats = new TokenStatsViewModel
-        {
-            TotalTokens = allTokens.Count,
-            ActiveTokens = allTokens.Count(t => t.Status.Equals("valid", StringComparison.OrdinalIgnoreCase)),
-            ExpiredTokens = allTokens.Count(t => t.ExpiresAt.HasValue && t.ExpiresAt < DateTime.UtcNow),
-            RevokedTokens = allTokens.Count(t => t.Status.Equals("revoked", StringComparison.OrdinalIgnoreCase) ||
-                                                  t.Status.Equals("redeemed", StringComparison.OrdinalIgnoreCase))
-        };
+        // Apply pagination at database level
+        var tokens = await tokenQuery
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
 
         ViewBag.CurrentPage = page;
-        ViewBag.TotalPages = (int)Math.Ceiling(totalTokens / (double)pageSize);
-        ViewBag.TotalTokens = totalTokens;
+        ViewBag.TotalPages = (int)Math.Ceiling(filteredCount / (double)pageSize);
+        ViewBag.TotalTokens = filteredCount;
         ViewBag.Search = search;
         ViewBag.Status = status;
         ViewBag.Stats = stats;
