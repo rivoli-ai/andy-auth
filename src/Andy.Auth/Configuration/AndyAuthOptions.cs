@@ -30,6 +30,13 @@ public class AndyAuthOptions
     public string? Audience { get; set; }
 
     /// <summary>
+    /// Additional valid audiences for token validation.
+    /// Useful when the API accepts tokens with different audience values
+    /// (e.g., MCP resource URLs vs API identifiers).
+    /// </summary>
+    public string[]? ValidAudiences { get; set; }
+
+    /// <summary>
     /// Azure AD configuration (required when Provider = AzureAD)
     /// </summary>
     public AzureAdOptions? AzureAd { get; set; }

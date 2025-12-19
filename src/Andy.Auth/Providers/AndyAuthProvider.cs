@@ -29,12 +29,19 @@ public class AndyAuthProvider : IAuthProvider
             // Ensure the authority ends with a trailing slash to match OpenIddict's issuer format
             var authority = options.Authority.TrimEnd('/') + "/";
 
+            // Build list of valid audiences (primary + additional)
+            var validAudiences = new List<string>();
+            if (!string.IsNullOrEmpty(options.Audience))
+                validAudiences.Add(options.Audience);
+            if (options.ValidAudiences != null)
+                validAudiences.AddRange(options.ValidAudiences);
+
             jwtOptions.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
                 ValidIssuer = authority,
-                ValidateAudience = !string.IsNullOrEmpty(options.Audience),  // Validate audience when configured
-                ValidAudience = options.Audience,
+                ValidateAudience = validAudiences.Count > 0,  // Validate audience when any are configured
+                ValidAudiences = validAudiences.Count > 0 ? validAudiences : null,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
                 ClockSkew = TimeSpan.FromMinutes(5),
