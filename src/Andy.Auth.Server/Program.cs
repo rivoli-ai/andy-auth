@@ -273,7 +273,8 @@ var app = builder.Build();
 app.UseForwardedHeaders();
 
 // Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
+// Enable developer exception page in non-production environments for debugging
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("UAT") || app.Environment.IsEnvironment("Staging"))
 {
     app.UseDeveloperExceptionPage();
 }
