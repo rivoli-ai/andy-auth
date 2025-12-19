@@ -50,18 +50,31 @@ public class ConsentController : Controller
     [HttpGet]
     public async Task<IActionResult> Index(string returnUrl)
     {
+        _logger.LogInformation("Consent page requested with returnUrl: {ReturnUrl}", returnUrl);
+
         if (string.IsNullOrEmpty(returnUrl))
         {
+            _logger.LogWarning("Consent page accessed without returnUrl");
             return BadRequest("Return URL is required.");
         }
 
-        var viewModel = await BuildConsentViewModelAsync(returnUrl);
-        if (viewModel == null)
+        try
         {
-            return BadRequest("Invalid authorization request.");
-        }
+            var viewModel = await BuildConsentViewModelAsync(returnUrl);
+            if (viewModel == null)
+            {
+                _logger.LogWarning("BuildConsentViewModelAsync returned null for returnUrl: {ReturnUrl}", returnUrl);
+                return BadRequest("Invalid authorization request.");
+            }
 
-        return View(viewModel);
+            _logger.LogInformation("Consent page rendering for client: {ClientId}", viewModel.ClientId);
+            return View(viewModel);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error building consent view model for returnUrl: {ReturnUrl}", returnUrl);
+            return BadRequest($"Error processing consent request: {ex.Message}");
+        }
     }
 
     /// <summary>
