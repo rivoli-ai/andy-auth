@@ -104,8 +104,13 @@ public class ConsentController : Controller
         }
 
         // Parse the return URL to get the authorization parameters
-        var uri = new Uri(model.ReturnUrl, UriKind.RelativeOrAbsolute);
-        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+        var queryIndex = model.ReturnUrl.IndexOf('?');
+        if (queryIndex < 0)
+        {
+            return BadRequest("No query string found in return URL.");
+        }
+        var queryString = model.ReturnUrl.Substring(queryIndex);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(queryString);
 
         if (!query.TryGetValue("client_id", out var clientIdValues) || string.IsNullOrEmpty(clientIdValues.FirstOrDefault()))
         {
