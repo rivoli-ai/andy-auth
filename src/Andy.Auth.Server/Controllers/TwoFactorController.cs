@@ -11,7 +11,7 @@ namespace Andy.Auth.Server.Controllers;
 /// <summary>
 /// Controller for managing two-factor authentication.
 /// </summary>
-[Authorize]
+[Authorize(AuthenticationSchemes = "Identity.Application")]
 public class TwoFactorController : Controller
 {
     private readonly UserManager<ApplicationUser> _userManager;

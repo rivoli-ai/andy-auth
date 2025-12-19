@@ -11,7 +11,7 @@ namespace Andy.Auth.Server.Controllers;
 /// <summary>
 /// Controller for handling OAuth consent screens.
 /// </summary>
-[Authorize]
+[Authorize(AuthenticationSchemes = "Identity.Application")]
 public class ConsentController : Controller
 {
     private readonly IOpenIddictApplicationManager _applicationManager;

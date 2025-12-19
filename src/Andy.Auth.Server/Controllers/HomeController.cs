@@ -25,7 +25,7 @@ public class HomeController : Controller
         return View();
     }
 
-    [Authorize]
+    [Authorize(AuthenticationSchemes = "Identity.Application")]
     public IActionResult UserSuccess()
     {
         // Simple page for authenticated non-admin users

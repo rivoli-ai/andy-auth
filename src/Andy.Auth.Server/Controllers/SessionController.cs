@@ -9,7 +9,7 @@ namespace Andy.Auth.Server.Controllers;
 /// <summary>
 /// Controller for managing user sessions.
 /// </summary>
-[Authorize]
+[Authorize(AuthenticationSchemes = "Identity.Application")]
 public class SessionController : Controller
 {
     private readonly SessionService _sessionService;

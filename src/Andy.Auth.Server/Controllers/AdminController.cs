@@ -7,7 +7,7 @@ using OpenIddict.Abstractions;
 
 namespace Andy.Auth.Server.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin", AuthenticationSchemes = "Identity.Application")]
 public class AdminController : Controller
 {
     private readonly ApplicationDbContext _context;
