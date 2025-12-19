@@ -45,6 +45,15 @@ public class ConsentController : Controller
     }
 
     /// <summary>
+    /// Debug endpoint to test consent page issues.
+    /// </summary>
+    [HttpGet("debug")]
+    public IActionResult Debug()
+    {
+        return Content($"Consent controller is working. User: {User.Identity?.Name ?? "anonymous"}, Authenticated: {User.Identity?.IsAuthenticated}");
+    }
+
+    /// <summary>
     /// Displays the consent screen.
     /// </summary>
     [HttpGet]
@@ -60,6 +69,26 @@ public class ConsentController : Controller
 
         try
         {
+            _logger.LogInformation("Step 1: Parsing returnUrl");
+            var uri = new Uri(returnUrl, UriKind.RelativeOrAbsolute);
+            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+            _logger.LogInformation("Step 2: Extracting client_id");
+            if (!query.TryGetValue("client_id", out var clientIdValues) || string.IsNullOrEmpty(clientIdValues.FirstOrDefault()))
+            {
+                return BadRequest("No client_id found in returnUrl.");
+            }
+            var clientId = clientIdValues.First()!;
+            _logger.LogInformation("Step 3: Looking up client {ClientId}", clientId);
+
+            var application = await _applicationManager.FindByClientIdAsync(clientId);
+            if (application == null)
+            {
+                _logger.LogWarning("Client not found: {ClientId}", clientId);
+                return BadRequest($"Client not found: {clientId}");
+            }
+
+            _logger.LogInformation("Step 4: Building view model");
             var viewModel = await BuildConsentViewModelAsync(returnUrl);
             if (viewModel == null)
             {
@@ -67,13 +96,13 @@ public class ConsentController : Controller
                 return BadRequest("Invalid authorization request.");
             }
 
-            _logger.LogInformation("Consent page rendering for client: {ClientId}", viewModel.ClientId);
+            _logger.LogInformation("Step 5: Rendering view for client: {ClientId}", viewModel.ClientId);
             return View(viewModel);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error building consent view model for returnUrl: {ReturnUrl}", returnUrl);
-            return BadRequest($"Error processing consent request: {ex.Message}");
+            return Content($"Error: {ex.GetType().Name}: {ex.Message}\n\nStack trace:\n{ex.StackTrace}");
         }
     }
 
