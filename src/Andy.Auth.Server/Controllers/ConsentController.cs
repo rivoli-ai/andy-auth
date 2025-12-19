@@ -69,26 +69,6 @@ public class ConsentController : Controller
 
         try
         {
-            _logger.LogInformation("Step 1: Parsing returnUrl");
-            var uri = new Uri(returnUrl, UriKind.RelativeOrAbsolute);
-            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
-
-            _logger.LogInformation("Step 2: Extracting client_id");
-            if (!query.TryGetValue("client_id", out var clientIdValues) || string.IsNullOrEmpty(clientIdValues.FirstOrDefault()))
-            {
-                return BadRequest("No client_id found in returnUrl.");
-            }
-            var clientId = clientIdValues.First()!;
-            _logger.LogInformation("Step 3: Looking up client {ClientId}", clientId);
-
-            var application = await _applicationManager.FindByClientIdAsync(clientId);
-            if (application == null)
-            {
-                _logger.LogWarning("Client not found: {ClientId}", clientId);
-                return BadRequest($"Client not found: {clientId}");
-            }
-
-            _logger.LogInformation("Step 4: Building view model");
             var viewModel = await BuildConsentViewModelAsync(returnUrl);
             if (viewModel == null)
             {
@@ -96,7 +76,7 @@ public class ConsentController : Controller
                 return BadRequest("Invalid authorization request.");
             }
 
-            _logger.LogInformation("Step 5: Rendering view for client: {ClientId}", viewModel.ClientId);
+            _logger.LogInformation("Consent page rendering for client: {ClientId}", viewModel.ClientId);
             return View(viewModel);
         }
         catch (Exception ex)
@@ -256,8 +236,15 @@ public class ConsentController : Controller
     private async Task<ConsentViewModel?> BuildConsentViewModelAsync(string returnUrl)
     {
         // Parse the return URL to get authorization parameters
-        var uri = new Uri(returnUrl, UriKind.RelativeOrAbsolute);
-        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+        // Handle both relative and absolute URLs by extracting query string directly
+        var queryIndex = returnUrl.IndexOf('?');
+        if (queryIndex < 0)
+        {
+            _logger.LogWarning("No query string found in returnUrl: {ReturnUrl}", returnUrl);
+            return null;
+        }
+        var queryString = returnUrl.Substring(queryIndex);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(queryString);
 
         if (!query.TryGetValue("client_id", out var clientIdValues) || string.IsNullOrEmpty(clientIdValues.FirstOrDefault()))
         {
