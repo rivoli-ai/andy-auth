@@ -22,6 +22,7 @@ public class AuthorizationController : ControllerBase
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _dbContext;
+    private readonly ILogger<AuthorizationController> _logger;
 
     public AuthorizationController(
         IOpenIddictApplicationManager applicationManager,
@@ -29,7 +30,8 @@ public class AuthorizationController : ControllerBase
         IOpenIddictScopeManager scopeManager,
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager,
-        ApplicationDbContext dbContext)
+        ApplicationDbContext dbContext,
+        ILogger<AuthorizationController> logger)
     {
         _applicationManager = applicationManager;
         _authorizationManager = authorizationManager;
@@ -37,6 +39,7 @@ public class AuthorizationController : ControllerBase
         _signInManager = signInManager;
         _userManager = userManager;
         _dbContext = dbContext;
+        _logger = logger;
     }
 
     [HttpGet("~/connect/authorize")]
@@ -192,8 +195,17 @@ public class AuthorizationController : ControllerBase
     [HttpPost("~/connect/token")]
     public async Task<IActionResult> Exchange()
     {
+        _logger.LogInformation("Token exchange requested. Grant type: {GrantType}, Client: {ClientId}",
+            HttpContext.Request.Form["grant_type"].ToString(),
+            HttpContext.Request.Form["client_id"].ToString());
+
         var request = HttpContext.GetOpenIddictServerRequest() ??
             throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+
+        _logger.LogInformation("Token request parsed. IsAuthCode: {IsAuthCode}, IsRefresh: {IsRefresh}, IsClientCreds: {IsClientCreds}",
+            request.IsAuthorizationCodeGrantType(),
+            request.IsRefreshTokenGrantType(),
+            request.IsClientCredentialsGrantType());
 
         if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType())
         {
@@ -250,6 +262,11 @@ public class AuthorizationController : ControllerBase
             // Update last login time
             user.LastLoginAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(user);
+
+            _logger.LogInformation("Token exchange successful for user {UserId}, client {ClientId}. Scopes: {Scopes}, Resources: {Resources}",
+                user.Id, request.ClientId,
+                string.Join(" ", principal.GetScopes()),
+                string.Join(" ", principal.GetResources()));
 
             return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }

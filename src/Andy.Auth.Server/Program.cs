@@ -273,12 +273,13 @@ var app = builder.Build();
 app.UseForwardedHeaders();
 
 // Configure the HTTP request pipeline
-// TEMPORARY: Enable developer exception page to debug consent issue
-// TODO: Remove after fixing the issue
-app.UseDeveloperExceptionPage();
-
-if (!app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
 {
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/Error");
     app.UseHsts();
 }
 

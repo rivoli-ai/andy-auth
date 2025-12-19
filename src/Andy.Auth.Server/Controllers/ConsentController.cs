@@ -45,45 +45,24 @@ public class ConsentController : Controller
     }
 
     /// <summary>
-    /// Debug endpoint to test consent page issues.
-    /// </summary>
-    [HttpGet("debug")]
-    public IActionResult Debug()
-    {
-        return Content($"Consent controller is working. User: {User.Identity?.Name ?? "anonymous"}, Authenticated: {User.Identity?.IsAuthenticated}");
-    }
-
-    /// <summary>
     /// Displays the consent screen.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index(string returnUrl)
     {
-        _logger.LogInformation("Consent page requested with returnUrl: {ReturnUrl}", returnUrl);
-
         if (string.IsNullOrEmpty(returnUrl))
         {
-            _logger.LogWarning("Consent page accessed without returnUrl");
             return BadRequest("Return URL is required.");
         }
 
-        try
+        var viewModel = await BuildConsentViewModelAsync(returnUrl);
+        if (viewModel == null)
         {
-            var viewModel = await BuildConsentViewModelAsync(returnUrl);
-            if (viewModel == null)
-            {
-                _logger.LogWarning("BuildConsentViewModelAsync returned null for returnUrl: {ReturnUrl}", returnUrl);
-                return BadRequest("Invalid authorization request.");
-            }
+            _logger.LogWarning("BuildConsentViewModelAsync returned null for returnUrl: {ReturnUrl}", returnUrl);
+            return BadRequest("Invalid authorization request.");
+        }
 
-            _logger.LogInformation("Consent page rendering for client: {ClientId}", viewModel.ClientId);
-            return View(viewModel);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error building consent view model for returnUrl: {ReturnUrl}", returnUrl);
-            return Content($"Error: {ex.GetType().Name}: {ex.Message}\n\nStack trace:\n{ex.StackTrace}");
-        }
+        return View(viewModel);
     }
 
     /// <summary>
