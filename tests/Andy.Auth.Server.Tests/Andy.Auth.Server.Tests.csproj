@@ -28,4 +28,8 @@
     <ProjectReference Include="..\..\src\Andy.Auth.Server\Andy.Auth.Server.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
