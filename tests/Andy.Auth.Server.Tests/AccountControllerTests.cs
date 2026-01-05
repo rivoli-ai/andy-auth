@@ -1,6 +1,7 @@
 using Andy.Auth.Server.Controllers;
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Models;
+using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +21,7 @@ public class AccountControllerTests
 {
     private readonly Mock<UserManager<ApplicationUser>> _mockUserManager;
     private readonly Mock<SignInManager<ApplicationUser>> _mockSignInManager;
+    private readonly Mock<IAuditService> _mockAuditService;
     private readonly Mock<ILogger<AccountController>> _mockLogger;
     private readonly AccountController _controller;
 
@@ -27,11 +29,13 @@ public class AccountControllerTests
     {
         _mockUserManager = MockUserManager();
         _mockSignInManager = MockSignInManager(_mockUserManager.Object);
+        _mockAuditService = new Mock<IAuditService>();
         _mockLogger = new Mock<ILogger<AccountController>>();
 
         _controller = new AccountController(
             _mockSignInManager.Object,
             _mockUserManager.Object,
+            _mockAuditService.Object,
             _mockLogger.Object);
 
         // Setup controller context for URL helper

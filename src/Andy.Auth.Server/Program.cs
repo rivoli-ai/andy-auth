@@ -235,6 +235,9 @@ builder.Services.AddAuthorization();
 // Register session management service
 builder.Services.AddScoped<SessionService>();
 
+// Register audit logging service
+builder.Services.AddScoped<IAuditService, AuditService>();
+
 // Register Dynamic Client Registration (RFC 7591)
 builder.Services.Configure<DcrSettings>(builder.Configuration.GetSection(DcrSettings.SectionName));
 builder.Services.AddScoped<DcrService>();

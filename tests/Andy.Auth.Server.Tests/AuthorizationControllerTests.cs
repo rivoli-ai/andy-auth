@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
@@ -25,6 +26,7 @@ public class AuthorizationControllerTests
     private readonly Mock<IOpenIddictScopeManager> _mockScopeManager;
     private readonly Mock<SignInManager<ApplicationUser>> _mockSignInManager;
     private readonly Mock<UserManager<ApplicationUser>> _mockUserManager;
+    private readonly Mock<ILogger<AuthorizationController>> _mockLogger;
     private readonly ApplicationDbContext _dbContext;
     private readonly AuthorizationController _controller;
     private readonly DefaultHttpContext _httpContext;
@@ -36,6 +38,7 @@ public class AuthorizationControllerTests
         _mockScopeManager = new Mock<IOpenIddictScopeManager>();
         _mockUserManager = MockUserManager();
         _mockSignInManager = MockSignInManager(_mockUserManager.Object);
+        _mockLogger = new Mock<ILogger<AuthorizationController>>();
 
         // Create in-memory database for testing
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -49,7 +52,8 @@ public class AuthorizationControllerTests
             _mockScopeManager.Object,
             _mockSignInManager.Object,
             _mockUserManager.Object,
-            _dbContext);
+            _dbContext,
+            _mockLogger.Object);
 
         _httpContext = new DefaultHttpContext();
         _controller.ControllerContext = new ControllerContext

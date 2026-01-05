@@ -1,4 +1,5 @@
 using Andy.Auth.Server.Data;
+using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +16,7 @@ public class AdminController : Controller
     private readonly IOpenIddictApplicationManager _applicationManager;
     private readonly IOpenIddictTokenManager _tokenManager;
     private readonly IOpenIddictAuthorizationManager _authorizationManager;
+    private readonly IAuditService _auditService;
     private readonly ILogger<AdminController> _logger;
 
     public AdminController(
@@ -23,6 +25,7 @@ public class AdminController : Controller
         IOpenIddictApplicationManager applicationManager,
         IOpenIddictTokenManager tokenManager,
         IOpenIddictAuthorizationManager authorizationManager,
+        IAuditService auditService,
         ILogger<AdminController> logger)
     {
         _context = context;
@@ -30,6 +33,7 @@ public class AdminController : Controller
         _applicationManager = applicationManager;
         _tokenManager = tokenManager;
         _authorizationManager = authorizationManager;
+        _auditService = auditService;
         _logger = logger;
     }
 
@@ -943,20 +947,16 @@ public class AdminController : Controller
         if (currentUser == null)
             return;
 
-        var auditLog = new AuditLog
-        {
-            Action = action,
-            PerformedById = currentUser.Id,
-            PerformedByEmail = currentUser.Email ?? "Unknown",
-            TargetUserId = targetUserId,
-            TargetUserEmail = targetUserEmail,
-            Details = details,
-            PerformedAt = DateTime.UtcNow,
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        };
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
-        _context.AuditLogs.Add(auditLog);
-        await _context.SaveChangesAsync();
+        await _auditService.LogAsync(
+            action,
+            currentUser.Id,
+            currentUser.Email ?? "Unknown",
+            targetUserId,
+            targetUserEmail,
+            details,
+            ipAddress);
     }
 
     public class ClientViewModel
