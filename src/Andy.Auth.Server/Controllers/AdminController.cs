@@ -615,6 +615,10 @@ public class AdminController : Controller
 
     public async Task<IActionResult> AuditLogs(int page = 1, int pageSize = 50, string? search = null, string? action = null, string sortBy = "PerformedAt", string sortOrder = "desc")
     {
+        // Debug: Log raw count
+        var rawCount = await _context.AuditLogs.CountAsync();
+        _logger.LogWarning("AUDIT LOGS PAGE - Raw count from database: {Count}", rawCount);
+
         // Start with all audit logs
         var query = _context.AuditLogs.AsQueryable();
 
