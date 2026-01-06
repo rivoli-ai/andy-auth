@@ -634,11 +634,11 @@ public class AdminController : Controller
         }
     }
 
-    public async Task<IActionResult> AuditLogs(int page = 1, int pageSize = 50, string? search = null, string? action = null, string sortBy = "PerformedAt", string sortOrder = "desc")
+    public async Task<IActionResult> AuditLogs(int page = 1, int pageSize = 50, string? search = null, string? actionFilter = null, string sortBy = "PerformedAt", string sortOrder = "desc")
     {
         // Debug: Log raw count and parameters
         var rawCount = await _context.AuditLogs.CountAsync();
-        _logger.LogWarning("AUDIT LOGS PAGE - Raw count: {Count}, action param: '{Action}', search: '{Search}'", rawCount, action ?? "null", search ?? "null");
+        _logger.LogWarning("AUDIT LOGS PAGE - Raw count: {Count}, actionFilter param: '{ActionFilter}', search: '{Search}'", rawCount, actionFilter ?? "null", search ?? "null");
 
         // Start with all audit logs
         var query = _context.AuditLogs.AsQueryable();
@@ -655,9 +655,9 @@ public class AdminController : Controller
         }
 
         // Apply action filter
-        if (!string.IsNullOrWhiteSpace(action))
+        if (!string.IsNullOrWhiteSpace(actionFilter))
         {
-            query = query.Where(l => l.Action == action);
+            query = query.Where(l => l.Action == actionFilter);
         }
 
         // Apply sorting
@@ -687,7 +687,7 @@ public class AdminController : Controller
         ViewBag.TotalPages = (int)Math.Ceiling(totalLogs / (double)pageSize);
         ViewBag.TotalLogs = totalLogs;
         ViewBag.Search = search;
-        ViewBag.Action = action;
+        ViewBag.ActionFilter = actionFilter;
         ViewBag.SortBy = sortBy;
         ViewBag.SortOrder = sortOrder;
         ViewBag.DistinctActions = distinctActions;

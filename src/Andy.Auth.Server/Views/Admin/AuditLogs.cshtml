@@ -5,7 +5,7 @@
     var totalPages = ViewBag.TotalPages;
     var totalLogs = ViewBag.TotalLogs;
     var search = ViewBag.Search as string;
-    var action = ViewBag.Action as string;
+    var actionFilter = ViewBag.ActionFilter as string;
     var sortBy = ViewBag.SortBy as string ?? "PerformedAt";
     var sortOrder = ViewBag.SortOrder as string ?? "desc";
     var distinctActions = ViewBag.DistinctActions as List<string> ?? new List<string>();
@@ -32,17 +32,17 @@
         <form method="get" asp-action="AuditLogs" class="filters-form">
             <div class="filters-container">
                 <input type="text" name="search" value="@search" placeholder="Search by email or details..." class="search-input" />
-                <select name="action" class="filter-select">
+                <select name="actionFilter" class="filter-select">
                     <option value="">All Actions</option>
                     @foreach (var act in distinctActions)
                     {
-                        <option value="@act" selected="@(act == action)">@act</option>
+                        <option value="@act" selected="@(act == actionFilter)">@act</option>
                     }
                 </select>
                 <input type="hidden" name="sortBy" value="@sortBy" />
                 <input type="hidden" name="sortOrder" value="@sortOrder" />
                 <button type="submit" class="btn btn-primary">Filter</button>
-                @if (!string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(action))
+                @if (!string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(actionFilter))
                 {
                     <a asp-action="AuditLogs" class="btn btn-secondary">Clear</a>
                 }
@@ -58,7 +58,7 @@
                                 var actionSortOrder = (sortBy == "Action" && sortOrder == "desc") ? "asc" : "desc";
                                 var actionSortUrl = $"?page={currentPage}&sortBy=Action&sortOrder={actionSortOrder}";
                                 if (!string.IsNullOrWhiteSpace(search)) actionSortUrl += $"&search={System.Web.HttpUtility.UrlEncode(search)}";
-                                if (!string.IsNullOrWhiteSpace(action)) actionSortUrl += $"&action={System.Web.HttpUtility.UrlEncode(action)}";
+                                if (!string.IsNullOrWhiteSpace(actionFilter)) actionSortUrl += $"&actionFilter={System.Web.HttpUtility.UrlEncode(actionFilter)}";
                                 var actionSortIcon = sortBy != "Action" ? "⇅" : (sortOrder == "asc" ? "↑" : "↓");
                             }
                             <a href="@actionSortUrl" class="sort-header">Action @actionSortIcon</a>
@@ -68,7 +68,7 @@
                                 var performedBySortOrder = (sortBy == "PerformedByEmail" && sortOrder == "desc") ? "asc" : "desc";
                                 var performedBySortUrl = $"?page={currentPage}&sortBy=PerformedByEmail&sortOrder={performedBySortOrder}";
                                 if (!string.IsNullOrWhiteSpace(search)) performedBySortUrl += $"&search={System.Web.HttpUtility.UrlEncode(search)}";
-                                if (!string.IsNullOrWhiteSpace(action)) performedBySortUrl += $"&action={System.Web.HttpUtility.UrlEncode(action)}";
+                                if (!string.IsNullOrWhiteSpace(actionFilter)) performedBySortUrl += $"&actionFilter={System.Web.HttpUtility.UrlEncode(actionFilter)}";
                                 var performedBySortIcon = sortBy != "PerformedByEmail" ? "⇅" : (sortOrder == "asc" ? "↑" : "↓");
                             }
                             <a href="@performedBySortUrl" class="sort-header">Performed By @performedBySortIcon</a>
@@ -78,7 +78,7 @@
                                 var targetUserSortOrder = (sortBy == "TargetUserEmail" && sortOrder == "desc") ? "asc" : "desc";
                                 var targetUserSortUrl = $"?page={currentPage}&sortBy=TargetUserEmail&sortOrder={targetUserSortOrder}";
                                 if (!string.IsNullOrWhiteSpace(search)) targetUserSortUrl += $"&search={System.Web.HttpUtility.UrlEncode(search)}";
-                                if (!string.IsNullOrWhiteSpace(action)) targetUserSortUrl += $"&action={System.Web.HttpUtility.UrlEncode(action)}";
+                                if (!string.IsNullOrWhiteSpace(actionFilter)) targetUserSortUrl += $"&actionFilter={System.Web.HttpUtility.UrlEncode(actionFilter)}";
                                 var targetUserSortIcon = sortBy != "TargetUserEmail" ? "⇅" : (sortOrder == "asc" ? "↑" : "↓");
                             }
                             <a href="@targetUserSortUrl" class="sort-header">Target User @targetUserSortIcon</a>
@@ -89,7 +89,7 @@
                                 var performedAtSortOrder = (sortBy == "PerformedAt" && sortOrder == "desc") ? "asc" : "desc";
                                 var performedAtSortUrl = $"?page={currentPage}&sortBy=PerformedAt&sortOrder={performedAtSortOrder}";
                                 if (!string.IsNullOrWhiteSpace(search)) performedAtSortUrl += $"&search={System.Web.HttpUtility.UrlEncode(search)}";
-                                if (!string.IsNullOrWhiteSpace(action)) performedAtSortUrl += $"&action={System.Web.HttpUtility.UrlEncode(action)}";
+                                if (!string.IsNullOrWhiteSpace(actionFilter)) performedAtSortUrl += $"&actionFilter={System.Web.HttpUtility.UrlEncode(actionFilter)}";
                                 var performedAtSortIcon = sortBy != "PerformedAt" ? "⇅" : (sortOrder == "asc" ? "↑" : "↓");
                             }
                             <a href="@performedAtSortUrl" class="sort-header">Date/Time @performedAtSortIcon</a>
@@ -184,7 +184,7 @@
             <div class="pagination">
                 @if (currentPage > 1)
                 {
-                    <a asp-action="AuditLogs" asp-route-page="@(currentPage - 1)" asp-route-search="@search" asp-route-action="@action" asp-route-sortBy="@sortBy" asp-route-sortOrder="@sortOrder" class="btn btn-sm">
+                    <a asp-action="AuditLogs" asp-route-page="@(currentPage - 1)" asp-route-search="@search" asp-route-actionFilter="@actionFilter" asp-route-sortBy="@sortBy" asp-route-sortOrder="@sortOrder" class="btn btn-sm">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -196,7 +196,7 @@
 
                 @if (currentPage < totalPages)
                 {
-                    <a asp-action="AuditLogs" asp-route-page="@(currentPage + 1)" asp-route-search="@search" asp-route-action="@action" asp-route-sortBy="@sortBy" asp-route-sortOrder="@sortOrder" class="btn btn-sm">
+                    <a asp-action="AuditLogs" asp-route-page="@(currentPage + 1)" asp-route-search="@search" asp-route-actionFilter="@actionFilter" asp-route-sortBy="@sortBy" asp-route-sortOrder="@sortOrder" class="btn btn-sm">
                         Next
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
