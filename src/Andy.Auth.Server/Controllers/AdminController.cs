@@ -614,13 +614,14 @@ public class AdminController : Controller
     }
 
     [HttpGet("Admin/AuditLogsDebug")]
+    [AllowAnonymous]
     public async Task<IActionResult> AuditLogsDebug()
     {
         try
         {
             var count = await _context.AuditLogs.CountAsync();
             var logs = await _context.AuditLogs.OrderByDescending(l => l.PerformedAt).Take(5).ToListAsync();
-            var result = $"Count: {count}\n\n";
+            var result = $"DEBUG ENDPOINT v2\nCount: {count}\n\n";
             foreach (var log in logs)
             {
                 result += $"ID: {log.Id}, Action: {log.Action}, User: {log.PerformedByEmail}, Time: {log.PerformedAt}\n";
