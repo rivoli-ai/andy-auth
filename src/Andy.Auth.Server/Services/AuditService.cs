@@ -26,8 +26,6 @@ public class AuditService : IAuditService
         string? details = null,
         string? ipAddress = null)
     {
-        _logger.LogWarning("AUDIT SERVICE - Entering LogAsync: Action={Action}, User={Email}", action, performedByEmail);
-
         try
         {
             var auditLog = new AuditLog
@@ -42,12 +40,8 @@ public class AuditService : IAuditService
                 IpAddress = ipAddress
             };
 
-            _logger.LogWarning("AUDIT SERVICE - About to add to context: Action={Action}", action);
             _context.AuditLogs.Add(auditLog);
-
-            _logger.LogWarning("AUDIT SERVICE - About to SaveChangesAsync: Action={Action}", action);
             await _context.SaveChangesAsync();
-            _logger.LogWarning("AUDIT SERVICE - SaveChangesAsync completed successfully: Action={Action}", action);
 
             _logger.LogInformation(
                 "Audit: {Action} by {PerformedByEmail} (target: {TargetUserEmail})",
@@ -58,10 +52,9 @@ public class AuditService : IAuditService
         catch (Exception ex)
         {
             _logger.LogError(ex,
-                "AUDIT SERVICE ERROR - Failed to save audit log: {Action} by {PerformedByEmail}. Error: {Error}",
+                "Failed to save audit log: {Action} by {PerformedByEmail}",
                 action,
-                performedByEmail,
-                ex.Message);
+                performedByEmail);
         }
     }
 }

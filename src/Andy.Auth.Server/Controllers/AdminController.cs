@@ -613,33 +613,8 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Users));
     }
 
-    [HttpGet("Admin/AuditLogsDebug")]
-    [AllowAnonymous]
-    public async Task<IActionResult> AuditLogsDebug()
-    {
-        try
-        {
-            var count = await _context.AuditLogs.CountAsync();
-            var logs = await _context.AuditLogs.OrderByDescending(l => l.PerformedAt).Take(5).ToListAsync();
-            var result = $"DEBUG ENDPOINT v2\nCount: {count}\n\n";
-            foreach (var log in logs)
-            {
-                result += $"ID: {log.Id}, Action: {log.Action}, User: {log.PerformedByEmail}, Time: {log.PerformedAt}\n";
-            }
-            return Content(result, "text/plain");
-        }
-        catch (Exception ex)
-        {
-            return Content($"Error: {ex.Message}\n{ex.StackTrace}", "text/plain");
-        }
-    }
-
     public async Task<IActionResult> AuditLogs(int page = 1, int pageSize = 50, string? search = null, string? actionFilter = null, string sortBy = "PerformedAt", string sortOrder = "desc")
     {
-        // Debug: Log raw count and parameters
-        var rawCount = await _context.AuditLogs.CountAsync();
-        _logger.LogWarning("AUDIT LOGS PAGE - Raw count: {Count}, actionFilter param: '{ActionFilter}', search: '{Search}'", rawCount, actionFilter ?? "null", search ?? "null");
-
         // Start with all audit logs
         var query = _context.AuditLogs.AsQueryable();
 
