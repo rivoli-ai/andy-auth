@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -22,6 +24,7 @@ public class AccountControllerTests
     private readonly Mock<UserManager<ApplicationUser>> _mockUserManager;
     private readonly Mock<SignInManager<ApplicationUser>> _mockSignInManager;
     private readonly Mock<IAuditService> _mockAuditService;
+    private readonly SessionService _sessionService;
     private readonly Mock<ILogger<AccountController>> _mockLogger;
     private readonly AccountController _controller;
 
@@ -30,12 +33,14 @@ public class AccountControllerTests
         _mockUserManager = MockUserManager();
         _mockSignInManager = MockSignInManager(_mockUserManager.Object);
         _mockAuditService = new Mock<IAuditService>();
+        _sessionService = CreateSessionService();
         _mockLogger = new Mock<ILogger<AccountController>>();
 
         _controller = new AccountController(
             _mockSignInManager.Object,
             _mockUserManager.Object,
             _mockAuditService.Object,
+            _sessionService,
             _mockLogger.Object);
 
         // Setup controller context for URL helper
@@ -483,6 +488,21 @@ public class AccountControllerTests
             contextAccessor.Object,
             claimsFactory.Object,
             null, null, null, null);
+    }
+
+    private static SessionService CreateSessionService()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        var dbContext = new ApplicationDbContext(options);
+        var logger = new Mock<ILogger<SessionService>>();
+        var configuration = new Mock<IConfiguration>();
+
+        return new SessionService(
+            dbContext,
+            logger.Object,
+            configuration.Object);
     }
 
     #endregion

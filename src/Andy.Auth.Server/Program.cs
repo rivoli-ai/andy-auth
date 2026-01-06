@@ -306,8 +306,7 @@ app.UseRouting();
 app.UseCors("AllowWebClients");
 
 app.UseAuthentication();
-// Temporarily disabled for UAT OAuth debugging - session tracking interferes with OAuth flow
-// app.UseSessionTracking();
+app.UseSessionTracking();
 app.UseAuthorization();
 
 // Static test endpoint to debug Safari crash - bypasses all middleware

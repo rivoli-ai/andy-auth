@@ -15,17 +15,20 @@ public class AccountController : Controller
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IAuditService _auditService;
+    private readonly SessionService _sessionService;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager,
         IAuditService auditService,
+        SessionService sessionService,
         ILogger<AccountController> logger)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _auditService = auditService;
+        _sessionService = sessionService;
         _logger = logger;
     }
 
@@ -210,6 +213,20 @@ public class AccountController : Controller
     {
         // Get current user before signing out
         var user = await _userManager.GetUserAsync(User);
+
+        // Revoke all sessions for this user
+        if (user != null)
+        {
+            try
+            {
+                var revokedCount = await _sessionService.RevokeAllSessionsAsync(user.Id, "User logged out");
+                _logger.LogInformation("Revoked {Count} sessions for user {UserId} on logout", revokedCount, user.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to revoke sessions on logout for user {UserId}", user.Id);
+            }
+        }
 
         await _signInManager.SignOutAsync();
         _logger.LogInformation("User logged out.");

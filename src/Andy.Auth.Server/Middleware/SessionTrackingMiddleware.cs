@@ -1,6 +1,8 @@
+using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Andy.Auth.Server.Middleware;
 
@@ -24,7 +26,7 @@ public class SessionTrackingMiddleware
         _logger = logger;
     }
 
-    public async Task InvokeAsync(HttpContext context, SessionService sessionService)
+    public async Task InvokeAsync(HttpContext context, SessionService sessionService, ApplicationDbContext dbContext)
     {
         // Skip tracking for static files and health checks
         var path = context.Request.Path.Value?.ToLowerInvariant() ?? "";
@@ -38,37 +40,61 @@ public class SessionTrackingMiddleware
         if (context.User.Identity?.IsAuthenticated == true)
         {
             var sessionId = GetSessionId(context);
+            var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-            if (!string.IsNullOrEmpty(sessionId))
+            if (!string.IsNullOrEmpty(sessionId) && !string.IsNullOrEmpty(userId))
             {
-                // Validate session is still active
-                var isValid = await sessionService.IsSessionValidAsync(sessionId);
+                // Check if session exists in database
+                var sessionExists = await dbContext.UserSessions
+                    .AnyAsync(s => s.SessionId == sessionId);
 
-                if (!isValid)
+                if (!sessionExists)
                 {
-                    // Session has been revoked - sign out user
-                    _logger.LogInformation("Session {SessionId} is no longer valid, signing out user", sessionId);
+                    // Auto-create session for authenticated user (first request after login)
+                    var ipAddress = context.Connection.RemoteIpAddress?.ToString();
+                    var userAgent = context.Request.Headers.UserAgent.FirstOrDefault();
 
-                    // Clear authentication cookie
-                    await context.SignOutAsync(IdentityConstants.ApplicationScheme);
-
-                    // Redirect to login if this is a web request
-                    if (!IsApiRequest(context))
+                    try
                     {
-                        context.Response.Redirect("/Account/Login?sessionExpired=true");
-                        return;
+                        await sessionService.CreateSessionAsync(userId, sessionId, ipAddress, userAgent);
+                        _logger.LogInformation("Auto-created session {SessionId} for user {UserId}", sessionId, userId);
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                        return;
+                        _logger.LogWarning(ex, "Failed to auto-create session {SessionId}", sessionId);
                     }
                 }
-
-                // Update session activity (throttled to avoid too many DB writes)
-                if (ShouldUpdateActivity(context))
+                else
                 {
-                    await sessionService.UpdateActivityAsync(sessionId);
+                    // Validate session is still active
+                    var isValid = await sessionService.IsSessionValidAsync(sessionId);
+
+                    if (!isValid)
+                    {
+                        // Session has been revoked - sign out user
+                        _logger.LogInformation("Session {SessionId} is no longer valid, signing out user", sessionId);
+
+                        // Clear authentication cookie
+                        await context.SignOutAsync(IdentityConstants.ApplicationScheme);
+
+                        // Redirect to login if this is a web request
+                        if (!IsApiRequest(context))
+                        {
+                            context.Response.Redirect("/Account/Login?sessionExpired=true");
+                            return;
+                        }
+                        else
+                        {
+                            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                            return;
+                        }
+                    }
+
+                    // Update session activity (throttled to avoid too many DB writes)
+                    if (ShouldUpdateActivity(context))
+                    {
+                        await sessionService.UpdateActivityAsync(sessionId);
+                    }
                 }
             }
         }
