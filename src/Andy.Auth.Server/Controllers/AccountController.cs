@@ -83,11 +83,12 @@ public class AccountController : Controller
 
         if (result.Succeeded)
         {
-            _logger.LogInformation("User {Email} logged in.", model.Email);
+            _logger.LogWarning("LOGIN SUCCESS - User {Email} logged in. About to update LastLoginAt and log audit.", model.Email);
 
             // Update last login time
             user.LastLoginAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(user);
+            _logger.LogWarning("LOGIN SUCCESS - LastLoginAt updated for {Email}. About to call audit service.", model.Email);
 
             // Log successful login
             await _auditService.LogAsync(
@@ -98,6 +99,7 @@ public class AccountController : Controller
                 user.Email,
                 "Successful login",
                 ipAddress);
+            _logger.LogWarning("LOGIN SUCCESS - Audit log completed for {Email}.", model.Email);
 
             if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
             {
