@@ -613,11 +613,19 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Users));
     }
 
+    [HttpGet("Admin/AuditLogsDebug")]
+    public async Task<IActionResult> AuditLogsDebug()
+    {
+        var count = await _context.AuditLogs.CountAsync();
+        var logs = await _context.AuditLogs.OrderByDescending(l => l.PerformedAt).Take(10).ToListAsync();
+        return Json(new { count, logs });
+    }
+
     public async Task<IActionResult> AuditLogs(int page = 1, int pageSize = 50, string? search = null, string? action = null, string sortBy = "PerformedAt", string sortOrder = "desc")
     {
-        // Debug: Log raw count
+        // Debug: Log raw count and parameters
         var rawCount = await _context.AuditLogs.CountAsync();
-        _logger.LogWarning("AUDIT LOGS PAGE - Raw count from database: {Count}", rawCount);
+        _logger.LogWarning("AUDIT LOGS PAGE - Raw count: {Count}, action param: '{Action}', search: '{Search}'", rawCount, action ?? "null", search ?? "null");
 
         // Start with all audit logs
         var query = _context.AuditLogs.AsQueryable();
