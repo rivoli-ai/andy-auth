@@ -26,25 +26,36 @@ public class AuditService : IAuditService
         string? details = null,
         string? ipAddress = null)
     {
-        var auditLog = new AuditLog
+        try
         {
-            Action = action,
-            PerformedById = performedById,
-            PerformedByEmail = performedByEmail,
-            TargetUserId = targetUserId,
-            TargetUserEmail = targetUserEmail,
-            Details = details,
-            PerformedAt = DateTime.UtcNow,
-            IpAddress = ipAddress
-        };
+            var auditLog = new AuditLog
+            {
+                Action = action,
+                PerformedById = performedById,
+                PerformedByEmail = performedByEmail,
+                TargetUserId = targetUserId,
+                TargetUserEmail = targetUserEmail,
+                Details = details,
+                PerformedAt = DateTime.UtcNow,
+                IpAddress = ipAddress
+            };
 
-        _context.AuditLogs.Add(auditLog);
-        await _context.SaveChangesAsync();
+            _context.AuditLogs.Add(auditLog);
+            await _context.SaveChangesAsync();
 
-        _logger.LogInformation(
-            "Audit: {Action} by {PerformedByEmail} (target: {TargetUserEmail})",
-            action,
-            performedByEmail,
-            targetUserEmail ?? "N/A");
+            _logger.LogInformation(
+                "Audit: {Action} by {PerformedByEmail} (target: {TargetUserEmail})",
+                action,
+                performedByEmail,
+                targetUserEmail ?? "N/A");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to save audit log: {Action} by {PerformedByEmail}. Error: {Error}",
+                action,
+                performedByEmail,
+                ex.Message);
+        }
     }
 }
