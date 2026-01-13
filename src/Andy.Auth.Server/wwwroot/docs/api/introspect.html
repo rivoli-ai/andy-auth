@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Introspection Endpoint - Andy Auth Documentation</title>
+    <meta name="description" content="Complete reference for the /connect/introspect OAuth 2.0 Token Introspection endpoint (RFC 7662)">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link">Core Concepts</a></li>
+                    <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                    <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link">PKCE</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Tutorials</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/tutorials/csharp.html" class="docs-sidebar-link">C# / .NET</a></li>
+                    <li><a href="/docs/tutorials/python.html" class="docs-sidebar-link">Python</a></li>
+                    <li><a href="/docs/tutorials/javascript.html" class="docs-sidebar-link">JavaScript</a></li>
+                    <li><a href="/docs/tutorials/typescript.html" class="docs-sidebar-link">TypeScript</a></li>
+                    <li><a href="/docs/tutorials/java.html" class="docs-sidebar-link">Java</a></li>
+                    <li><a href="/docs/tutorials/go.html" class="docs-sidebar-link">Go</a></li>
+                    <li><a href="/docs/tutorials/rust.html" class="docs-sidebar-link">Rust</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/userinfo.html" class="docs-sidebar-link">UserInfo</a></li>
+                    <li><a href="/docs/api/introspect.html" class="docs-sidebar-link active">Introspection</a></li>
+                    <li><a href="/docs/api/revoke.html" class="docs-sidebar-link">Revocation</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                    <li><a href="/docs/api/discovery.html" class="docs-sidebar-link">Discovery</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/api/endpoints.html">API Reference</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Introspection</span>
+            </nav>
+
+            <h1>Introspection Endpoint</h1>
+            <p class="lead">
+                The introspection endpoint allows resource servers to validate access tokens and retrieve
+                their metadata. This implements RFC 7662 (OAuth 2.0 Token Introspection).
+            </p>
+
+            <div class="endpoint">
+                <span class="endpoint-method post">POST</span>
+                <span class="endpoint-path">/connect/introspect</span>
+            </div>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    MCP Token Validation
+                </div>
+                <p>
+                    The introspection endpoint is essential for MCP servers to validate tokens from AI clients.
+                    When an MCP server receives a request with an access token, it should call this endpoint
+                    to verify the token is valid and get user information.
+                </p>
+            </div>
+
+            <h2 id="request">Request</h2>
+
+            <h3 id="request-parameters">Request Parameters</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Required</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>token</code></td>
+                        <td><span class="badge badge-new">Required</span></td>
+                        <td>The token to introspect (access token or refresh token)</td>
+                    </tr>
+                    <tr>
+                        <td><code>token_type_hint</code></td>
+                        <td>Optional</td>
+                        <td>Hint about the token type: <code>access_token</code> or <code>refresh_token</code></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 id="authentication">Client Authentication</h3>
+
+            <p>Introspection requests must be authenticated. Andy Auth supports:</p>
+
+            <ul>
+                <li><strong>HTTP Basic Authentication</strong> - Recommended for confidential clients</li>
+                <li><strong>POST body credentials</strong> - <code>client_id</code> and <code>client_secret</code> in the request body</li>
+            </ul>
+
+            <h3 id="request-example">Request Example</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">http</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>POST /connect/introspect HTTP/1.1
+Host: auth.example.com
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic bXktY2xpZW50Om15LXNlY3JldA==
+
+token=eyJhbGciOiJSUzI1NiIsInR5cCI6ImF0K2p3dCJ9...&
+token_type_hint=access_token</code></pre>
+            </div>
+
+            <h2 id="active-response">Active Token Response</h2>
+
+            <p>When the token is valid and active:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "active": true,
+  "sub": "user_abc123",
+  "client_id": "my-client",
+  "username": "johndoe",
+  "token_type": "Bearer",
+  "scope": "openid profile email",
+  "aud": "my-api",
+  "iss": "https://auth.example.com/",
+  "exp": 1704153600,
+  "iat": 1704150000,
+  "nbf": 1704150000,
+  "jti": "token_xyz789"
+}</code></pre>
+            </div>
+
+            <h3 id="response-fields">Response Fields</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>active</code></td>
+                        <td>boolean</td>
+                        <td><strong>Always present.</strong> Indicates if the token is currently active</td>
+                    </tr>
+                    <tr>
+                        <td><code>sub</code></td>
+                        <td>string</td>
+                        <td>Subject identifier (user ID)</td>
+                    </tr>
+                    <tr>
+                        <td><code>client_id</code></td>
+                        <td>string</td>
+                        <td>Client that requested the token</td>
+                    </tr>
+                    <tr>
+                        <td><code>username</code></td>
+                        <td>string</td>
+                        <td>Human-readable username</td>
+                    </tr>
+                    <tr>
+                        <td><code>token_type</code></td>
+                        <td>string</td>
+                        <td>Type of token (usually "Bearer")</td>
+                    </tr>
+                    <tr>
+                        <td><code>scope</code></td>
+                        <td>string</td>
+                        <td>Space-separated list of scopes</td>
+                    </tr>
+                    <tr>
+                        <td><code>aud</code></td>
+                        <td>string</td>
+                        <td>Intended audience(s)</td>
+                    </tr>
+                    <tr>
+                        <td><code>iss</code></td>
+                        <td>string</td>
+                        <td>Issuer URL</td>
+                    </tr>
+                    <tr>
+                        <td><code>exp</code></td>
+                        <td>number</td>
+                        <td>Expiration timestamp (Unix epoch)</td>
+                    </tr>
+                    <tr>
+                        <td><code>iat</code></td>
+                        <td>number</td>
+                        <td>Issued at timestamp (Unix epoch)</td>
+                    </tr>
+                    <tr>
+                        <td><code>nbf</code></td>
+                        <td>number</td>
+                        <td>Not before timestamp (Unix epoch)</td>
+                    </tr>
+                    <tr>
+                        <td><code>jti</code></td>
+                        <td>string</td>
+                        <td>Unique token identifier</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="inactive-response">Inactive Token Response</h2>
+
+            <p>When the token is invalid, expired, revoked, or unknown:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "active": false
+}</code></pre>
+            </div>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Security Note
+                </div>
+                <p>
+                    For security reasons, the introspection endpoint returns only <code>{"active": false}</code>
+                    for invalid tokens, without revealing why the token is invalid. This prevents attackers
+                    from learning about token validity or structure.
+                </p>
+            </div>
+
+            <h2 id="code-examples">Code Examples</h2>
+
+            <h3>Python (MCP Server)</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">python</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>import requests
+from functools import wraps
+from flask import request, jsonify
+
+INTROSPECTION_URL = 'https://auth.example.com/connect/introspect'
+CLIENT_ID = 'my-mcp-server'
+CLIENT_SECRET = 'my-secret'
+
+def validate_token(access_token: str) -> dict | None:
+    """Validate an access token using introspection."""
+    response = requests.post(
+        INTROSPECTION_URL,
+        data={
+            'token': access_token,
+            'token_type_hint': 'access_token'
+        },
+        auth=(CLIENT_ID, CLIENT_SECRET)
+    )
+
+    if response.status_code != 200:
+        return None
+
+    result = response.json()
+    if not result.get('active'):
+        return None
+
+    return result
+
+def require_auth(f):
+    """Decorator to require valid OAuth token."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'Missing bearer token'}), 401
+
+        token = auth_header[7:]  # Remove 'Bearer ' prefix
+        token_info = validate_token(token)
+
+        if not token_info:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+
+        # Make token info available to the route
+        request.token_info = token_info
+        return f(*args, **kwargs)
+
+    return decorated
+
+# Usage in an MCP server endpoint
+@app.route('/mcp/tools', methods=['POST'])
+@require_auth
+def handle_mcp_request():
+    user_id = request.token_info['sub']
+    scopes = request.token_info.get('scope', '').split()
+
+    # Check for required scope
+    if 'mcp:tools' not in scopes:
+        return jsonify({'error': 'Insufficient scope'}), 403
+
+    # Process MCP request...
+    return jsonify({'result': 'success'})</code></pre>
+            </div>
+
+            <h3>JavaScript / Node.js</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">javascript</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>const INTROSPECTION_URL = 'https://auth.example.com/connect/introspect';
+const CLIENT_ID = 'my-mcp-server';
+const CLIENT_SECRET = 'my-secret';
+
+async function validateToken(accessToken) {
+  const credentials = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
+
+  const response = await fetch(INTROSPECTION_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': `Basic ${credentials}`
+    },
+    body: new URLSearchParams({
+      token: accessToken,
+      token_type_hint: 'access_token'
+    })
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const result = await response.json();
+  return result.active ? result : null;
+}
+
+// Express middleware
+function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing bearer token' });
+  }
+
+  const token = authHeader.slice(7);
+  validateToken(token)
+    .then(tokenInfo => {
+      if (!tokenInfo) {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+      }
+      req.tokenInfo = tokenInfo;
+      next();
+    })
+    .catch(err => {
+      console.error('Token validation error:', err);
+      res.status(500).json({ error: 'Token validation failed' });
+    });
+}
+
+// Usage
+app.post('/mcp/tools', requireAuth, (req, res) => {
+  const userId = req.tokenInfo.sub;
+  const scopes = (req.tokenInfo.scope || '').split(' ');
+
+  // Check scope and process request...
+  res.json({ result: 'success' });
+});</code></pre>
+            </div>
+
+            <h3>cURL</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>curl -X POST https://auth.example.com/connect/introspect \
+  -u "my-client:my-secret" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "token=eyJhbGciOiJSUzI1NiIsInR5cCI6ImF0K2p3dCJ9..." \
+  -d "token_type_hint=access_token"</code></pre>
+            </div>
+
+            <h2 id="error-responses">Error Responses</h2>
+
+            <h3>401 Unauthorized</h3>
+
+            <p>Returned when client authentication fails:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "error": "invalid_client",
+  "error_description": "Client authentication failed"
+}</code></pre>
+            </div>
+
+            <h3>400 Bad Request</h3>
+
+            <p>Returned when the request is malformed:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "error": "invalid_request",
+  "error_description": "The 'token' parameter is required"
+}</code></pre>
+            </div>
+
+            <h2 id="caching">Caching Considerations</h2>
+
+            <p>
+                Introspection requests can add latency to API calls. Consider these strategies to reduce overhead:
+            </p>
+
+            <ul>
+                <li><strong>Short-term caching</strong> - Cache introspection results for a few seconds to handle bursts of requests</li>
+                <li><strong>JWT validation</strong> - For JWTs, validate the signature locally first, then introspect periodically</li>
+                <li><strong>Token binding</strong> - Use the <code>jti</code> claim as a cache key</li>
+            </ul>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Cache Carefully
+                </div>
+                <p>
+                    If you cache introspection results, keep the cache duration short (seconds, not minutes).
+                    Longer cache times may allow revoked tokens to continue working.
+                </p>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/api/userinfo.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">UserInfo Endpoint</span>
+                </a>
+                <a href="/docs/api/revoke.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Revocation Endpoint</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

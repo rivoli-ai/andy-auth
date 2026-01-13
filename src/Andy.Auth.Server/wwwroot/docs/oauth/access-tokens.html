@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Tokens - Andy Auth Documentation</title>
+    <meta name="description" content="Understand how access tokens work in OAuth 2.0, including JWT structure, validation, and token introspection with Andy Auth">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link">Core Concepts</a></li>
+                    <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                    <li><a href="/docs/oauth/client-credentials.html" class="docs-sidebar-link">Client Credentials</a></li>
+                    <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link">PKCE</a></li>
+                    <li><a href="/docs/oauth/access-tokens.html" class="docs-sidebar-link active">Access Tokens</a></li>
+                    <li><a href="/docs/oauth/refresh-tokens.html" class="docs-sidebar-link">Refresh Tokens</a></li>
+                    <li><a href="/docs/oauth/scopes.html" class="docs-sidebar-link">Scopes</a></li>
+                    <li><a href="/docs/oauth/claims.html" class="docs-sidebar-link">Claims</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/oauth/concepts.html">OAuth & OpenID Connect</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Access Tokens</span>
+            </nav>
+
+            <h1>Access Tokens</h1>
+            <p class="lead">
+                Access tokens are credentials used to access protected resources. Andy Auth issues JSON Web Tokens (JWTs)
+                that are cryptographically signed and can be validated without contacting the authorization server.
+            </p>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    What is an Access Token?
+                </div>
+                <p>
+                    An access token represents the authorization granted to a client to access specific resources
+                    on behalf of a user (or the client itself). It contains information about the granted permissions
+                    (scopes) and is typically short-lived for security purposes.
+                </p>
+            </div>
+
+            <h2 id="jwt-structure">JWT Structure</h2>
+
+            <p>
+                Andy Auth issues access tokens as JSON Web Tokens (JWTs), which consist of three parts separated by dots:
+                <code>header.payload.signature</code>
+            </p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                </div>
+                <pre><code>eyJhbGciOiJSUzI1NiIsInR5cCI6ImF0K2p3dCIsImtpZCI6IjEyMzQ1Njc4OTAifQ.
+eyJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20iLCJzdWIiOiJ1c2VyXzEyMzQ1
+Iiwi YXVkIjoiaHR0cHM6Ly9hcGkuZXhhbXBsZS5jb20iLCJleHAiOjE3MDAwMDM2MDAs
+ImlhdCI6MTcwMDAwMDAwMCwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBlbWFpbCIsImNs
+aWVudF9pZCI6Im15LWFwcCJ9.
+signature_bytes_here</code></pre>
+            </div>
+
+            <h3>Header</h3>
+
+            <p>The header contains metadata about the token:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "alg": "RS256",
+  "typ": "at+jwt",
+  "kid": "key-id-12345"
+}</code></pre>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>alg</code></td>
+                        <td>Signing algorithm (RS256 = RSA with SHA-256)</td>
+                    </tr>
+                    <tr>
+                        <td><code>typ</code></td>
+                        <td>Token type (<code>at+jwt</code> for access tokens per RFC 9068)</td>
+                    </tr>
+                    <tr>
+                        <td><code>kid</code></td>
+                        <td>Key ID used for signing, references JWKS endpoint</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Payload (Claims)</h3>
+
+            <p>The payload contains claims about the user and the token:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "iss": "https://auth.example.com",
+  "sub": "user_12345",
+  "aud": "https://api.example.com",
+  "exp": 1700003600,
+  "iat": 1700000000,
+  "nbf": 1700000000,
+  "jti": "unique-token-id",
+  "client_id": "my-app",
+  "scope": "openid profile email",
+  "email": "user@example.com",
+  "name": "John Doe"
+}</code></pre>
+            </div>
+
+            <h3>Standard JWT Claims</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Claim</th>
+                        <th>Name</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>iss</code></td>
+                        <td>Issuer</td>
+                        <td>URL of the authorization server that issued the token</td>
+                    </tr>
+                    <tr>
+                        <td><code>sub</code></td>
+                        <td>Subject</td>
+                        <td>Unique identifier for the user or client</td>
+                    </tr>
+                    <tr>
+                        <td><code>aud</code></td>
+                        <td>Audience</td>
+                        <td>Intended recipient(s) of the token</td>
+                    </tr>
+                    <tr>
+                        <td><code>exp</code></td>
+                        <td>Expiration</td>
+                        <td>Unix timestamp when the token expires</td>
+                    </tr>
+                    <tr>
+                        <td><code>iat</code></td>
+                        <td>Issued At</td>
+                        <td>Unix timestamp when the token was issued</td>
+                    </tr>
+                    <tr>
+                        <td><code>nbf</code></td>
+                        <td>Not Before</td>
+                        <td>Unix timestamp before which the token is not valid</td>
+                    </tr>
+                    <tr>
+                        <td><code>jti</code></td>
+                        <td>JWT ID</td>
+                        <td>Unique identifier for the token</td>
+                    </tr>
+                    <tr>
+                        <td><code>client_id</code></td>
+                        <td>Client ID</td>
+                        <td>The OAuth client that requested the token</td>
+                    </tr>
+                    <tr>
+                        <td><code>scope</code></td>
+                        <td>Scope</td>
+                        <td>Space-separated list of granted scopes</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="using-tokens">Using Access Tokens</h2>
+
+            <p>Include the access token in the <code>Authorization</code> header when making API requests:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>curl -X GET https://api.example.com/users/me \
+  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIs..."</code></pre>
+            </div>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Security Warning
+                </div>
+                <p>
+                    Access tokens are sensitive credentials. Never log them, expose them in URLs, or store them
+                    in insecure locations. Treat them like passwords.
+                </p>
+            </div>
+
+            <h2 id="token-validation">Token Validation</h2>
+
+            <p>
+                Resource servers should validate access tokens before granting access to protected resources.
+                There are two approaches: local validation and introspection.
+            </p>
+
+            <h3>Local JWT Validation</h3>
+
+            <p>
+                For JWT access tokens, you can validate locally without contacting the authorization server.
+                This is faster but cannot detect revoked tokens.
+            </p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">python</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>import jwt
+import requests
+from jwt import PyJWKClient
+
+class TokenValidator:
+    def __init__(self, issuer: str, audience: str):
+        self.issuer = issuer
+        self.audience = audience
+        self.jwks_client = PyJWKClient(f"{issuer}/.well-known/jwks")
+
+    def validate(self, token: str) -> dict:
+        """Validate a JWT access token locally."""
+        try:
+            # Get the signing key from JWKS
+            signing_key = self.jwks_client.get_signing_key_from_jwt(token)
+
+            # Decode and validate the token
+            payload = jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=["RS256"],
+                issuer=self.issuer,
+                audience=self.audience,
+                options={
+                    "verify_exp": True,
+                    "verify_iat": True,
+                    "verify_nbf": True,
+                    "require": ["exp", "iat", "sub", "iss", "aud"]
+                }
+            )
+
+            return {
+                "valid": True,
+                "subject": payload["sub"],
+                "scopes": payload.get("scope", "").split(),
+                "claims": payload
+            }
+
+        except jwt.ExpiredSignatureError:
+            return {"valid": False, "error": "Token has expired"}
+        except jwt.InvalidTokenError as e:
+            return {"valid": False, "error": str(e)}
+
+
+# Usage
+validator = TokenValidator(
+    issuer="https://auth.example.com",
+    audience="https://api.example.com"
+)
+
+result = validator.validate(access_token)
+if result["valid"]:
+    print(f"Token valid for user: {result['subject']}")</code></pre>
+            </div>
+
+            <h3>Validation Steps</h3>
+
+            <p>When validating a JWT locally, verify the following:</p>
+
+            <ol>
+                <li><strong>Signature</strong> - Verify the token signature using the public key from JWKS</li>
+                <li><strong>Issuer (iss)</strong> - Must match your expected authorization server URL</li>
+                <li><strong>Audience (aud)</strong> - Must include your API's identifier</li>
+                <li><strong>Expiration (exp)</strong> - Token must not be expired</li>
+                <li><strong>Not Before (nbf)</strong> - Current time must be after this timestamp</li>
+                <li><strong>Scopes</strong> - Verify the token has required scopes for the operation</li>
+            </ol>
+
+            <h2 id="introspection">Token Introspection</h2>
+
+            <p>
+                Token introspection (RFC 7662) allows resource servers to query the authorization server
+                about a token's current state. This can detect revoked tokens but requires a network call.
+            </p>
+
+            <div class="endpoint">
+                <span class="endpoint-method post">POST</span>
+                <span class="endpoint-path">/connect/introspect</span>
+            </div>
+
+            <h3>Request</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>curl -X POST https://auth.example.com/connect/introspect \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -u "my-client-id:my-client-secret" \
+  -d "token=eyJhbGciOiJSUzI1NiIs..." \
+  -d "token_type_hint=access_token"</code></pre>
+            </div>
+
+            <h3>Response (Active Token)</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "active": true,
+  "sub": "user_12345",
+  "client_id": "my-app",
+  "scope": "openid profile email",
+  "token_type": "Bearer",
+  "exp": 1700003600,
+  "iat": 1700000000,
+  "iss": "https://auth.example.com",
+  "aud": "https://api.example.com",
+  "email": "user@example.com",
+  "name": "John Doe"
+}</code></pre>
+            </div>
+
+            <h3>Response (Inactive Token)</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "active": false
+}</code></pre>
+            </div>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    When to Use Introspection
+                </div>
+                <p>
+                    Use introspection when you need to check if a token has been revoked, or when you need
+                    additional claims not included in the JWT. Consider caching introspection results briefly
+                    to reduce latency.
+                </p>
+            </div>
+
+            <h2 id="token-lifetime">Token Lifetime</h2>
+
+            <p>
+                Access tokens are intentionally short-lived to limit the damage if they are compromised.
+                Andy Auth uses the following default lifetimes:
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Token Type</th>
+                        <th>Default Lifetime</th>
+                        <th>Configurable</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Access Token</td>
+                        <td>1 hour (3600 seconds)</td>
+                        <td>Yes, per client</td>
+                    </tr>
+                    <tr>
+                        <td>Refresh Token</td>
+                        <td>14 days</td>
+                        <td>Yes, per client</td>
+                    </tr>
+                    <tr>
+                        <td>Authorization Code</td>
+                        <td>5 minutes</td>
+                        <td>No</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="code-examples">Code Examples</h2>
+
+            <h3>C# / .NET - Validating Tokens</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">csharp</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+
+public class JwtValidator
+{
+    private readonly string _issuer;
+    private readonly string _audience;
+    private readonly HttpClient _httpClient;
+    private JsonWebKeySet _jwks;
+
+    public JwtValidator(string issuer, string audience)
+    {
+        _issuer = issuer;
+        _audience = audience;
+        _httpClient = new HttpClient();
+    }
+
+    public async Task&lt;ClaimsPrincipal&gt; ValidateTokenAsync(string token)
+    {
+        // Fetch JWKS if not cached
+        if (_jwks == null)
+        {
+            var jwksJson = await _httpClient.GetStringAsync(
+                $"{_issuer}/.well-known/jwks"
+            );
+            _jwks = new JsonWebKeySet(jwksJson);
+        }
+
+        var validationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = _issuer,
+            ValidateAudience = true,
+            ValidAudience = _audience,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKeys = _jwks.GetSigningKeys(),
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+
+        var handler = new JwtSecurityTokenHandler();
+        var principal = handler.ValidateToken(
+            token,
+            validationParameters,
+            out SecurityToken validatedToken
+        );
+
+        return principal;
+    }
+}</code></pre>
+            </div>
+
+            <h3>Node.js - Using jose Library</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">typescript</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>import * as jose from 'jose';
+
+interface TokenPayload {
+  sub: string;
+  scope: string;
+  email?: string;
+  name?: string;
+}
+
+class AccessTokenValidator {
+  private issuer: string;
+  private audience: string;
+  private jwks: jose.JWTVerifyGetKey;
+
+  constructor(issuer: string, audience: string) {
+    this.issuer = issuer;
+    this.audience = audience;
+    this.jwks = jose.createRemoteJWKSet(
+      new URL(`${issuer}/.well-known/jwks`)
+    );
+  }
+
+  async validate(token: string): Promise&lt;TokenPayload&gt; {
+    const { payload } = await jose.jwtVerify(token, this.jwks, {
+      issuer: this.issuer,
+      audience: this.audience,
+      clockTolerance: 60, // 1 minute tolerance
+    });
+
+    return payload as TokenPayload;
+  }
+}
+
+// Usage
+const validator = new AccessTokenValidator(
+  'https://auth.example.com',
+  'https://api.example.com'
+);
+
+try {
+  const payload = await validator.validate(accessToken);
+  console.log(`Authenticated user: ${payload.sub}`);
+  console.log(`Scopes: ${payload.scope}`);
+} catch (error) {
+  console.error('Token validation failed:', error);
+}</code></pre>
+            </div>
+
+            <h2 id="best-practices">Best Practices</h2>
+
+            <ul>
+                <li><strong>Keep tokens short-lived</strong> - Use short expiration times (1 hour or less) and refresh tokens for long sessions</li>
+                <li><strong>Validate on every request</strong> - Always validate the token before processing protected requests</li>
+                <li><strong>Check scopes</strong> - Verify the token has the required scopes for the requested operation</li>
+                <li><strong>Cache JWKS</strong> - Cache the JSON Web Key Set and refresh periodically</li>
+                <li><strong>Use HTTPS only</strong> - Never transmit tokens over unencrypted connections</li>
+                <li><strong>Implement token binding</strong> - Consider binding tokens to specific clients or sessions when possible</li>
+            </ul>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/oauth/client-credentials.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Client Credentials</span>
+                </a>
+                <a href="/docs/oauth/refresh-tokens.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Refresh Tokens</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

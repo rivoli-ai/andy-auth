@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Tutorial - Andy Auth Documentation</title>
+    <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body>
+    <header class="docs-header">
+        <div class="docs-header-content">
+            <a href="../" class="docs-logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="4" width="24" height="24" rx="6" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 16L14 18L20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Andy Auth</span>
+            </a>
+            <div class="docs-header-actions">
+                <button class="docs-search-btn" data-search-trigger>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <span>Search</span>
+                    <kbd>Ctrl+K</kbd>
+                </button>
+                <button id="theme-toggle" class="docs-theme-toggle" onclick="toggleTheme()"></button>
+                <a href="https://github.com/anthropics/andy-auth" class="docs-github-link">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="docs-layout">
+        <aside class="docs-sidebar">
+            <nav class="docs-nav">
+                <div class="docs-sidebar-group expanded">
+                    <div class="docs-sidebar-group-header">
+                        <span>Getting Started</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="docs-sidebar-group-content">
+                        <a href="../" class="docs-sidebar-link">Overview</a>
+                        <a href="../quickstart.html" class="docs-sidebar-link">Quick Start</a>
+                    </div>
+                </div>
+                <div class="docs-sidebar-group">
+                    <div class="docs-sidebar-group-header">
+                        <span>MCP Integration</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="docs-sidebar-group-content">
+                        <a href="../mcp/overview.html" class="docs-sidebar-link">Overview</a>
+                        <a href="../mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a>
+                        <a href="../mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a>
+                        <a href="../mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a>
+                        <a href="../mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a>
+                        <a href="../mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a>
+                    </div>
+                </div>
+                <div class="docs-sidebar-group expanded">
+                    <div class="docs-sidebar-group-header">
+                        <span>Tutorials</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="docs-sidebar-group-content">
+                        <a href="python.html" class="docs-sidebar-link">Python</a>
+                        <a href="csharp.html" class="docs-sidebar-link">C# / .NET</a>
+                        <a href="javascript.html" class="docs-sidebar-link active">JavaScript</a>
+                        <a href="typescript.html" class="docs-sidebar-link">TypeScript</a>
+                        <a href="java.html" class="docs-sidebar-link">Java</a>
+                        <a href="go.html" class="docs-sidebar-link">Go</a>
+                        <a href="rust.html" class="docs-sidebar-link">Rust</a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="docs-main">
+            <article class="docs-content">
+                <div class="docs-breadcrumb">
+                    <a href="../">Docs</a>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    <a href="#">Tutorials</a>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    <span>JavaScript</span>
+                </div>
+
+                <h1>JavaScript OAuth Integration</h1>
+                <p class="docs-lead">Integrate Andy Auth into your JavaScript applications using Node.js, Express, or browser-based SPAs.</p>
+
+                <h2 id="node-express">Node.js with Express</h2>
+                <p>A complete Express.js application with OAuth authentication:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">JavaScript - server.js</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>const express = require('express');
+const session = require('express-session');
+const crypto = require('crypto');
+
+const app = express();
+
+// Configuration
+const config = {
+    authority: 'https://your-andy-auth-server.com',
+    clientId: 'your-client-id',
+    clientSecret: 'your-client-secret',
+    redirectUri: 'http://localhost:3000/callback',
+    scopes: ['openid', 'profile', 'email']
+};
+
+// Session middleware
+app.use(session({
+    secret: crypto.randomBytes(32).toString('hex'),
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: process.env.NODE_ENV === 'production' }
+}));
+
+// PKCE Helper functions
+function generateCodeVerifier() {
+    return crypto.randomBytes(32).toString('base64url');
+}
+
+function generateCodeChallenge(verifier) {
+    return crypto.createHash('sha256')
+        .update(verifier)
+        .digest('base64url');
+}
+
+// Home page
+app.get('/', (req, res) => {
+    if (req.session.user) {
+        res.send(`
+            &lt;h1&gt;Welcome ${req.session.user.name}&lt;/h1&gt;
+            &lt;p&gt;Email: ${req.session.user.email}&lt;/p&gt;
+            &lt;a href="/logout"&gt;Logout&lt;/a&gt;
+        `);
+    } else {
+        res.send(`
+            &lt;h1&gt;Andy Auth Demo&lt;/h1&gt;
+            &lt;a href="/login"&gt;Login with Andy Auth&lt;/a&gt;
+        `);
+    }
+});
+
+// Start OAuth flow
+app.get('/login', (req, res) => {
+    const state = crypto.randomBytes(16).toString('hex');
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = generateCodeChallenge(codeVerifier);
+
+    // Store in session for callback verification
+    req.session.oauth = { state, codeVerifier };
+
+    const authUrl = new URL(`${config.authority}/connect/authorize`);
+    authUrl.searchParams.set('client_id', config.clientId);
+    authUrl.searchParams.set('redirect_uri', config.redirectUri);
+    authUrl.searchParams.set('response_type', 'code');
+    authUrl.searchParams.set('scope', config.scopes.join(' '));
+    authUrl.searchParams.set('state', state);
+    authUrl.searchParams.set('code_challenge', codeChallenge);
+    authUrl.searchParams.set('code_challenge_method', 'S256');
+
+    res.redirect(authUrl.toString());
+});
+
+// OAuth callback
+app.get('/callback', async (req, res) => {
+    const { code, state, error } = req.query;
+
+    if (error) {
+        return res.status(400).send(`OAuth error: ${error}`);
+    }
+
+    // Verify state
+    if (state !== req.session.oauth?.state) {
+        return res.status(400).send('Invalid state parameter');
+    }
+
+    try {
+        // Exchange code for tokens
+        const tokenResponse = await fetch(`${config.authority}/connect/token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                grant_type: 'authorization_code',
+                code,
+                redirect_uri: config.redirectUri,
+                client_id: config.clientId,
+                client_secret: config.clientSecret,
+                code_verifier: req.session.oauth.codeVerifier
+            })
+        });
+
+        if (!tokenResponse.ok) {
+            throw new Error(`Token exchange failed: ${await tokenResponse.text()}`);
+        }
+
+        const tokens = await tokenResponse.json();
+
+        // Get user info
+        const userInfoResponse = await fetch(`${config.authority}/connect/userinfo`, {
+            headers: { Authorization: `Bearer ${tokens.access_token}` }
+        });
+
+        const userInfo = await userInfoResponse.json();
+
+        // Store in session
+        req.session.user = userInfo;
+        req.session.tokens = tokens;
+        delete req.session.oauth;
+
+        res.redirect('/');
+    } catch (err) {
+        console.error('Callback error:', err);
+        res.status(500).send('Authentication failed');
+    }
+});
+
+// Logout
+app.get('/logout', (req, res) => {
+    req.session.destroy();
+    res.redirect('/');
+});
+
+// Protected API endpoint
+app.get('/api/profile', (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+    res.json(req.session.user);
+});
+
+app.listen(3000, () => {
+    console.log('Server running on http://localhost:3000');
+});</code></pre>
+                </div>
+
+                <h2 id="spa">Browser Single Page Application</h2>
+                <p>OAuth implementation for SPAs using the authorization code flow with PKCE:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">JavaScript - auth.js</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>class AndyAuthClient {
+    constructor(config) {
+        this.authority = config.authority;
+        this.clientId = config.clientId;
+        this.redirectUri = config.redirectUri;
+        this.scopes = config.scopes || ['openid', 'profile', 'email'];
+        this.storageKey = 'andy_auth_tokens';
+    }
+
+    // Generate PKCE code verifier
+    generateCodeVerifier() {
+        const array = new Uint8Array(32);
+        crypto.getRandomValues(array);
+        return this.base64UrlEncode(array);
+    }
+
+    // Generate code challenge from verifier
+    async generateCodeChallenge(verifier) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(verifier);
+        const hash = await crypto.subtle.digest('SHA-256', data);
+        return this.base64UrlEncode(new Uint8Array(hash));
+    }
+
+    base64UrlEncode(buffer) {
+        return btoa(String.fromCharCode(...buffer))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=/g, '');
+    }
+
+    // Start login flow
+    async login() {
+        const state = this.generateCodeVerifier().substring(0, 16);
+        const codeVerifier = this.generateCodeVerifier();
+        const codeChallenge = await this.generateCodeChallenge(codeVerifier);
+
+        // Store PKCE data
+        sessionStorage.setItem('oauth_state', state);
+        sessionStorage.setItem('code_verifier', codeVerifier);
+
+        const authUrl = new URL(`${this.authority}/connect/authorize`);
+        authUrl.searchParams.set('client_id', this.clientId);
+        authUrl.searchParams.set('redirect_uri', this.redirectUri);
+        authUrl.searchParams.set('response_type', 'code');
+        authUrl.searchParams.set('scope', this.scopes.join(' '));
+        authUrl.searchParams.set('state', state);
+        authUrl.searchParams.set('code_challenge', codeChallenge);
+        authUrl.searchParams.set('code_challenge_method', 'S256');
+
+        window.location.href = authUrl.toString();
+    }
+
+    // Handle callback after redirect
+    async handleCallback() {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const state = params.get('state');
+        const error = params.get('error');
+
+        if (error) {
+            throw new Error(`OAuth error: ${error}`);
+        }
+
+        // Verify state
+        const savedState = sessionStorage.getItem('oauth_state');
+        if (state !== savedState) {
+            throw new Error('Invalid state parameter');
+        }
+
+        const codeVerifier = sessionStorage.getItem('code_verifier');
+
+        // Exchange code for tokens
+        const response = await fetch(`${this.authority}/connect/token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                grant_type: 'authorization_code',
+                code,
+                redirect_uri: this.redirectUri,
+                client_id: this.clientId,
+                code_verifier: codeVerifier
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Token exchange failed: ${await response.text()}`);
+        }
+
+        const tokens = await response.json();
+        this.saveTokens(tokens);
+
+        // Clean up
+        sessionStorage.removeItem('oauth_state');
+        sessionStorage.removeItem('code_verifier');
+
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname);
+
+        return tokens;
+    }
+
+    saveTokens(tokens) {
+        localStorage.setItem(this.storageKey, JSON.stringify({
+            ...tokens,
+            expires_at: Date.now() + (tokens.expires_in * 1000)
+        }));
+    }
+
+    getTokens() {
+        const data = localStorage.getItem(this.storageKey);
+        return data ? JSON.parse(data) : null;
+    }
+
+    getAccessToken() {
+        const tokens = this.getTokens();
+        if (!tokens) return null;
+
+        // Check expiration
+        if (Date.now() >= tokens.expires_at) {
+            this.logout();
+            return null;
+        }
+
+        return tokens.access_token;
+    }
+
+    isAuthenticated() {
+        return !!this.getAccessToken();
+    }
+
+    async getUserInfo() {
+        const token = this.getAccessToken();
+        if (!token) throw new Error('Not authenticated');
+
+        const response = await fetch(`${this.authority}/connect/userinfo`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to get user info');
+        }
+
+        return response.json();
+    }
+
+    logout() {
+        localStorage.removeItem(this.storageKey);
+    }
+
+    // Make authenticated API requests
+    async fetch(url, options = {}) {
+        const token = this.getAccessToken();
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        return fetch(url, {
+            ...options,
+            headers: {
+                ...options.headers,
+                Authorization: `Bearer ${token}`
+            }
+        });
+    }
+}
+
+// Usage
+const auth = new AndyAuthClient({
+    authority: 'https://your-andy-auth-server.com',
+    clientId: 'spa-client',
+    redirectUri: 'http://localhost:3000/callback'
+});
+
+// Check for callback
+if (window.location.search.includes('code=')) {
+    auth.handleCallback()
+        .then(() => console.log('Logged in!'))
+        .catch(err => console.error('Login failed:', err));
+}
+
+// Login button
+document.getElementById('login-btn')?.addEventListener('click', () => {
+    auth.login();
+});
+
+// Get user info
+if (auth.isAuthenticated()) {
+    auth.getUserInfo().then(user => {
+        console.log('User:', user);
+    });
+}</code></pre>
+                </div>
+
+                <h2 id="react">React Integration</h2>
+                <p>React hooks for authentication state management:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">JavaScript - useAuth.js</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+const AuthContext = createContext(null);
+
+export function AuthProvider({ children, config }) {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    const auth = useMemo(() => new AndyAuthClient(config), [config]);
+
+    useEffect(() => {
+        // Check for callback on mount
+        if (window.location.search.includes('code=')) {
+            auth.handleCallback()
+                .then(() => loadUser())
+                .catch(err => setError(err.message))
+                .finally(() => setLoading(false));
+        } else if (auth.isAuthenticated()) {
+            loadUser();
+        } else {
+            setLoading(false);
+        }
+    }, []);
+
+    const loadUser = useCallback(async () => {
+        try {
+            const userInfo = await auth.getUserInfo();
+            setUser(userInfo);
+        } catch (err) {
+            setError(err.message);
+            auth.logout();
+        } finally {
+            setLoading(false);
+        }
+    }, [auth]);
+
+    const login = useCallback(() => {
+        auth.login();
+    }, [auth]);
+
+    const logout = useCallback(() => {
+        auth.logout();
+        setUser(null);
+    }, [auth]);
+
+    const value = {
+        user,
+        loading,
+        error,
+        isAuthenticated: !!user,
+        login,
+        logout,
+        getAccessToken: () => auth.getAccessToken()
+    };
+
+    return (
+        &lt;AuthContext.Provider value={value}&gt;
+            {children}
+        &lt;/AuthContext.Provider&gt;
+    );
+}
+
+export function useAuth() {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth must be used within AuthProvider');
+    }
+    return context;
+}
+
+// Protected route component
+export function ProtectedRoute({ children }) {
+    const { isAuthenticated, loading, login } = useAuth();
+
+    if (loading) {
+        return &lt;div&gt;Loading...&lt;/div&gt;;
+    }
+
+    if (!isAuthenticated) {
+        return (
+            &lt;div&gt;
+                &lt;p&gt;Please log in to access this page&lt;/p&gt;
+                &lt;button onClick={login}&gt;Login&lt;/button&gt;
+            &lt;/div&gt;
+        );
+    }
+
+    return children;
+}
+
+// Usage in App.js
+function App() {
+    return (
+        &lt;AuthProvider config={{
+            authority: 'https://your-andy-auth-server.com',
+            clientId: 'react-app',
+            redirectUri: window.location.origin + '/callback'
+        }}&gt;
+            &lt;Router&gt;
+                &lt;Routes&gt;
+                    &lt;Route path="/" element={&lt;Home /&gt;} /&gt;
+                    &lt;Route path="/callback" element={&lt;Callback /&gt;} /&gt;
+                    &lt;Route path="/profile" element={
+                        &lt;ProtectedRoute&gt;
+                            &lt;Profile /&gt;
+                        &lt;/ProtectedRoute&gt;
+                    } /&gt;
+                &lt;/Routes&gt;
+            &lt;/Router&gt;
+        &lt;/AuthProvider&gt;
+    );
+}</code></pre>
+                </div>
+
+                <h2 id="mcp-server">MCP Server in Node.js</h2>
+                <p>Build an MCP-compatible server that validates OAuth tokens:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">JavaScript - mcp-server.js</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>const express = require('express');
+const jwt = require('jsonwebtoken');
+const jwksClient = require('jwks-rsa');
+
+const app = express();
+app.use(express.json());
+
+const config = {
+    authority: 'https://your-andy-auth-server.com',
+    audience: 'mcp-server'
+};
+
+// JWKS client for token validation
+const client = jwksClient({
+    jwksUri: `${config.authority}/.well-known/openid-configuration/jwks`,
+    cache: true,
+    rateLimit: true
+});
+
+function getKey(header, callback) {
+    client.getSigningKey(header.kid, (err, key) => {
+        if (err) return callback(err);
+        callback(null, key.getPublicKey());
+    });
+}
+
+// Token validation middleware
+function validateToken(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Missing or invalid authorization header' });
+    }
+
+    const token = authHeader.substring(7);
+
+    jwt.verify(token, getKey, {
+        issuer: config.authority,
+        audience: config.audience
+    }, (err, decoded) => {
+        if (err) {
+            console.error('Token validation failed:', err.message);
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        req.user = decoded;
+        next();
+    });
+}
+
+// MCP tool: Get current user
+app.post('/mcp/tools/get_user', validateToken, (req, res) => {
+    res.json({
+        tool: 'get_user',
+        result: {
+            userId: req.user.sub,
+            email: req.user.email,
+            name: req.user.name
+        }
+    });
+});
+
+// MCP tool: Query data
+app.post('/mcp/tools/query', validateToken, async (req, res) => {
+    const { query } = req.body;
+
+    // Check scope
+    const scopes = req.user.scope?.split(' ') || [];
+    if (!scopes.includes('data:read')) {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
+    // Execute query (example)
+    const result = { data: 'Example result for: ' + query };
+
+    res.json({
+        tool: 'query',
+        result
+    });
+});
+
+// MCP tool discovery endpoint
+app.get('/mcp/tools', validateToken, (req, res) => {
+    res.json({
+        tools: [
+            {
+                name: 'get_user',
+                description: 'Get information about the authenticated user',
+                input_schema: {
+                    type: 'object',
+                    properties: {},
+                    required: []
+                }
+            },
+            {
+                name: 'query',
+                description: 'Query data from the system',
+                input_schema: {
+                    type: 'object',
+                    properties: {
+                        query: {
+                            type: 'string',
+                            description: 'The query to execute'
+                        }
+                    },
+                    required: ['query']
+                }
+            }
+        ]
+    });
+});
+
+app.listen(3001, () => {
+    console.log('MCP Server running on http://localhost:3001');
+});</code></pre>
+                </div>
+
+                <h2 id="vue">Vue.js Integration</h2>
+                <p>Vue 3 composable for authentication:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">JavaScript - useAuth.js (Vue)</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>import { ref, computed, onMounted } from 'vue';
+
+const user = ref(null);
+const loading = ref(true);
+const error = ref(null);
+
+let authClient = null;
+
+export function createAuth(config) {
+    authClient = new AndyAuthClient(config);
+}
+
+export function useAuth() {
+    const isAuthenticated = computed(() => !!user.value);
+
+    onMounted(async () => {
+        if (!authClient) {
+            throw new Error('Auth not initialized. Call createAuth first.');
+        }
+
+        // Handle callback
+        if (window.location.search.includes('code=')) {
+            try {
+                await authClient.handleCallback();
+                const userInfo = await authClient.getUserInfo();
+                user.value = userInfo;
+            } catch (err) {
+                error.value = err.message;
+            }
+        } else if (authClient.isAuthenticated()) {
+            try {
+                const userInfo = await authClient.getUserInfo();
+                user.value = userInfo;
+            } catch (err) {
+                authClient.logout();
+            }
+        }
+
+        loading.value = false;
+    });
+
+    function login() {
+        authClient.login();
+    }
+
+    function logout() {
+        authClient.logout();
+        user.value = null;
+    }
+
+    function getAccessToken() {
+        return authClient.getAccessToken();
+    }
+
+    return {
+        user,
+        loading,
+        error,
+        isAuthenticated,
+        login,
+        logout,
+        getAccessToken
+    };
+}
+
+// main.js
+import { createApp } from 'vue';
+import App from './App.vue';
+import { createAuth } from './composables/useAuth';
+
+createAuth({
+    authority: 'https://your-andy-auth-server.com',
+    clientId: 'vue-app',
+    redirectUri: window.location.origin + '/callback'
+});
+
+createApp(App).mount('#app');</code></pre>
+                </div>
+
+                <div class="docs-callout docs-callout-warning">
+                    <div class="docs-callout-title">Security Note for SPAs</div>
+                    <p>Single Page Applications are public clients and cannot securely store client secrets. Always use PKCE and consider token rotation strategies for enhanced security.</p>
+                </div>
+
+                <div class="docs-callout docs-callout-success">
+                    <div class="docs-callout-title">Next Steps</div>
+                    <ul>
+                        <li>Check out the <a href="typescript.html">TypeScript Tutorial</a> for type-safe implementations</li>
+                        <li>Learn about <a href="../mcp/overview.html">MCP Integration</a> for AI assistants</li>
+                        <li>Review <a href="../security/best-practices.html">Security Best Practices</a></li>
+                    </ul>
+                </div>
+            </article>
+
+            <aside class="docs-toc">
+                <div class="docs-toc-title">On this page</div>
+                <ul class="docs-toc-list"></ul>
+            </aside>
+        </main>
+    </div>
+
+    <div id="search-modal" class="docs-search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" id="search-modal-input" placeholder="Search documentation..." class="docs-search-modal-input">
+            <div id="search-results" class="docs-search-results"></div>
+        </div>
+    </div>
+
+    <script src="../js/docs.js"></script>
+</body>
+</html>

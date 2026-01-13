@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python OAuth Integration - Andy Auth Documentation</title>
+    <meta name="description" content="Complete guide to integrating Andy Auth OAuth with Python applications">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/></svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                </a>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                </button>
+                <a href="/" class="docs-header-link"><span>Back to App</span></a>
+            </div>
+        </div>
+    </header>
+
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Tutorials</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/tutorials/csharp.html" class="docs-sidebar-link">C# / .NET</a></li>
+                    <li><a href="/docs/tutorials/python.html" class="docs-sidebar-link active">Python</a></li>
+                    <li><a href="/docs/tutorials/javascript.html" class="docs-sidebar-link">JavaScript</a></li>
+                    <li><a href="/docs/tutorials/typescript.html" class="docs-sidebar-link">TypeScript</a></li>
+                    <li><a href="/docs/tutorials/java.html" class="docs-sidebar-link">Java</a></li>
+                    <li><a href="/docs/tutorials/go.html" class="docs-sidebar-link">Go</a></li>
+                    <li><a href="/docs/tutorials/rust.html" class="docs-sidebar-link">Rust</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/tutorials/python.html">Tutorials</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Python</span>
+            </nav>
+
+            <h1>Python OAuth Integration</h1>
+            <p class="lead">
+                Complete guide to integrating Andy Auth OAuth 2.0 with Python applications,
+                including Flask, FastAPI, and MCP server implementations.
+            </p>
+
+            <h2 id="prerequisites">Prerequisites</h2>
+
+            <ul>
+                <li>Python 3.8+</li>
+                <li>pip or poetry for package management</li>
+                <li>Andy Auth server running (see <a href="/docs/quickstart.html">Quick Start</a>)</li>
+            </ul>
+
+            <h2 id="installation">Installation</h2>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code># Install required packages
+pip install requests authlib httpx
+
+# For Flask applications
+pip install flask flask-login
+
+# For FastAPI applications
+pip install fastapi uvicorn python-jose</code></pre>
+            </div>
+
+            <h2 id="authorization-code-flow">Authorization Code Flow with PKCE</h2>
+
+            <p>The recommended flow for web applications and MCP clients:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">python</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code>import secrets
+import hashlib
+import base64
+from urllib.parse import urlencode
+import requests
+
+class AndyAuthClient:
+    """OAuth 2.0 client for Andy Auth with PKCE support."""
+
+    def __init__(self, client_id: str, redirect_uri: str, auth_server: str):
+        self.client_id = client_id
+        self.redirect_uri = redirect_uri
+        self.auth_server = auth_server.rstrip('/')
+
+        # Discover endpoints
+        self._discover_endpoints()
+
+    def _discover_endpoints(self):
+        """Fetch OpenID Connect discovery document."""
+        response = requests.get(f"{self.auth_server}/.well-known/openid-configuration")
+        response.raise_for_status()
+        config = response.json()
+
+        self.authorization_endpoint = config['authorization_endpoint']
+        self.token_endpoint = config['token_endpoint']
+        self.userinfo_endpoint = config['userinfo_endpoint']
+        self.introspection_endpoint = config.get('introspection_endpoint')
+
+    def generate_pkce(self) -> tuple[str, str]:
+        """Generate PKCE code verifier and challenge."""
+        # Generate random code verifier (43-128 characters)
+        code_verifier = secrets.token_urlsafe(64)
+
+        # Create code challenge using S256
+        digest = hashlib.sha256(code_verifier.encode()).digest()
+        code_challenge = base64.urlsafe_b64encode(digest).decode().rstrip('=')
+
+        return code_verifier, code_challenge
+
+    def get_authorization_url(
+        self,
+        scope: str = "openid profile email",
+        state: str = None
+    ) -> tuple[str, str, str]:
+        """
+        Generate authorization URL with PKCE.
+
+        Returns:
+            tuple: (authorization_url, state, code_verifier)
+        """
+        code_verifier, code_challenge = self.generate_pkce()
+        state = state or secrets.token_urlsafe(32)
+
+        params = {
+            'client_id': self.client_id,
+            'response_type': 'code',
+            'redirect_uri': self.redirect_uri,
+            'scope': scope,
+            'state': state,
+            'code_challenge': code_challenge,
+            'code_challenge_method': 'S256'
+        }
+
+        url = f"{self.authorization_endpoint}?{urlencode(params)}"
+        return url, state, code_verifier
+
+    def exchange_code(self, code: str, code_verifier: str) -> dict:
+        """Exchange authorization code for tokens."""
+        response = requests.post(
+            self.token_endpoint,
+            data={
+                'grant_type': 'authorization_code',
+                'client_id': self.client_id,
+                'code': code,
+                'redirect_uri': self.redirect_uri,
+                'code_verifier': code_verifier
+            },
+            headers={'Content-Type': 'application/x-www-form-urlencoded'}
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def refresh_token(self, refresh_token: str) -> dict:
+        """Use refresh token to get new access token."""
+        response = requests.post(
+            self.token_endpoint,
+            data={
+                'grant_type': 'refresh_token',
+                'client_id': self.client_id,
+                'refresh_token': refresh_token
+            },
+            headers={'Content-Type': 'application/x-www-form-urlencoded'}
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_userinfo(self, access_token: str) -> dict:
+        """Get user information using access token."""
+        response = requests.get(
+            self.userinfo_endpoint,
+            headers={'Authorization': f'Bearer {access_token}'}
+        )
+        response.raise_for_status()
+        return response.json()
+
+
+# Usage example
+if __name__ == "__main__":
+    client = AndyAuthClient(
+        client_id="my-python-app",
+        redirect_uri="http://localhost:8000/callback",
+        auth_server="https://auth.example.com"
+    )
+
+    # Step 1: Get authorization URL
+    auth_url, state, code_verifier = client.get_authorization_url()
+    print(f"Visit: {auth_url}")
+
+    # Step 2: After redirect, exchange code (simulate)
+    # authorization_code = input("Enter authorization code: ")
+    # tokens = client.exchange_code(authorization_code, code_verifier)
+    # print(f"Access Token: {tokens['access_token']}")</code></pre>
+            </div>
+
+            <h2 id="flask">Flask Integration</h2>
+
+            <p>Complete Flask application with OAuth login:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">python</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code>from flask import Flask, redirect, request, session, url_for, jsonify
+from functools import wraps
+import requests
+import secrets
+
+app = Flask(__name__)
+app.secret_key = secrets.token_hex(32)
+
+# Configuration
+AUTH_SERVER = "https://auth.example.com"
+CLIENT_ID = "my-flask-app"
+REDIRECT_URI = "http://localhost:5000/callback"
+
+# Discover endpoints on startup
+discovery = requests.get(f"{AUTH_SERVER}/.well-known/openid-configuration").json()
+
+
+def login_required(f):
+    """Decorator to require authentication."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'access_token' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+@app.route('/')
+def home():
+    if 'user' in session:
+        return f"Hello, {session['user']['email']}! <a href='/logout'>Logout</a>"
+    return "<a href='/login'>Login with Andy Auth</a>"
+
+
+@app.route('/login')
+def login():
+    # Generate PKCE
+    code_verifier = secrets.token_urlsafe(64)
+    import hashlib, base64
+    code_challenge = base64.urlsafe_b64encode(
+        hashlib.sha256(code_verifier.encode()).digest()
+    ).decode().rstrip('=')
+
+    # Store in session
+    session['code_verifier'] = code_verifier
+    session['state'] = secrets.token_urlsafe(32)
+
+    # Build authorization URL
+    params = {
+        'client_id': CLIENT_ID,
+        'response_type': 'code',
+        'redirect_uri': REDIRECT_URI,
+        'scope': 'openid profile email',
+        'state': session['state'],
+        'code_challenge': code_challenge,
+        'code_challenge_method': 'S256'
+    }
+
+    from urllib.parse import urlencode
+    auth_url = f"{discovery['authorization_endpoint']}?{urlencode(params)}"
+    return redirect(auth_url)
+
+
+@app.route('/callback')
+def callback():
+    # Verify state
+    if request.args.get('state') != session.get('state'):
+        return "State mismatch", 400
+
+    # Check for errors
+    if 'error' in request.args:
+        return f"Error: {request.args.get('error_description', request.args['error'])}", 400
+
+    # Exchange code for tokens
+    code = request.args.get('code')
+    token_response = requests.post(
+        discovery['token_endpoint'],
+        data={
+            'grant_type': 'authorization_code',
+            'client_id': CLIENT_ID,
+            'code': code,
+            'redirect_uri': REDIRECT_URI,
+            'code_verifier': session['code_verifier']
+        }
+    )
+
+    if not token_response.ok:
+        return f"Token error: {token_response.text}", 400
+
+    tokens = token_response.json()
+    session['access_token'] = tokens['access_token']
+    session['refresh_token'] = tokens.get('refresh_token')
+
+    # Get user info
+    userinfo = requests.get(
+        discovery['userinfo_endpoint'],
+        headers={'Authorization': f"Bearer {tokens['access_token']}"}
+    ).json()
+
+    session['user'] = userinfo
+
+    # Clean up
+    session.pop('code_verifier', None)
+    session.pop('state', None)
+
+    return redirect(url_for('home'))
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('home'))
+
+
+@app.route('/api/protected')
+@login_required
+def protected_api():
+    return jsonify({
+        'message': 'This is protected data',
+        'user': session['user']
+    })
+
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)</code></pre>
+            </div>
+
+            <h2 id="fastapi">FastAPI Integration</h2>
+
+            <p>FastAPI application with OAuth 2.0 and JWT validation:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">python</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code>from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import OAuth2AuthorizationCodeBearer
+from jose import jwt, JWTError
+import httpx
+
+app = FastAPI(title="My API with Andy Auth")
+
+# Configuration
+AUTH_SERVER = "https://auth.example.com"
+CLIENT_ID = "my-fastapi-app"
+
+# OAuth2 scheme
+oauth2_scheme = OAuth2AuthorizationCodeBearer(
+    authorizationUrl=f"{AUTH_SERVER}/connect/authorize",
+    tokenUrl=f"{AUTH_SERVER}/connect/token",
+    scopes={"openid": "OpenID", "profile": "Profile", "email": "Email"}
+)
+
+# Cache for JWKS
+_jwks_cache = None
+
+
+async def get_jwks():
+    """Fetch JWKS from auth server (with caching)."""
+    global _jwks_cache
+    if _jwks_cache is None:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{AUTH_SERVER}/.well-known/jwks")
+            _jwks_cache = response.json()
+    return _jwks_cache
+
+
+async def validate_token(token: str = Depends(oauth2_scheme)) -> dict:
+    """Validate access token and return claims."""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    try:
+        # For opaque tokens, use introspection
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{AUTH_SERVER}/connect/introspect",
+                data={
+                    "token": token,
+                    "token_type_hint": "access_token",
+                    "client_id": CLIENT_ID
+                }
+            )
+
+            if not response.is_success:
+                raise credentials_exception
+
+            result = response.json()
+            if not result.get("active"):
+                raise credentials_exception
+
+            return {
+                "sub": result.get("sub"),
+                "email": result.get("email"),
+                "name": result.get("name"),
+                "scope": result.get("scope", "").split()
+            }
+
+    except Exception as e:
+        raise credentials_exception
+
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome! Use /docs for API documentation"}
+
+
+@app.get("/api/me")
+async def get_current_user(user: dict = Depends(validate_token)):
+    """Get current authenticated user."""
+    return user
+
+
+@app.get("/api/protected")
+async def protected_endpoint(user: dict = Depends(validate_token)):
+    """Example protected endpoint."""
+    return {
+        "message": f"Hello, {user.get('name', user['sub'])}!",
+        "scopes": user["scope"]
+    }
+
+
+# Run with: uvicorn main:app --reload</code></pre>
+            </div>
+
+            <h2 id="mcp-server">MCP Server Implementation</h2>
+
+            <p>Build an MCP server with OAuth authentication:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">python</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code>"""
+MCP Server with Andy Auth OAuth 2.0 Authentication
+"""
+from fastapi import FastAPI, Depends, HTTPException, Header
+from pydantic import BaseModel
+from typing import Optional, List
+import httpx
+
+app = FastAPI(title="My MCP Server")
+
+AUTH_SERVER = "https://auth.example.com"
+CLIENT_ID = "mcp-server"
+CLIENT_SECRET = "your-client-secret"  # For confidential clients
+
+
+class TokenInfo(BaseModel):
+    sub: str
+    email: Optional[str]
+    scope: List[str]
+
+
+async def validate_bearer_token(
+    authorization: str = Header(..., description="Bearer token")
+) -> TokenInfo:
+    """Validate bearer token using introspection endpoint."""
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization header")
+
+    token = authorization[7:]  # Remove "Bearer " prefix
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{AUTH_SERVER}/connect/introspect",
+            data={
+                "token": token,
+                "token_type_hint": "access_token"
+            },
+            auth=(CLIENT_ID, CLIENT_SECRET)  # Basic auth for confidential clients
+        )
+
+        if not response.is_success:
+            raise HTTPException(status_code=401, detail="Token validation failed")
+
+        result = response.json()
+
+        if not result.get("active"):
+            raise HTTPException(status_code=401, detail="Token is not active")
+
+        return TokenInfo(
+            sub=result["sub"],
+            email=result.get("email"),
+            scope=result.get("scope", "").split()
+        )
+
+
+# MCP Protocol Endpoints
+
+@app.get("/.well-known/mcp.json")
+async def mcp_discovery():
+    """MCP server discovery endpoint."""
+    return {
+        "name": "My MCP Server",
+        "version": "1.0.0",
+        "description": "Example MCP server with OAuth authentication",
+        "authentication": {
+            "type": "oauth2",
+            "authorization_url": f"{AUTH_SERVER}/connect/authorize",
+            "token_url": f"{AUTH_SERVER}/connect/token",
+            "scopes": ["openid", "profile", "email"]
+        },
+        "capabilities": {
+            "tools": True,
+            "resources": True
+        }
+    }
+
+
+@app.get("/mcp/tools")
+async def list_tools(token: TokenInfo = Depends(validate_bearer_token)):
+    """List available MCP tools."""
+    return {
+        "tools": [
+            {
+                "name": "search",
+                "description": "Search the database",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Search query"}
+                    },
+                    "required": ["query"]
+                }
+            },
+            {
+                "name": "get_user",
+                "description": "Get user information",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "user_id": {"type": "string"}
+                    }
+                }
+            }
+        ]
+    }
+
+
+class ToolRequest(BaseModel):
+    name: str
+    arguments: dict
+
+
+@app.post("/mcp/tools/execute")
+async def execute_tool(
+    request: ToolRequest,
+    token: TokenInfo = Depends(validate_bearer_token)
+):
+    """Execute an MCP tool."""
+    if request.name == "search":
+        query = request.arguments.get("query", "")
+        return {
+            "result": f"Search results for '{query}' by user {token.email}",
+            "items": []
+        }
+
+    elif request.name == "get_user":
+        return {
+            "result": {
+                "id": token.sub,
+                "email": token.email
+            }
+        }
+
+    raise HTTPException(status_code=404, detail=f"Tool '{request.name}' not found")
+
+
+@app.get("/mcp/resources")
+async def list_resources(token: TokenInfo = Depends(validate_bearer_token)):
+    """List available MCP resources."""
+    return {
+        "resources": [
+            {
+                "uri": "user://profile",
+                "name": "User Profile",
+                "description": "Current user's profile information"
+            }
+        ]
+    }
+
+
+@app.get("/mcp/resources/{resource_path:path}")
+async def get_resource(
+    resource_path: str,
+    token: TokenInfo = Depends(validate_bearer_token)
+):
+    """Get an MCP resource."""
+    if resource_path == "user://profile":
+        return {
+            "content": {
+                "id": token.sub,
+                "email": token.email,
+                "scopes": token.scope
+            }
+        }
+
+    raise HTTPException(status_code=404, detail=f"Resource '{resource_path}' not found")</code></pre>
+            </div>
+
+            <h2 id="client-credentials">Client Credentials Flow</h2>
+
+            <p>For server-to-server communication without user interaction:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">python</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code>import requests
+
+def get_client_credentials_token(
+    auth_server: str,
+    client_id: str,
+    client_secret: str,
+    scope: str = "openid"
+) -> dict:
+    """
+    Get access token using client credentials grant.
+    Used for server-to-server communication.
+    """
+    # Discover token endpoint
+    discovery = requests.get(
+        f"{auth_server}/.well-known/openid-configuration"
+    ).json()
+
+    # Request token
+    response = requests.post(
+        discovery['token_endpoint'],
+        data={
+            'grant_type': 'client_credentials',
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'scope': scope
+        },
+        headers={'Content-Type': 'application/x-www-form-urlencoded'}
+    )
+
+    response.raise_for_status()
+    return response.json()
+
+
+# Usage
+if __name__ == "__main__":
+    tokens = get_client_credentials_token(
+        auth_server="https://auth.example.com",
+        client_id="my-service",
+        client_secret="my-secret",
+        scope="openid profile"
+    )
+
+    print(f"Access Token: {tokens['access_token']}")
+    print(f"Expires In: {tokens['expires_in']} seconds")</code></pre>
+            </div>
+
+            <h2 id="dynamic-registration">Dynamic Client Registration</h2>
+
+            <p>Register clients automatically using RFC 7591:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">python</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code>import requests
+
+def register_client(
+    auth_server: str,
+    client_name: str,
+    redirect_uris: list[str],
+    grant_types: list[str] = None,
+    initial_access_token: str = None
+) -> dict:
+    """
+    Register a new OAuth client dynamically.
+    """
+    # Discover registration endpoint
+    discovery = requests.get(
+        f"{auth_server}/.well-known/openid-configuration"
+    ).json()
+
+    registration_endpoint = discovery.get('registration_endpoint')
+    if not registration_endpoint:
+        raise ValueError("Server does not support dynamic client registration")
+
+    # Prepare registration request
+    registration_data = {
+        "client_name": client_name,
+        "redirect_uris": redirect_uris,
+        "grant_types": grant_types or ["authorization_code", "refresh_token"],
+        "response_types": ["code"],
+        "token_endpoint_auth_method": "none"  # Public client
+    }
+
+    headers = {"Content-Type": "application/json"}
+    if initial_access_token:
+        headers["Authorization"] = f"Bearer {initial_access_token}"
+
+    response = requests.post(
+        registration_endpoint,
+        json=registration_data,
+        headers=headers
+    )
+
+    response.raise_for_status()
+    return response.json()
+
+
+# Usage
+if __name__ == "__main__":
+    client = register_client(
+        auth_server="https://auth.example.com",
+        client_name="My Dynamic Client",
+        redirect_uris=["http://localhost:3000/callback"]
+    )
+
+    print(f"Client ID: {client['client_id']}")
+    print(f"Registration Token: {client.get('registration_access_token')}")</code></pre>
+            </div>
+
+            <h2 id="testing">Testing</h2>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">python</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code>"""
+Unit tests for OAuth integration
+"""
+import pytest
+from unittest.mock import patch, MagicMock
+
+def test_pkce_generation():
+    from your_module import AndyAuthClient
+
+    client = AndyAuthClient(
+        client_id="test",
+        redirect_uri="http://localhost/callback",
+        auth_server="https://auth.example.com"
+    )
+
+    verifier, challenge = client.generate_pkce()
+
+    # Verifier should be URL-safe base64
+    assert len(verifier) >= 43
+    assert len(challenge) == 43  # SHA256 in base64url without padding
+
+
+@pytest.mark.asyncio
+async def test_token_validation():
+    from your_module import validate_token
+
+    with patch('httpx.AsyncClient') as mock_client:
+        mock_response = MagicMock()
+        mock_response.is_success = True
+        mock_response.json.return_value = {
+            "active": True,
+            "sub": "user123",
+            "email": "user@example.com",
+            "scope": "openid profile"
+        }
+
+        mock_client.return_value.__aenter__.return_value.post.return_value = mock_response
+
+        result = await validate_token("test_token")
+
+        assert result["sub"] == "user123"
+        assert "openid" in result["scope"]</code></pre>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/tutorials/csharp.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">C# / .NET</span>
+                </a>
+                <a href="/docs/tutorials/javascript.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">JavaScript / Node.js</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

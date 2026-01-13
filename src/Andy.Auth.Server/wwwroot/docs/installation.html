@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Installation Guide - Andy Auth Documentation</title>
+    <meta name="description" content="Step-by-step guide to installing and running Andy Auth locally with .NET 8 and PostgreSQL">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link active">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Security</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/security/overview.html" class="docs-sidebar-link">Security Overview</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link">Core Concepts</a></li>
+                    <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                    <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link">PKCE</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Tutorials</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/tutorials/csharp.html" class="docs-sidebar-link">C# / .NET</a></li>
+                    <li><a href="/docs/tutorials/python.html" class="docs-sidebar-link">Python</a></li>
+                    <li><a href="/docs/tutorials/javascript.html" class="docs-sidebar-link">JavaScript</a></li>
+                    <li><a href="/docs/tutorials/typescript.html" class="docs-sidebar-link">TypeScript</a></li>
+                    <li><a href="/docs/tutorials/java.html" class="docs-sidebar-link">Java</a></li>
+                    <li><a href="/docs/tutorials/go.html" class="docs-sidebar-link">Go</a></li>
+                    <li><a href="/docs/tutorials/rust.html" class="docs-sidebar-link">Rust</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/installation.html">Getting Started</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Installation</span>
+            </nav>
+
+            <h1>Installation Guide</h1>
+            <p class="lead">
+                This guide walks you through installing Andy Auth from source and getting it running
+                on your local development environment.
+            </p>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Quick Start Available
+                </div>
+                <p>
+                    If you want to get started quickly, check out the <a href="/docs/quickstart.html">Quick Start</a> guide
+                    which provides the fastest path to a running instance.
+                </p>
+            </div>
+
+            <h2 id="prerequisites">Prerequisites</h2>
+
+            <p>Before installing Andy Auth, ensure you have the following software installed:</p>
+
+            <h3>.NET 8 SDK</h3>
+
+            <p>Andy Auth is built on .NET 8. Download and install the SDK from the official Microsoft website:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Verify .NET installation
+dotnet --version
+# Should output: 8.0.x or higher
+
+# If not installed, download from:
+# https://dotnet.microsoft.com/download/dotnet/8.0</code></pre>
+            </div>
+
+            <h3>PostgreSQL 14+</h3>
+
+            <p>Andy Auth uses PostgreSQL for data storage. Install PostgreSQL 14 or later:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># macOS (using Homebrew)
+brew install postgresql@14
+brew services start postgresql@14
+
+# Ubuntu/Debian
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+
+# Windows
+# Download installer from https://www.postgresql.org/download/windows/
+
+# Verify installation
+psql --version
+# Should output: psql (PostgreSQL) 14.x or higher</code></pre>
+            </div>
+
+            <h3>Git</h3>
+
+            <p>Git is required to clone the repository:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Verify Git installation
+git --version
+# Should output: git version 2.x.x</code></pre>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Requirement</th>
+                        <th>Minimum Version</th>
+                        <th>Recommended</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>.NET SDK</strong></td>
+                        <td>8.0</td>
+                        <td>8.0 (latest)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>PostgreSQL</strong></td>
+                        <td>14</td>
+                        <td>16</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Git</strong></td>
+                        <td>2.0</td>
+                        <td>2.40+</td>
+                    </tr>
+                    <tr>
+                        <td><strong>RAM</strong></td>
+                        <td>2 GB</td>
+                        <td>4 GB</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Disk Space</strong></td>
+                        <td>500 MB</td>
+                        <td>1 GB</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="clone-repository">Cloning the Repository</h2>
+
+            <p>Clone the Andy Auth repository from GitHub:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Clone the repository
+git clone https://github.com/rivoli-ai/andy-auth.git
+
+# Navigate to the project directory
+cd andy-auth
+
+# View the project structure
+ls -la
+# You should see:
+# - src/           (source code)
+# - tests/         (test projects)
+# - docs/          (documentation)
+# - Andy.Auth.sln  (solution file)</code></pre>
+            </div>
+
+            <h2 id="database-setup">Database Setup</h2>
+
+            <p>Create a PostgreSQL database for Andy Auth:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Connect to PostgreSQL
+psql -U postgres
+
+# Create a new database
+CREATE DATABASE andyauth;
+
+# Create a user for the application
+CREATE USER andyauth_user WITH ENCRYPTED PASSWORD 'your_secure_password';
+
+# Grant privileges
+GRANT ALL PRIVILEGES ON DATABASE andyauth TO andyauth_user;
+
+# Exit psql
+\q</code></pre>
+            </div>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Use Strong Passwords
+                </div>
+                <p>
+                    Replace <code>your_secure_password</code> with a strong, unique password. Never use the example
+                    password in production environments.
+                </p>
+            </div>
+
+            <h3>Apply Database Migrations</h3>
+
+            <p>Andy Auth uses Entity Framework Core for database management. Apply migrations to create the schema:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Navigate to the server project
+cd src/Andy.Auth.Server
+
+# Update the connection string in appsettings.Development.json first
+# Then apply migrations
+dotnet ef database update
+
+# Or run all migrations explicitly
+dotnet ef migrations list
+dotnet ef database update</code></pre>
+            </div>
+
+            <h2 id="configuration">Environment Configuration</h2>
+
+            <p>Configure the application for your environment:</p>
+
+            <h3>Development Configuration</h3>
+
+            <p>Create or update <code>appsettings.Development.json</code>:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+    "ConnectionStrings": {
+        "DefaultConnection": "Host=localhost;Database=andyauth;Username=andyauth_user;Password=your_secure_password"
+    },
+    "Logging": {
+        "LogLevel": {
+            "Default": "Information",
+            "Microsoft.AspNetCore": "Warning",
+            "OpenIddict": "Debug"
+        }
+    },
+    "OpenIddict": {
+        "Issuer": "https://localhost:5001"
+    }
+}</code></pre>
+            </div>
+
+            <h3>User Secrets (Recommended for Development)</h3>
+
+            <p>Use .NET User Secrets to store sensitive configuration:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Initialize user secrets
+cd src/Andy.Auth.Server
+dotnet user-secrets init
+
+# Set the connection string
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" \
+    "Host=localhost;Database=andyauth;Username=andyauth_user;Password=your_secure_password"
+
+# View all secrets
+dotnet user-secrets list</code></pre>
+            </div>
+
+            <h2 id="running-locally">Running Locally</h2>
+
+            <p>Start the application in development mode:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># From the src/Andy.Auth.Server directory
+dotnet run
+
+# Or with hot reload enabled
+dotnet watch run
+
+# The application will start on:
+# - HTTPS: https://localhost:5001
+# - HTTP:  http://localhost:5000</code></pre>
+            </div>
+
+            <h3>Verify Installation</h3>
+
+            <p>Check that the application is running correctly:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Check the OpenID discovery endpoint
+curl https://localhost:5001/.well-known/openid-configuration
+
+# You should see a JSON response with endpoints like:
+# - authorization_endpoint
+# - token_endpoint
+# - userinfo_endpoint
+# - registration_endpoint</code></pre>
+            </div>
+
+            <p>You can also visit the following URLs in your browser:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>URL</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>https://localhost:5001</code></td>
+                        <td>Application home page</td>
+                    </tr>
+                    <tr>
+                        <td><code>https://localhost:5001/docs</code></td>
+                        <td>Documentation</td>
+                    </tr>
+                    <tr>
+                        <td><code>https://localhost:5001/.well-known/openid-configuration</code></td>
+                        <td>OpenID Discovery</td>
+                    </tr>
+                    <tr>
+                        <td><code>https://localhost:5001/admin</code></td>
+                        <td>Admin dashboard</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="first-admin">Creating the First Admin User</h2>
+
+            <p>Create an administrator account to access the admin dashboard:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># The first user registered automatically becomes an admin
+# Navigate to https://localhost:5001/register and create an account
+
+# Alternatively, use the CLI tool:
+cd src/Andy.Auth.Server
+dotnet run -- create-admin --email admin@example.com --password "YourSecurePassword123!"</code></pre>
+            </div>
+
+            <h2 id="docker">Docker Installation (Alternative)</h2>
+
+            <p>You can also run Andy Auth using Docker:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Build the Docker image
+docker build -t andy-auth .
+
+# Run with Docker Compose
+docker-compose up -d
+
+# Or run standalone with environment variables
+docker run -d \
+    -p 5001:443 \
+    -e ConnectionStrings__DefaultConnection="Host=host.docker.internal;Database=andyauth;Username=andyauth_user;Password=your_secure_password" \
+    -e ASPNETCORE_URLS="https://+:443" \
+    -e ASPNETCORE_Kestrel__Certificates__Default__Path="/https/cert.pfx" \
+    -e ASPNETCORE_Kestrel__Certificates__Default__Password="cert_password" \
+    andy-auth</code></pre>
+            </div>
+
+            <h2 id="troubleshooting">Troubleshooting</h2>
+
+            <h3>Common Issues</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Issue</th>
+                        <th>Solution</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Database connection failed</strong></td>
+                        <td>Verify PostgreSQL is running and connection string is correct</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SSL certificate errors</strong></td>
+                        <td>Trust the development certificate: <code>dotnet dev-certs https --trust</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Port already in use</strong></td>
+                        <td>Change the port in <code>launchSettings.json</code> or stop the conflicting process</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Migration errors</strong></td>
+                        <td>Ensure EF tools are installed: <code>dotnet tool install --global dotnet-ef</code></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Getting Help</h3>
+
+            <p>If you encounter issues not covered here:</p>
+
+            <ul>
+                <li>Check the <a href="https://github.com/rivoli-ai/andy-auth/issues">GitHub Issues</a> for similar problems</li>
+                <li>Review the application logs in the console output</li>
+                <li>Enable debug logging by setting <code>Logging:LogLevel:Default</code> to <code>Debug</code></li>
+            </ul>
+
+            <h2 id="next-steps">Next Steps</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/configuration.html" class="docs-card">
+                    <div class="docs-card-title">Configuration Guide</div>
+                    <div class="docs-card-desc">Learn how to configure Andy Auth for your environment.</div>
+                </a>
+                <a href="/docs/security/overview.html" class="docs-card">
+                    <div class="docs-card-title">Security Overview</div>
+                    <div class="docs-card-desc">Understand the security features and best practices.</div>
+                </a>
+                <a href="/docs/mcp/overview.html" class="docs-card">
+                    <div class="docs-card-title">MCP Integration</div>
+                    <div class="docs-card-desc">Set up authentication for AI assistants.</div>
+                </a>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/quickstart.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Quick Start</span>
+                </a>
+                <a href="/docs/configuration.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Configuration</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

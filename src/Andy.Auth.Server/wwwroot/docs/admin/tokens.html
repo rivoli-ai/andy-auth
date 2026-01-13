@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Management - Andy Auth Documentation</title>
+    <meta name="description" content="Learn how to view and revoke OAuth tokens in Andy Auth admin dashboard">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Admin Dashboard <span class="badge badge-new">New</span></div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/admin/dashboard.html" class="docs-sidebar-link">Dashboard Overview</a></li>
+                    <li><a href="/docs/admin/users.html" class="docs-sidebar-link">User Management</a></li>
+                    <li><a href="/docs/admin/clients.html" class="docs-sidebar-link">OAuth Clients</a></li>
+                    <li><a href="/docs/admin/tokens.html" class="docs-sidebar-link active">Token Management</a></li>
+                    <li><a href="/docs/admin/audit-logs.html" class="docs-sidebar-link">Audit Logs</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/admin/dashboard.html">Admin Dashboard</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Token Management</span>
+            </nav>
+
+            <h1>Token Management</h1>
+            <p class="lead">
+                View, monitor, and revoke OAuth tokens (reference tokens) from the admin dashboard.
+                Access the token management interface at <code>/admin/tokens</code>.
+            </p>
+
+            <div class="endpoint">
+                <span class="endpoint-method get">GET</span>
+                <span class="endpoint-path">/admin/tokens</span>
+            </div>
+
+            <h2 id="token-statistics">Token Statistics</h2>
+
+            <p>The token management page displays real-time statistics at a glance:</p>
+
+            <!-- Screenshot Placeholder -->
+            <div class="screenshot-placeholder">
+                <div class="screenshot-placeholder-inner">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <path d="M21 15l-5-5L5 21"/>
+                    </svg>
+                    <span>Token Statistics Screenshot</span>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Total Tokens</strong></td>
+                        <td>The total number of tokens in the system</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Active Tokens</strong></td>
+                        <td>Tokens that are currently valid and usable</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Expired</strong></td>
+                        <td>Tokens that have passed their expiration time</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Revoked</strong></td>
+                        <td>Tokens that have been manually revoked</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="token-list">Token List</h2>
+
+            <p>The token table displays detailed information about each token:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Column</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Type</strong></td>
+                        <td>Token type: Access Token, Refresh Token, or Authorization Code</td>
+                    </tr>
+                    <tr>
+                        <td><strong>User</strong></td>
+                        <td>The user the token was issued for (or "Client credentials" for machine-to-machine)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Application</strong></td>
+                        <td>The OAuth client application name</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Created</strong></td>
+                        <td>When the token was issued</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Expires</strong></td>
+                        <td>When the token will expire (with visual indicator if expired)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Status</strong></td>
+                        <td>Current status: Valid, Revoked, Redeemed, or Inactive</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="token-types">Understanding Token Types</h2>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">Token Types</span>
+                </div>
+                <pre><code>Access Token        - Short-lived token for API access
+Refresh Token       - Long-lived token to obtain new access tokens
+Authorization Code  - One-time code exchanged for tokens</code></pre>
+            </div>
+
+            <h2 id="token-status">Understanding Token Status</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Description</th>
+                        <th>Action Available</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Valid</strong></td>
+                        <td>Token is active and can be used</td>
+                        <td>Can be revoked</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Revoked</strong></td>
+                        <td>Token was manually invalidated</td>
+                        <td>None</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Redeemed</strong></td>
+                        <td>Authorization code was exchanged for tokens</td>
+                        <td>None</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Inactive</strong></td>
+                        <td>Token is no longer valid (expired or parent revoked)</td>
+                        <td>None</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="searching-filtering">Searching and Filtering</h2>
+
+            <p>Use the search and filter controls to find specific tokens:</p>
+
+            <h3>Search</h3>
+
+            <ol>
+                <li>Enter a search term in the search input (user email or application name)</li>
+                <li>Click <strong>Filter</strong> or press Enter</li>
+            </ol>
+
+            <h3>Filter by Status</h3>
+
+            <ol>
+                <li>Select a status from the dropdown menu</li>
+                <li>Click <strong>Filter</strong> to apply</li>
+            </ol>
+
+            <p>Available status filters:</p>
+
+            <ul>
+                <li><strong>All Statuses</strong> - Show all tokens</li>
+                <li><strong>Valid</strong> - Only active tokens</li>
+                <li><strong>Revoked</strong> - Manually revoked tokens</li>
+                <li><strong>Redeemed</strong> - Used authorization codes</li>
+                <li><strong>Inactive</strong> - Expired or invalidated tokens</li>
+            </ul>
+
+            <h2 id="revoking-tokens">Revoking Tokens</h2>
+
+            <h3>Revoking a Single Token</h3>
+
+            <p>To revoke an individual token:</p>
+
+            <ol>
+                <li>Find the token in the list</li>
+                <li>Click the <strong>Revoke</strong> button in the Actions column</li>
+                <li>Confirm the action in the prompt</li>
+            </ol>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Revocation Effects
+                </div>
+                <p>
+                    When you revoke a refresh token, all associated access tokens are also invalidated.
+                    The user will need to re-authenticate to obtain new tokens.
+                </p>
+            </div>
+
+            <h3>Revoking All Tokens</h3>
+
+            <p>In emergency situations, you can revoke all active tokens:</p>
+
+            <ol>
+                <li>Click the <strong>Revoke All</strong> button in the header</li>
+                <li>Carefully read the confirmation prompt</li>
+                <li>Confirm to revoke all active tokens</li>
+            </ol>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Use With Caution
+                </div>
+                <p>
+                    Revoking all tokens will immediately log out all users from all applications.
+                    This action cannot be undone. Only use this in security emergencies.
+                </p>
+            </div>
+
+            <h2 id="use-cases">Common Use Cases</h2>
+
+            <h3>Security Incident Response</h3>
+
+            <p>If you suspect a security breach:</p>
+
+            <ol>
+                <li>Search for tokens associated with the compromised user or application</li>
+                <li>Revoke all suspicious tokens</li>
+                <li>Review the <a href="/docs/admin/audit-logs.html">audit logs</a> for suspicious activity</li>
+                <li>Consider resetting the user's password</li>
+            </ol>
+
+            <h3>User Account Termination</h3>
+
+            <p>When deactivating a user account:</p>
+
+            <ol>
+                <li>Search for tokens by the user's email</li>
+                <li>Revoke all active tokens for that user</li>
+                <li>Suspend or delete the user account</li>
+            </ol>
+
+            <h3>Client Application Retirement</h3>
+
+            <p>When retiring an OAuth client:</p>
+
+            <ol>
+                <li>Search for tokens by the application name</li>
+                <li>Revoke all tokens for that client</li>
+                <li>Delete the OAuth client from the <a href="/docs/admin/clients.html">clients page</a></li>
+            </ol>
+
+            <h2 id="pagination">Pagination</h2>
+
+            <p>The token list is paginated for performance. Use the pagination controls at the bottom to navigate:</p>
+
+            <ul>
+                <li><strong>Previous</strong> - Go to the previous page</li>
+                <li><strong>Page numbers</strong> - Jump to a specific page</li>
+                <li><strong>Next</strong> - Go to the next page</li>
+            </ul>
+
+            <h2 id="best-practices">Best Practices</h2>
+
+            <ul>
+                <li><strong>Regular monitoring</strong> - Check token statistics periodically to detect anomalies</li>
+                <li><strong>Prompt revocation</strong> - Revoke tokens immediately when security concerns arise</li>
+                <li><strong>Document actions</strong> - Keep records of why tokens were revoked</li>
+                <li><strong>Review expired tokens</strong> - Clean up or archive old token data as needed</li>
+                <li><strong>Coordinate with users</strong> - Warn users before mass revocations when possible</li>
+            </ul>
+
+            <h2 id="next-steps">Next Steps</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/admin/audit-logs.html" class="docs-card">
+                    <div class="docs-card-title">Audit Logs</div>
+                    <div class="docs-card-desc">Track token revocations and other security events.</div>
+                </a>
+                <a href="/docs/admin/clients.html" class="docs-card">
+                    <div class="docs-card-title">OAuth Client Management</div>
+                    <div class="docs-card-desc">Manage the applications that issue tokens.</div>
+                </a>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/admin/clients.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">OAuth Client Management</span>
+                </a>
+                <a href="/docs/admin/audit-logs.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Audit Logs</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <style>
+        .screenshot-placeholder {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ed 100%);
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 3rem;
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+        .screenshot-placeholder-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            color: #6b7280;
+        }
+        .screenshot-placeholder-inner svg {
+            opacity: 0.5;
+        }
+        .screenshot-placeholder-inner span {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+    </style>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

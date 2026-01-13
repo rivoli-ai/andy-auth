@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Endpoints Overview - Andy Auth Documentation</title>
+    <meta name="description" content="Complete reference for all OAuth 2.0 and OpenID Connect endpoints provided by Andy Auth">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link">Core Concepts</a></li>
+                    <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                    <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link">PKCE</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Tutorials</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/tutorials/csharp.html" class="docs-sidebar-link">C# / .NET</a></li>
+                    <li><a href="/docs/tutorials/python.html" class="docs-sidebar-link">Python</a></li>
+                    <li><a href="/docs/tutorials/javascript.html" class="docs-sidebar-link">JavaScript</a></li>
+                    <li><a href="/docs/tutorials/typescript.html" class="docs-sidebar-link">TypeScript</a></li>
+                    <li><a href="/docs/tutorials/java.html" class="docs-sidebar-link">Java</a></li>
+                    <li><a href="/docs/tutorials/go.html" class="docs-sidebar-link">Go</a></li>
+                    <li><a href="/docs/tutorials/rust.html" class="docs-sidebar-link">Rust</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link active">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/userinfo.html" class="docs-sidebar-link">UserInfo</a></li>
+                    <li><a href="/docs/api/introspect.html" class="docs-sidebar-link">Introspection</a></li>
+                    <li><a href="/docs/api/revoke.html" class="docs-sidebar-link">Revocation</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                    <li><a href="/docs/api/discovery.html" class="docs-sidebar-link">Discovery</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/api/endpoints.html">API Reference</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Endpoints Overview</span>
+            </nav>
+
+            <h1>API Endpoints Overview</h1>
+            <p class="lead">
+                Andy Auth implements a complete OAuth 2.0 and OpenID Connect authorization server using OpenIddict.
+                This reference documents all available API endpoints.
+            </p>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Base URL
+                </div>
+                <p>
+                    All endpoints are relative to your Andy Auth server URL. For example, if your server is at
+                    <code>https://auth.example.com</code>, the authorization endpoint would be
+                    <code>https://auth.example.com/connect/authorize</code>.
+                </p>
+            </div>
+
+            <h2 id="oauth-endpoints">OAuth 2.0 / OIDC Endpoints</h2>
+
+            <p>These are the core endpoints for authentication and authorization:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><a href="/docs/api/authorize.html"><code>/connect/authorize</code></a></td>
+                        <td>
+                            <span class="endpoint-method get" style="font-size: 0.75rem; padding: 2px 6px;">GET</span>
+                            <span class="endpoint-method post" style="font-size: 0.75rem; padding: 2px 6px;">POST</span>
+                        </td>
+                        <td>Initiates the OAuth authorization flow</td>
+                    </tr>
+                    <tr>
+                        <td><a href="/docs/api/token.html"><code>/connect/token</code></a></td>
+                        <td><span class="endpoint-method post" style="font-size: 0.75rem; padding: 2px 6px;">POST</span></td>
+                        <td>Exchanges authorization codes or credentials for tokens</td>
+                    </tr>
+                    <tr>
+                        <td><a href="/docs/api/userinfo.html"><code>/connect/userinfo</code></a></td>
+                        <td><span class="endpoint-method get" style="font-size: 0.75rem; padding: 2px 6px;">GET</span></td>
+                        <td>Returns claims about the authenticated user</td>
+                    </tr>
+                    <tr>
+                        <td><a href="/docs/api/introspect.html"><code>/connect/introspect</code></a></td>
+                        <td><span class="endpoint-method post" style="font-size: 0.75rem; padding: 2px 6px;">POST</span></td>
+                        <td>Validates and returns information about a token</td>
+                    </tr>
+                    <tr>
+                        <td><a href="/docs/api/revoke.html"><code>/connect/revoke</code></a></td>
+                        <td><span class="endpoint-method post" style="font-size: 0.75rem; padding: 2px 6px;">POST</span></td>
+                        <td>Revokes an access or refresh token</td>
+                    </tr>
+                    <tr>
+                        <td><a href="/docs/api/register.html"><code>/connect/register</code></a></td>
+                        <td><span class="endpoint-method post" style="font-size: 0.75rem; padding: 2px 6px;">POST</span></td>
+                        <td>Dynamic Client Registration (RFC 7591)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="discovery-endpoints">Discovery Endpoints</h2>
+
+            <p>Standard endpoints for discovering server capabilities:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><a href="/docs/api/discovery.html"><code>/.well-known/openid-configuration</code></a></td>
+                        <td><span class="endpoint-method get" style="font-size: 0.75rem; padding: 2px 6px;">GET</span></td>
+                        <td>OpenID Connect Discovery document</td>
+                    </tr>
+                    <tr>
+                        <td><a href="/docs/api/discovery.html#jwks"><code>/.well-known/jwks</code></a></td>
+                        <td><span class="endpoint-method get" style="font-size: 0.75rem; padding: 2px 6px;">GET</span></td>
+                        <td>JSON Web Key Set for token verification</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="endpoint-summary">Quick Reference</h2>
+
+            <h3 id="authorization">Authorization Endpoint</h3>
+            <div class="endpoint">
+                <span class="endpoint-method get">GET</span>
+                <span class="endpoint-method post">POST</span>
+                <span class="endpoint-path">/connect/authorize</span>
+            </div>
+            <p>Initiates user authentication and authorization. Supports Authorization Code flow with PKCE.</p>
+            <p><a href="/docs/api/authorize.html">View full documentation</a></p>
+
+            <h3 id="token">Token Endpoint</h3>
+            <div class="endpoint">
+                <span class="endpoint-method post">POST</span>
+                <span class="endpoint-path">/connect/token</span>
+            </div>
+            <p>Exchanges authorization codes, refresh tokens, or client credentials for access tokens.</p>
+            <p><a href="/docs/api/token.html">View full documentation</a></p>
+
+            <h3 id="userinfo">UserInfo Endpoint</h3>
+            <div class="endpoint">
+                <span class="endpoint-method get">GET</span>
+                <span class="endpoint-path">/connect/userinfo</span>
+            </div>
+            <p>Returns OpenID Connect claims about the authenticated user.</p>
+            <p><a href="/docs/api/userinfo.html">View full documentation</a></p>
+
+            <h3 id="introspection">Introspection Endpoint</h3>
+            <div class="endpoint">
+                <span class="endpoint-method post">POST</span>
+                <span class="endpoint-path">/connect/introspect</span>
+            </div>
+            <p>Validates tokens and returns their metadata (RFC 7662).</p>
+            <p><a href="/docs/api/introspect.html">View full documentation</a></p>
+
+            <h3 id="revocation">Revocation Endpoint</h3>
+            <div class="endpoint">
+                <span class="endpoint-method post">POST</span>
+                <span class="endpoint-path">/connect/revoke</span>
+            </div>
+            <p>Revokes access or refresh tokens (RFC 7009).</p>
+            <p><a href="/docs/api/revoke.html">View full documentation</a></p>
+
+            <h3 id="registration">Dynamic Client Registration</h3>
+            <div class="endpoint">
+                <span class="endpoint-method post">POST</span>
+                <span class="endpoint-path">/connect/register</span>
+            </div>
+            <p>Allows clients to register dynamically (RFC 7591).</p>
+            <p><a href="/docs/api/register.html">View full documentation</a></p>
+
+            <h3 id="discovery">Discovery</h3>
+            <div class="endpoint">
+                <span class="endpoint-method get">GET</span>
+                <span class="endpoint-path">/.well-known/openid-configuration</span>
+            </div>
+            <p>OpenID Connect Discovery document with all server capabilities.</p>
+            <p><a href="/docs/api/discovery.html">View full documentation</a></p>
+
+            <h2 id="authentication">Authentication Methods</h2>
+
+            <p>Andy Auth supports the following client authentication methods:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Description</th>
+                        <th>Use Case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>none</code></td>
+                        <td>No client authentication (public clients)</td>
+                        <td>Mobile apps, SPAs, MCP clients</td>
+                    </tr>
+                    <tr>
+                        <td><code>client_secret_basic</code></td>
+                        <td>HTTP Basic authentication</td>
+                        <td>Server-side applications</td>
+                    </tr>
+                    <tr>
+                        <td><code>client_secret_post</code></td>
+                        <td>Client secret in request body</td>
+                        <td>Server-side applications</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="error-responses">Error Responses</h2>
+
+            <p>All endpoints return standard OAuth 2.0 error responses:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "error": "invalid_request",
+  "error_description": "The 'client_id' parameter is missing."
+}</code></pre>
+            </div>
+
+            <p>Common error codes:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Error Code</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>invalid_request</code></td>
+                        <td>The request is missing a required parameter or is malformed</td>
+                    </tr>
+                    <tr>
+                        <td><code>invalid_client</code></td>
+                        <td>Client authentication failed</td>
+                    </tr>
+                    <tr>
+                        <td><code>invalid_grant</code></td>
+                        <td>The authorization code or refresh token is invalid or expired</td>
+                    </tr>
+                    <tr>
+                        <td><code>unauthorized_client</code></td>
+                        <td>The client is not authorized to use this grant type</td>
+                    </tr>
+                    <tr>
+                        <td><code>unsupported_grant_type</code></td>
+                        <td>The grant type is not supported</td>
+                    </tr>
+                    <tr>
+                        <td><code>invalid_scope</code></td>
+                        <td>The requested scope is invalid or unknown</td>
+                    </tr>
+                    <tr>
+                        <td><code>access_denied</code></td>
+                        <td>The resource owner denied the request</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/oauth/pkce.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">PKCE</span>
+                </a>
+                <a href="/docs/api/authorize.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Authorization Endpoint</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

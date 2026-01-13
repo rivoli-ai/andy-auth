@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Tutorial - Andy Auth Documentation</title>
+    <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body>
+    <header class="docs-header">
+        <div class="docs-header-content">
+            <a href="../" class="docs-logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="4" width="24" height="24" rx="6" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 16L14 18L20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Andy Auth</span>
+            </a>
+            <div class="docs-header-actions">
+                <button class="docs-search-btn" data-search-trigger>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <span>Search</span>
+                    <kbd>Ctrl+K</kbd>
+                </button>
+                <button id="theme-toggle" class="docs-theme-toggle" onclick="toggleTheme()"></button>
+                <a href="https://github.com/anthropics/andy-auth" class="docs-github-link">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="docs-layout">
+        <aside class="docs-sidebar">
+            <nav class="docs-nav">
+                <div class="docs-sidebar-group expanded">
+                    <div class="docs-sidebar-group-header">
+                        <span>Getting Started</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="docs-sidebar-group-content">
+                        <a href="../" class="docs-sidebar-link">Overview</a>
+                        <a href="../quickstart.html" class="docs-sidebar-link">Quick Start</a>
+                    </div>
+                </div>
+                <div class="docs-sidebar-group expanded">
+                    <div class="docs-sidebar-group-header">
+                        <span>Tutorials</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="docs-sidebar-group-content">
+                        <a href="python.html" class="docs-sidebar-link">Python</a>
+                        <a href="csharp.html" class="docs-sidebar-link">C# / .NET</a>
+                        <a href="javascript.html" class="docs-sidebar-link">JavaScript</a>
+                        <a href="typescript.html" class="docs-sidebar-link">TypeScript</a>
+                        <a href="java.html" class="docs-sidebar-link active">Java</a>
+                        <a href="go.html" class="docs-sidebar-link">Go</a>
+                        <a href="rust.html" class="docs-sidebar-link">Rust</a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="docs-main">
+            <article class="docs-content">
+                <div class="docs-breadcrumb">
+                    <a href="../">Docs</a>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    <a href="#">Tutorials</a>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    <span>Java</span>
+                </div>
+
+                <h1>Java OAuth Integration</h1>
+                <p class="docs-lead">Integrate Andy Auth into your Java applications using Spring Boot and Spring Security.</p>
+
+                <h2 id="dependencies">Maven Dependencies</h2>
+                <p>Add the required dependencies to your <code>pom.xml</code>:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">XML - pom.xml</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>&lt;dependencies&gt;
+    &lt;!-- Spring Boot OAuth2 Client --&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-boot-starter-oauth2-client&lt;/artifactId&gt;
+    &lt;/dependency&gt;
+
+    &lt;!-- Spring Security --&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-boot-starter-security&lt;/artifactId&gt;
+    &lt;/dependency&gt;
+
+    &lt;!-- For Resource Server / API protection --&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-boot-starter-oauth2-resource-server&lt;/artifactId&gt;
+    &lt;/dependency&gt;
+
+    &lt;!-- Web --&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;</code></pre>
+                </div>
+
+                <h2 id="config">Application Configuration</h2>
+                <p>Configure Andy Auth in <code>application.yml</code>:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">YAML - application.yml</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          andy-auth:
+            client-id: your-client-id
+            client-secret: your-client-secret
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - openid
+              - profile
+              - email
+        provider:
+          andy-auth:
+            issuer-uri: https://your-andy-auth-server.com
+
+      # Resource server configuration (for API protection)
+      resourceserver:
+        jwt:
+          issuer-uri: https://your-andy-auth-server.com</code></pre>
+                </div>
+
+                <h2 id="security-config">Security Configuration</h2>
+                <p>Configure Spring Security with OAuth2 login:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Java - SecurityConfig.java</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>package com.example.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/", "/public/**", "/error").permitAll()
+                .anyRequest().authenticated()
+            )
+            .oauth2Login(oauth2 -> oauth2
+                .loginPage("/login")
+                .defaultSuccessUrl("/dashboard", true)
+                .failureUrl("/login?error=true")
+                .userInfoEndpoint(userInfo -> userInfo
+                    .oidcUserService(oidcUserService())
+                )
+            )
+            .logout(logout -> logout
+                .logoutSuccessUrl("/")
+                .invalidateHttpSession(true)
+                .clearAuthentication(true)
+                .deleteCookies("JSESSIONID")
+            );
+
+        return http.build();
+    }
+
+    @Bean
+    public OAuth2UserService&lt;OidcUserRequest, OidcUser&gt; oidcUserService() {
+        final OidcUserService delegate = new OidcUserService();
+
+        return userRequest -&gt; {
+            OidcUser oidcUser = delegate.loadUser(userRequest);
+
+            // Custom user processing
+            // You can map claims to your local user model here
+            System.out.println("User logged in: " + oidcUser.getEmail());
+
+            return oidcUser;
+        };
+    }
+}</code></pre>
+                </div>
+
+                <h2 id="controller">Web Controller</h2>
+                <p>Access authenticated user information in controllers:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Java - HomeController.java</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>package com.example.controller;
+
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.Map;
+
+@Controller
+public class HomeController {
+
+    @GetMapping("/")
+    public String home() {
+        return "home";
+    }
+
+    @GetMapping("/dashboard")
+    public String dashboard(@AuthenticationPrincipal OidcUser user, Model model) {
+        model.addAttribute("user", user);
+        model.addAttribute("name", user.getFullName());
+        model.addAttribute("email", user.getEmail());
+        return "dashboard";
+    }
+
+    @GetMapping("/profile")
+    @ResponseBody
+    public Map&lt;String, Object&gt; profile(@AuthenticationPrincipal OidcUser user) {
+        return Map.of(
+            "sub", user.getSubject(),
+            "name", user.getFullName(),
+            "email", user.getEmail(),
+            "claims", user.getClaims()
+        );
+    }
+
+    @GetMapping("/tokens")
+    @ResponseBody
+    public Map&lt;String, String&gt; tokens(
+            @RegisteredOAuth2AuthorizedClient("andy-auth") OAuth2AuthorizedClient client) {
+        return Map.of(
+            "accessToken", truncate(client.getAccessToken().getTokenValue(), 50),
+            "expiresAt", client.getAccessToken().getExpiresAt().toString(),
+            "hasRefreshToken", String.valueOf(client.getRefreshToken() != null)
+        );
+    }
+
+    private String truncate(String value, int length) {
+        return value.length() &gt; length ? value.substring(0, length) + "..." : value;
+    }
+}</code></pre>
+                </div>
+
+                <h2 id="resource-server">Resource Server (API Protection)</h2>
+                <p>Protect your API with JWT Bearer authentication:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Java - ResourceServerConfig.java</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>package com.example.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+public class ResourceServerConfig {
+
+    @Bean
+    public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
+        http
+            .securityMatcher("/api/**")
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/public/**").permitAll()
+                .requestMatchers("/api/admin/**").hasAuthority("SCOPE_admin")
+                .anyRequest().authenticated()
+            )
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt
+                    .jwtAuthenticationConverter(jwtAuthenticationConverter())
+                )
+            );
+
+        return http.build();
+    }
+
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter authoritiesConverter =
+            new JwtGrantedAuthoritiesConverter();
+        authoritiesConverter.setAuthoritiesClaimName("scope");
+        authoritiesConverter.setAuthorityPrefix("SCOPE_");
+
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+        return converter;
+    }
+}</code></pre>
+                </div>
+
+                <h2 id="api-controller">Protected API Controller</h2>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Java - ApiController.java</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>package com.example.controller;
+
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api")
+public class ApiController {
+
+    @GetMapping("/data")
+    public Map&lt;String, Object&gt; getData(@AuthenticationPrincipal Jwt jwt) {
+        return Map.of(
+            "message", "Protected data",
+            "userId", jwt.getSubject(),
+            "email", jwt.getClaimAsString("email"),
+            "scopes", jwt.getClaimAsString("scope")
+        );
+    }
+
+    @GetMapping("/admin/users")
+    @PreAuthorize("hasAuthority('SCOPE_admin')")
+    public Map&lt;String, String&gt; adminEndpoint(@AuthenticationPrincipal Jwt jwt) {
+        return Map.of(
+            "message", "Admin only data",
+            "admin", jwt.getSubject()
+        );
+    }
+
+    @PostMapping("/action")
+    @PreAuthorize("hasAuthority('SCOPE_write')")
+    public Map&lt;String, String&gt; performAction(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody Map&lt;String, String&gt; request) {
+        return Map.of(
+            "status", "success",
+            "action", request.getOrDefault("action", "unknown"),
+            "performedBy", jwt.getSubject()
+        );
+    }
+}</code></pre>
+                </div>
+
+                <h2 id="mcp-server">MCP Server Implementation</h2>
+                <p>Build an MCP-compatible server in Java:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Java - McpController.java</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>package com.example.mcp;
+
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/mcp")
+public class McpController {
+
+    @GetMapping("/tools")
+    public Map&lt;String, Object&gt; listTools(@AuthenticationPrincipal Jwt jwt) {
+        return Map.of("tools", List.of(
+            Map.of(
+                "name", "get_user_info",
+                "description", "Get authenticated user information",
+                "input_schema", Map.of(
+                    "type", "object",
+                    "properties", Map.of(),
+                    "required", List.of()
+                )
+            ),
+            Map.of(
+                "name", "query_data",
+                "description", "Query data from the system",
+                "input_schema", Map.of(
+                    "type", "object",
+                    "properties", Map.of(
+                        "query", Map.of(
+                            "type", "string",
+                            "description", "The query to execute"
+                        )
+                    ),
+                    "required", List.of("query")
+                )
+            )
+        ));
+    }
+
+    @PostMapping("/tools/get_user_info")
+    public Map&lt;String, Object&gt; getUserInfo(@AuthenticationPrincipal Jwt jwt) {
+        return Map.of(
+            "tool", "get_user_info",
+            "result", Map.of(
+                "userId", jwt.getSubject(),
+                "email", jwt.getClaimAsString("email"),
+                "name", jwt.getClaimAsString("name"),
+                "authenticated", true
+            )
+        );
+    }
+
+    @PostMapping("/tools/query_data")
+    public Map&lt;String, Object&gt; queryData(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody QueryRequest request) {
+
+        // Verify scope
+        String scopes = jwt.getClaimAsString("scope");
+        if (scopes == null || !scopes.contains("data:read")) {
+            throw new InsufficientScopeException("data:read scope required");
+        }
+
+        // Execute query (example implementation)
+        Object result = executeQuery(request.query(), jwt.getSubject());
+
+        return Map.of(
+            "tool", "query_data",
+            "result", result
+        );
+    }
+
+    private Object executeQuery(String query, String userId) {
+        // Implement your query logic
+        return Map.of(
+            "query", query,
+            "executedBy", userId,
+            "data", List.of("item1", "item2", "item3")
+        );
+    }
+
+    record QueryRequest(String query) {}
+}
+
+// Custom exception
+class InsufficientScopeException extends RuntimeException {
+    public InsufficientScopeException(String message) {
+        super(message);
+    }
+}</code></pre>
+                </div>
+
+                <h2 id="client-credentials">Client Credentials Flow</h2>
+                <p>Service-to-service authentication:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Java - OAuth2ClientService.java</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>package com.example.service;
+
+import org.springframework.http.*;
+import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+
+import java.time.Instant;
+import java.util.Map;
+
+@Service
+public class OAuth2ClientService {
+
+    private final String tokenEndpoint;
+    private final String clientId;
+    private final String clientSecret;
+    private final RestTemplate restTemplate;
+
+    private String cachedToken;
+    private Instant tokenExpiry = Instant.MIN;
+
+    public OAuth2ClientService() {
+        this.tokenEndpoint = "https://your-andy-auth-server.com/connect/token";
+        this.clientId = "service-client";
+        this.clientSecret = "service-secret";
+        this.restTemplate = new RestTemplate();
+    }
+
+    public String getAccessToken(String... scopes) {
+        // Return cached token if still valid
+        if (cachedToken != null && Instant.now().isBefore(tokenExpiry.minusSeconds(300))) {
+            return cachedToken;
+        }
+
+        MultiValueMap&lt;String, String&gt; body = new LinkedMultiValueMap&lt;&gt;();
+        body.add("grant_type", "client_credentials");
+        body.add("client_id", clientId);
+        body.add("client_secret", clientSecret);
+        body.add("scope", String.join(" ", scopes));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        HttpEntity&lt;MultiValueMap&lt;String, String&gt;&gt; request =
+            new HttpEntity&lt;&gt;(body, headers);
+
+        ResponseEntity&lt;Map&gt; response = restTemplate.exchange(
+            tokenEndpoint,
+            HttpMethod.POST,
+            request,
+            Map.class
+        );
+
+        Map&lt;String, Object&gt; tokenResponse = response.getBody();
+        cachedToken = (String) tokenResponse.get("access_token");
+        int expiresIn = (Integer) tokenResponse.get("expires_in");
+        tokenExpiry = Instant.now().plusSeconds(expiresIn);
+
+        return cachedToken;
+    }
+
+    public &lt;T&gt; T callApi(String url, Class&lt;T&gt; responseType, String... scopes) {
+        String token = getAccessToken(scopes);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+
+        HttpEntity&lt;Void&gt; request = new HttpEntity&lt;&gt;(headers);
+
+        ResponseEntity&lt;T&gt; response = restTemplate.exchange(
+            url,
+            HttpMethod.GET,
+            request,
+            responseType
+        );
+
+        return response.getBody();
+    }
+}</code></pre>
+                </div>
+
+                <div class="docs-callout docs-callout-success">
+                    <div class="docs-callout-title">Next Steps</div>
+                    <ul>
+                        <li>Explore <a href="../mcp/overview.html">MCP Integration</a> for AI assistants</li>
+                        <li>Check out <a href="../api/endpoints.html">API Reference</a></li>
+                        <li>See <a href="../security/best-practices.html">Security Best Practices</a></li>
+                    </ul>
+                </div>
+            </article>
+
+            <aside class="docs-toc">
+                <div class="docs-toc-title">On this page</div>
+                <ul class="docs-toc-list"></ul>
+            </aside>
+        </main>
+    </div>
+
+    <div id="search-modal" class="docs-search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" id="search-modal-input" placeholder="Search documentation..." class="docs-search-modal-input">
+            <div id="search-results" class="docs-search-results"></div>
+        </div>
+    </div>
+
+    <script src="../js/docs.js"></script>
+</body>
+</html>

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Desktop Integration - Andy Auth Documentation</title>
+    <meta name="description" content="Step-by-step guide to configure Anthropic's Claude Desktop application with Andy Auth for MCP authentication">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration <span class="badge badge-new">Important</span></div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link active">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link">Core Concepts</a></li>
+                    <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                    <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link">PKCE</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Tutorials</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/tutorials/csharp.html" class="docs-sidebar-link">C# / .NET</a></li>
+                    <li><a href="/docs/tutorials/python.html" class="docs-sidebar-link">Python</a></li>
+                    <li><a href="/docs/tutorials/javascript.html" class="docs-sidebar-link">JavaScript</a></li>
+                    <li><a href="/docs/tutorials/typescript.html" class="docs-sidebar-link">TypeScript</a></li>
+                    <li><a href="/docs/tutorials/java.html" class="docs-sidebar-link">Java</a></li>
+                    <li><a href="/docs/tutorials/go.html" class="docs-sidebar-link">Go</a></li>
+                    <li><a href="/docs/tutorials/rust.html" class="docs-sidebar-link">Rust</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/mcp/overview.html">MCP Integration</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Claude Desktop</span>
+            </nav>
+
+            <h1>Claude Desktop Integration</h1>
+            <p class="lead">
+                Configure Anthropic's Claude Desktop application to authenticate with MCP servers
+                using Andy Auth as your OAuth 2.1 provider.
+            </p>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Pre-configured Client
+                </div>
+                <p>
+                    Andy Auth includes a pre-configured OAuth client for Claude Desktop with the client ID
+                    <code>claude-desktop</code>. No additional registration is required.
+                </p>
+            </div>
+
+            <h2 id="prerequisites">Prerequisites</h2>
+
+            <ul>
+                <li>Claude Desktop installed on your machine (macOS or Windows)</li>
+                <li>Andy Auth server running and accessible</li>
+                <li>An MCP server you want to connect to</li>
+                <li>A user account on Andy Auth</li>
+            </ul>
+
+            <h2 id="configuration-file">Step 1: Locate Configuration File</h2>
+
+            <p>Claude Desktop stores its MCP configuration in a JSON file. The location varies by operating system:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Operating System</th>
+                        <th>Configuration Path</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>macOS</strong></td>
+                        <td><code>~/Library/Application Support/Claude/claude_desktop_config.json</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Windows</strong></td>
+                        <td><code>%APPDATA%\Claude\claude_desktop_config.json</code></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>Create the file if it doesn't exist:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># macOS
+mkdir -p ~/Library/Application\ Support/Claude
+touch ~/Library/Application\ Support/Claude/claude_desktop_config.json
+
+# Windows (PowerShell)
+New-Item -ItemType Directory -Force -Path "$env:APPDATA\Claude"
+New-Item -ItemType File -Force -Path "$env:APPDATA\Claude\claude_desktop_config.json"</code></pre>
+            </div>
+
+            <h2 id="basic-config">Step 2: Configure MCP Server with OAuth</h2>
+
+            <p>Add your MCP server configuration with OAuth authentication:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "mcpServers": {
+    "my-secure-server": {
+      "command": "npx",
+      "args": ["-y", "@my-org/mcp-server"],
+      "oauth": {
+        "clientId": "claude-desktop",
+        "authorizationEndpoint": "https://auth.example.com/connect/authorize",
+        "tokenEndpoint": "https://auth.example.com/connect/token",
+        "scopes": ["openid", "profile", "email", "offline_access"],
+        "redirectUri": "http://localhost:8765/callback"
+      }
+    }
+  }
+}</code></pre>
+            </div>
+
+            <h3 id="config-options">Configuration Options</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Option</th>
+                        <th>Required</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>clientId</code></td>
+                        <td>Yes</td>
+                        <td>OAuth client ID (<code>claude-desktop</code> for Andy Auth)</td>
+                    </tr>
+                    <tr>
+                        <td><code>authorizationEndpoint</code></td>
+                        <td>Yes</td>
+                        <td>Andy Auth authorization URL</td>
+                    </tr>
+                    <tr>
+                        <td><code>tokenEndpoint</code></td>
+                        <td>Yes</td>
+                        <td>Andy Auth token exchange URL</td>
+                    </tr>
+                    <tr>
+                        <td><code>scopes</code></td>
+                        <td>No</td>
+                        <td>Array of OAuth scopes to request</td>
+                    </tr>
+                    <tr>
+                        <td><code>redirectUri</code></td>
+                        <td>No</td>
+                        <td>Local callback URL for OAuth flow</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="discovery-config">Alternative: Using OpenID Discovery</h2>
+
+            <p>Claude Desktop can automatically discover OAuth endpoints:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "mcpServers": {
+    "my-secure-server": {
+      "command": "npx",
+      "args": ["-y", "@my-org/mcp-server"],
+      "oauth": {
+        "clientId": "claude-desktop",
+        "issuer": "https://auth.example.com",
+        "scopes": ["openid", "profile", "email", "offline_access"]
+      }
+    }
+  }
+}</code></pre>
+            </div>
+
+            <p>When using <code>issuer</code>, Claude Desktop fetches <code>/.well-known/openid-configuration</code>
+            to discover all required endpoints automatically.</p>
+
+            <h2 id="multiple-servers">Step 3: Configure Multiple MCP Servers</h2>
+
+            <p>You can configure multiple MCP servers, each with their own authentication:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "mcpServers": {
+    "company-data": {
+      "command": "npx",
+      "args": ["-y", "@company/data-mcp-server"],
+      "oauth": {
+        "clientId": "claude-desktop",
+        "issuer": "https://auth.example.com",
+        "scopes": ["openid", "profile", "data:read"]
+      }
+    },
+    "code-assistant": {
+      "command": "npx",
+      "args": ["-y", "@company/code-mcp-server"],
+      "oauth": {
+        "clientId": "claude-desktop",
+        "issuer": "https://auth.example.com",
+        "scopes": ["openid", "profile", "code:read", "code:write"]
+      }
+    },
+    "local-files": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/files"]
+    }
+  }
+}</code></pre>
+            </div>
+
+            <h2 id="authentication-flow">Step 4: Authentication Flow</h2>
+
+            <p>When you start Claude Desktop and attempt to use an MCP server with OAuth:</p>
+
+            <ol>
+                <li><strong>Claude Desktop</strong> detects the OAuth configuration</li>
+                <li><strong>A browser window</strong> opens to Andy Auth's login page</li>
+                <li><strong>You authenticate</strong> with your username and password</li>
+                <li><strong>Consent screen</strong> shows the requested permissions</li>
+                <li><strong>After approval</strong>, the browser redirects to the local callback</li>
+                <li><strong>Claude Desktop</strong> receives the tokens and connects to the MCP server</li>
+            </ol>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                </div>
+                <pre><code>┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
+│  Claude Desktop │      │    Andy Auth    │      │   MCP Server    │
+└────────┬────────┘      └────────┬────────┘      └────────┬────────┘
+         │                        │                        │
+         │  1. Open browser       │                        │
+         │───────────────────────>│                        │
+         │                        │                        │
+         │  2. User logs in       │                        │
+         │        +               │                        │
+         │  3. User consents      │                        │
+         │                        │                        │
+         │  4. Redirect with code │                        │
+         │<───────────────────────│                        │
+         │                        │                        │
+         │  5. Exchange for token │                        │
+         │───────────────────────>│                        │
+         │                        │                        │
+         │  6. Access token       │                        │
+         │<───────────────────────│                        │
+         │                        │                        │
+         │  7. Connect with token                          │
+         │─────────────────────────────────────────────────>│
+         │                        │                        │
+         │  8. MCP communication                           │
+         │<─────────────────────────────────────────────────>│</code></pre>
+            </div>
+
+            <h2 id="token-management">Token Management</h2>
+
+            <p>Claude Desktop manages tokens automatically:</p>
+
+            <ul>
+                <li><strong>Access tokens</strong> are cached and reused</li>
+                <li><strong>Refresh tokens</strong> automatically obtain new access tokens when expired</li>
+                <li><strong>Token storage</strong> is secured by the operating system's keychain</li>
+            </ul>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Offline Access
+                </div>
+                <p>
+                    Include <code>offline_access</code> in your scopes to receive refresh tokens.
+                    This allows Claude Desktop to maintain authentication across sessions without
+                    requiring you to log in again.
+                </p>
+            </div>
+
+            <h2 id="troubleshooting">Troubleshooting</h2>
+
+            <h3 id="issue-browser-not-opening">Browser Doesn't Open</h3>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Solution
+                </div>
+                <ul>
+                    <li>Ensure your default browser is set correctly in system preferences</li>
+                    <li>Check if Claude Desktop has permission to open URLs</li>
+                    <li>Restart Claude Desktop and try again</li>
+                </ul>
+            </div>
+
+            <h3 id="issue-callback-error">Callback Error</h3>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Solution
+                </div>
+                <ul>
+                    <li>Verify the <code>redirectUri</code> is not blocked by a firewall</li>
+                    <li>Check that port 8765 (or your configured port) is available</li>
+                    <li>Ensure no other application is using the callback port</li>
+                </ul>
+            </div>
+
+            <h3 id="issue-token-expired">Token Expired Errors</h3>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Solution
+                </div>
+                <ul>
+                    <li>Add <code>offline_access</code> to your scopes for refresh token support</li>
+                    <li>Clear cached tokens: remove OAuth data from your system keychain</li>
+                    <li>Re-authenticate by restarting Claude Desktop</li>
+                </ul>
+            </div>
+
+            <h3 id="issue-connection-refused">Connection Refused to MCP Server</h3>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Solution
+                </div>
+                <ul>
+                    <li>Verify the MCP server is running and accessible</li>
+                    <li>Check that the access token has the required scopes</li>
+                    <li>Ensure the MCP server is configured to accept tokens from Andy Auth</li>
+                </ul>
+            </div>
+
+            <h3 id="viewing-logs">Viewing Claude Desktop Logs</h3>
+
+            <p>Access Claude Desktop logs for debugging:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># macOS
+tail -f ~/Library/Logs/Claude/mcp*.log
+
+# Windows (PowerShell)
+Get-Content "$env:LOCALAPPDATA\Claude\logs\mcp*.log" -Wait</code></pre>
+            </div>
+
+            <h2 id="security-considerations">Security Considerations</h2>
+
+            <ul>
+                <li><strong>Localhost callbacks</strong>: Claude Desktop uses localhost for OAuth callbacks, which is secure for desktop applications</li>
+                <li><strong>PKCE</strong>: Claude Desktop automatically uses PKCE for all OAuth flows</li>
+                <li><strong>Token storage</strong>: Tokens are stored securely in the OS keychain</li>
+                <li><strong>Scope limitation</strong>: Request only the scopes your MCP servers need</li>
+            </ul>
+
+            <h2 id="next-steps">Next Steps</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/mcp/chatgpt.html" class="docs-card">
+                    <div class="docs-card-title">ChatGPT Integration</div>
+                    <div class="docs-card-desc">Configure ChatGPT custom actions with Andy Auth.</div>
+                </a>
+                <a href="/docs/mcp/vscode-extensions.html" class="docs-card">
+                    <div class="docs-card-title">VS Code Extensions</div>
+                    <div class="docs-card-desc">Set up Cline, Roo, and Continue.dev with MCP authentication.</div>
+                </a>
+                <a href="/docs/mcp/oauth-flow.html" class="docs-card">
+                    <div class="docs-card-title">OAuth 2.1 Flow Details</div>
+                    <div class="docs-card-desc">Deep dive into the OAuth flow used by Claude Desktop.</div>
+                </a>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/mcp/oauth-flow.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">OAuth 2.1 Flow</span>
+                </a>
+                <a href="/docs/mcp/chatgpt.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">ChatGPT</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

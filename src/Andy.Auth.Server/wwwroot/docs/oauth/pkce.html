@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PKCE - Andy Auth Documentation</title>
+    <meta name="description" content="Proof Key for Code Exchange (PKCE) security mechanism for OAuth 2.0">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/></svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                </button>
+                <a href="/" class="docs-header-link"><span>Back to App</span></a>
+            </div>
+        </div>
+    </header>
+
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link">Core Concepts</a></li>
+                    <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                    <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link active">PKCE</a></li>
+                    <li><a href="/docs/oauth/client-credentials.html" class="docs-sidebar-link">Client Credentials</a></li>
+                    <li><a href="/docs/oauth/access-tokens.html" class="docs-sidebar-link">Access Tokens</a></li>
+                    <li><a href="/docs/oauth/refresh-tokens.html" class="docs-sidebar-link">Refresh Tokens</a></li>
+                    <li><a href="/docs/oauth/scopes.html" class="docs-sidebar-link">Scopes</a></li>
+                    <li><a href="/docs/oauth/claims.html" class="docs-sidebar-link">Claims</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/oauth/concepts.html">OAuth</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">PKCE</span>
+            </nav>
+
+            <h1>Proof Key for Code Exchange (PKCE)</h1>
+            <p class="lead">
+                PKCE (pronounced "pixy") is a security extension for OAuth 2.0 that protects authorization
+                codes from interception attacks. Andy Auth requires PKCE for all public clients.
+            </p>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Required for MCP Clients
+                </div>
+                <p>
+                    All AI assistants (Claude Desktop, ChatGPT, Cline, etc.) are public clients and
+                    <strong>must use PKCE</strong>. Authorization requests without PKCE will be rejected.
+                </p>
+            </div>
+
+            <h2 id="why-pkce">Why PKCE?</h2>
+            <p>
+                Public clients (mobile apps, desktop apps, SPAs) cannot securely store a client secret.
+                Without PKCE, a malicious app could intercept the authorization code and exchange it
+                for tokens. PKCE adds a dynamic secret that proves the same client that started the
+                flow is completing it.
+            </p>
+
+            <h3>The Attack PKCE Prevents</h3>
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                </div>
+                <pre><code>Without PKCE:
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  Your App   │    │ Malicious   │    │  Andy Auth  │
+│             │    │    App      │    │             │
+└──────┬──────┘    └──────┬──────┘    └──────┬──────┘
+       │                  │                  │
+       │ 1. Auth Request  │                  │
+       │─────────────────────────────────────>
+       │                  │                  │
+       │ 2. Auth Code (intercepted)          │
+       │<─────────────────│<─────────────────│
+       │                  │                  │
+       │                  │ 3. Token Request │
+       │                  │ (with stolen code)
+       │                  │─────────────────>│
+       │                  │                  │
+       │                  │ 4. Access Token  │
+       │                  │<─────────────────│
+       │                  │                  │
+       │          ATTACKER WINS!             │
+
+With PKCE:
+       │                  │ 3. Token Request │
+       │                  │ (missing verifier)
+       │                  │─────────────────>│
+       │                  │                  │
+       │                  │ ERROR: invalid   │
+       │                  │<─────────────────│
+       │                  │                  │
+       │          ATTACKER BLOCKED!          │</code></pre>
+            </div>
+
+            <h2 id="how-it-works">How PKCE Works</h2>
+
+            <div class="docs-steps">
+                <div class="docs-step">
+                    <div class="docs-step-title">Generate Code Verifier</div>
+                    <p>
+                        Create a cryptographically random string between 43-128 characters using
+                        unreserved URI characters: <code>[A-Z] / [a-z] / [0-9] / "-" / "." / "_" / "~"</code>
+                    </p>
+                </div>
+                <div class="docs-step">
+                    <div class="docs-step-title">Create Code Challenge</div>
+                    <p>
+                        Compute <code>BASE64URL(SHA256(code_verifier))</code>. This derived value
+                        is sent in the authorization request.
+                    </p>
+                </div>
+                <div class="docs-step">
+                    <div class="docs-step-title">Send Challenge with Auth Request</div>
+                    <p>
+                        Include <code>code_challenge</code> and <code>code_challenge_method=S256</code>
+                        in your authorization request.
+                    </p>
+                </div>
+                <div class="docs-step">
+                    <div class="docs-step-title">Send Verifier with Token Request</div>
+                    <p>
+                        Include the original <code>code_verifier</code> when exchanging the code.
+                        Andy Auth verifies it matches the challenge.
+                    </p>
+                </div>
+            </div>
+
+            <h2 id="implementation">Implementation</h2>
+
+            <h3>JavaScript / TypeScript</h3>
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">javascript</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code>// Generate a cryptographically random code verifier
+function generateCodeVerifier(): string {
+  const array = new Uint8Array(64);
+  crypto.getRandomValues(array);
+  return base64UrlEncode(array);
+}
+
+// Create the code challenge from the verifier
+async function generateCodeChallenge(verifier: string): Promise&lt;string&gt; {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return base64UrlEncode(new Uint8Array(hash));
+}
+
+// Base64 URL encoding (no padding)
+function base64UrlEncode(buffer: Uint8Array): string {
+  return btoa(String.fromCharCode(...buffer))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+// Usage
+const codeVerifier = generateCodeVerifier();
+const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+// Store verifier securely for later use
+sessionStorage.setItem('pkce_verifier', codeVerifier);
+
+// Include in authorization request
+const authUrl = `https://auth.example.com/connect/authorize?` +
+  `client_id=my-app&` +
+  `response_type=code&` +
+  `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+  `scope=openid%20profile&` +
+  `code_challenge=${codeChallenge}&` +
+  `code_challenge_method=S256&` +
+  `state=${state}`;</code></pre>
+            </div>
+
+            <h3>Python</h3>
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">python</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code>import secrets
+import hashlib
+import base64
+
+def generate_pkce_pair() -> tuple[str, str]:
+    """Generate PKCE code verifier and challenge."""
+    # Generate random code verifier (43-128 chars)
+    code_verifier = secrets.token_urlsafe(64)
+
+    # Create code challenge: BASE64URL(SHA256(verifier))
+    verifier_bytes = code_verifier.encode('ascii')
+    sha256_hash = hashlib.sha256(verifier_bytes).digest()
+    code_challenge = base64.urlsafe_b64encode(sha256_hash).decode('ascii').rstrip('=')
+
+    return code_verifier, code_challenge
+
+# Usage
+code_verifier, code_challenge = generate_pkce_pair()
+
+# Authorization URL
+auth_params = {
+    'client_id': 'my-app',
+    'response_type': 'code',
+    'redirect_uri': 'http://localhost:8000/callback',
+    'scope': 'openid profile email',
+    'code_challenge': code_challenge,
+    'code_challenge_method': 'S256',
+    'state': secrets.token_urlsafe(32)
+}
+
+# Token exchange (include verifier)
+token_data = {
+    'grant_type': 'authorization_code',
+    'code': authorization_code,
+    'redirect_uri': 'http://localhost:8000/callback',
+    'client_id': 'my-app',
+    'code_verifier': code_verifier  # Original verifier, not challenge!
+}</code></pre>
+            </div>
+
+            <h3>C# / .NET</h3>
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">csharp</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code>using System.Security.Cryptography;
+using System.Text;
+
+public static class PkceGenerator
+{
+    public static (string Verifier, string Challenge) Generate()
+    {
+        // Generate random code verifier
+        var bytes = new byte[64];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(bytes);
+        var verifier = Base64UrlEncode(bytes);
+
+        // Create code challenge: BASE64URL(SHA256(verifier))
+        using var sha256 = SHA256.Create();
+        var challengeBytes = sha256.ComputeHash(Encoding.ASCII.GetBytes(verifier));
+        var challenge = Base64UrlEncode(challengeBytes);
+
+        return (verifier, challenge);
+    }
+
+    private static string Base64UrlEncode(byte[] input)
+    {
+        return Convert.ToBase64String(input)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
+    }
+}
+
+// Usage
+var (verifier, challenge) = PkceGenerator.Generate();
+
+// Store verifier in session
+HttpContext.Session.SetString("pkce_verifier", verifier);
+
+// Build authorization URL
+var authUrl = $"https://auth.example.com/connect/authorize?" +
+    $"client_id=my-app&" +
+    $"response_type=code&" +
+    $"redirect_uri={Uri.EscapeDataString(redirectUri)}&" +
+    $"scope=openid%20profile&" +
+    $"code_challenge={challenge}&" +
+    $"code_challenge_method=S256&" +
+    $"state={state}";</code></pre>
+            </div>
+
+            <h2 id="requirements">Requirements</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Requirement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>code_verifier</code></td>
+                        <td>43-128 characters, unreserved URI chars only</td>
+                    </tr>
+                    <tr>
+                        <td><code>code_challenge</code></td>
+                        <td>BASE64URL(SHA256(code_verifier)), no padding</td>
+                    </tr>
+                    <tr>
+                        <td><code>code_challenge_method</code></td>
+                        <td>Must be <code>S256</code> (plain is not supported)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="callout callout-danger">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    Plain Method Not Supported
+                </div>
+                <p>
+                    Andy Auth only supports the <code>S256</code> challenge method. The <code>plain</code>
+                    method is insecure and will be rejected.
+                </p>
+            </div>
+
+            <h2 id="common-errors">Common Errors</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Error</th>
+                        <th>Cause</th>
+                        <th>Solution</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>invalid_request</code></td>
+                        <td>Missing code_challenge for public client</td>
+                        <td>Include PKCE parameters in auth request</td>
+                    </tr>
+                    <tr>
+                        <td><code>invalid_grant</code></td>
+                        <td>Code verifier doesn't match challenge</td>
+                        <td>Ensure same verifier used for challenge and token request</td>
+                    </tr>
+                    <tr>
+                        <td><code>invalid_request</code></td>
+                        <td>Plain challenge method</td>
+                        <td>Use S256 method only</td>
+                    </tr>
+                    <tr>
+                        <td><code>invalid_request</code></td>
+                        <td>Verifier too short or too long</td>
+                        <td>Use 43-128 characters</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/oauth/authorization-code.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Authorization Code Flow</span>
+                </a>
+                <a href="/docs/oauth/client-credentials.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Client Credentials</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

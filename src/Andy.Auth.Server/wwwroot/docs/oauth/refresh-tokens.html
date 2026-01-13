@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Refresh Tokens - Andy Auth Documentation</title>
+    <meta name="description" content="Learn about refresh tokens in OAuth 2.0, including token rotation, offline_access scope, and best practices for long-lived sessions">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link">Core Concepts</a></li>
+                    <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                    <li><a href="/docs/oauth/client-credentials.html" class="docs-sidebar-link">Client Credentials</a></li>
+                    <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link">PKCE</a></li>
+                    <li><a href="/docs/oauth/access-tokens.html" class="docs-sidebar-link">Access Tokens</a></li>
+                    <li><a href="/docs/oauth/refresh-tokens.html" class="docs-sidebar-link active">Refresh Tokens</a></li>
+                    <li><a href="/docs/oauth/scopes.html" class="docs-sidebar-link">Scopes</a></li>
+                    <li><a href="/docs/oauth/claims.html" class="docs-sidebar-link">Claims</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/oauth/concepts.html">OAuth & OpenID Connect</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Refresh Tokens</span>
+            </nav>
+
+            <h1>Refresh Tokens</h1>
+            <p class="lead">
+                Refresh tokens enable long-lived sessions without requiring users to re-authenticate frequently.
+                They are used to obtain new access tokens when the current one expires, providing a seamless user experience.
+            </p>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Why Refresh Tokens?
+                </div>
+                <p>
+                    Access tokens are intentionally short-lived (typically 1 hour) for security. Refresh tokens
+                    allow clients to obtain new access tokens without user interaction, enabling sessions that
+                    last days or weeks while maintaining security.
+                </p>
+            </div>
+
+            <h2 id="offline-access">The offline_access Scope</h2>
+
+            <p>
+                To receive a refresh token, your application must request the <code>offline_access</code> scope
+                during the authorization request. This scope signals that your application needs long-lived access
+                to user resources.
+            </p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                </div>
+                <pre><code>GET /connect/authorize?
+  response_type=code&
+  client_id=my-app&
+  redirect_uri=https://myapp.com/callback&
+  scope=openid profile email offline_access&
+  code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&
+  code_challenge_method=S256&
+  state=abc123</code></pre>
+            </div>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    User Consent Required
+                </div>
+                <p>
+                    When requesting <code>offline_access</code>, the user will be prompted to consent to
+                    "Access your data anytime" or similar wording. This transparency ensures users understand
+                    their data can be accessed even when they're not actively using your application.
+                </p>
+            </div>
+
+            <h2 id="obtaining-refresh-tokens">Obtaining Refresh Tokens</h2>
+
+            <p>
+                Refresh tokens are returned alongside access tokens in the token response when
+                <code>offline_access</code> is granted:
+            </p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "refresh_token": "rt_a1b2c3d4e5f6g7h8i9j0...",
+  "scope": "openid profile email offline_access"
+}</code></pre>
+            </div>
+
+            <h2 id="using-refresh-tokens">Using Refresh Tokens</h2>
+
+            <p>
+                When your access token expires (or is about to expire), exchange the refresh token
+                for a new access token:
+            </p>
+
+            <div class="endpoint">
+                <span class="endpoint-method post">POST</span>
+                <span class="endpoint-path">/connect/token</span>
+            </div>
+
+            <h3>Request Parameters</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Required</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>grant_type</code></td>
+                        <td>Yes</td>
+                        <td>Must be <code>refresh_token</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>refresh_token</code></td>
+                        <td>Yes</td>
+                        <td>The refresh token received from a previous token response</td>
+                    </tr>
+                    <tr>
+                        <td><code>client_id</code></td>
+                        <td>Yes</td>
+                        <td>Your application's client identifier</td>
+                    </tr>
+                    <tr>
+                        <td><code>client_secret</code></td>
+                        <td>Conditional</td>
+                        <td>Required for confidential clients</td>
+                    </tr>
+                    <tr>
+                        <td><code>scope</code></td>
+                        <td>No</td>
+                        <td>Optionally request a subset of the original scopes</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Example Request</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>curl -X POST https://auth.example.com/connect/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=refresh_token" \
+  -d "refresh_token=rt_a1b2c3d4e5f6g7h8i9j0..." \
+  -d "client_id=my-app"</code></pre>
+            </div>
+
+            <h2 id="token-rotation">Refresh Token Rotation</h2>
+
+            <p>
+                Andy Auth implements <strong>refresh token rotation</strong> as a security best practice.
+                Each time you use a refresh token, a new refresh token is issued and the old one is invalidated.
+            </p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                </div>
+                <pre><code>┌────────────────────────────────────────────────────────────────────┐
+│                    Refresh Token Rotation Flow                      │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  Initial Token Response:                                            │
+│  ├── access_token: AT1 (expires in 1 hour)                         │
+│  └── refresh_token: RT1                                             │
+│                                                                     │
+│  After 1 hour, use RT1:                                             │
+│  ├── access_token: AT2 (new, expires in 1 hour)                    │
+│  └── refresh_token: RT2 (new, RT1 is now invalid)                  │
+│                                                                     │
+│  After another hour, use RT2:                                       │
+│  ├── access_token: AT3 (new, expires in 1 hour)                    │
+│  └── refresh_token: RT3 (new, RT2 is now invalid)                  │
+│                                                                     │
+│  And so on...                                                       │
+│                                                                     │
+└────────────────────────────────────────────────────────────────────┘</code></pre>
+            </div>
+
+            <h3>Benefits of Rotation</h3>
+
+            <ul>
+                <li><strong>Limits token replay</strong> - A stolen refresh token can only be used once</li>
+                <li><strong>Enables breach detection</strong> - Reuse of an old token indicates a potential compromise</li>
+                <li><strong>Automatic recovery</strong> - Legitimate users get new tokens; attackers are locked out</li>
+            </ul>
+
+            <div class="callout callout-danger">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    Important: Token Reuse Detection
+                </div>
+                <p>
+                    If you attempt to use a refresh token that has already been rotated, Andy Auth will
+                    invalidate the entire token family for that session. This is a security measure to
+                    detect token theft. Always store the latest refresh token securely.
+                </p>
+            </div>
+
+            <h2 id="token-lifetimes">Token Lifetimes</h2>
+
+            <p>Refresh tokens have configurable lifetimes with multiple expiration modes:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Setting</th>
+                        <th>Default</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Absolute Lifetime</td>
+                        <td>14 days</td>
+                        <td>Maximum time from initial issuance until the token family expires</td>
+                    </tr>
+                    <tr>
+                        <td>Sliding Lifetime</td>
+                        <td>1 day</td>
+                        <td>Time until expiration, reset on each use (within absolute limit)</td>
+                    </tr>
+                    <tr>
+                        <td>Inactivity Timeout</td>
+                        <td>7 days</td>
+                        <td>Token expires if not used within this period</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Expiration Behavior</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                </div>
+                <pre><code>Day 0:  User logs in, receives RT1
+        └── Absolute expiry: Day 14
+        └── Sliding expiry: Day 1
+
+Day 1:  User refreshes with RT1, receives RT2
+        └── Absolute expiry: Day 14 (unchanged)
+        └── Sliding expiry: Day 2 (reset)
+
+Day 10: User refreshes with RT2, receives RT3
+        └── Absolute expiry: Day 14 (unchanged)
+        └── Sliding expiry: Day 11 (reset, but capped at Day 14)
+
+Day 14: Absolute expiry reached - user must re-authenticate</code></pre>
+            </div>
+
+            <h2 id="code-examples">Code Examples</h2>
+
+            <h3>TypeScript - Token Refresh with Rotation</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">typescript</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  refresh_token?: string;
+  scope?: string;
+}
+
+class TokenManager {
+  private accessToken: string | null = null;
+  private refreshToken: string | null = null;
+  private expiresAt: Date | null = null;
+  private clientId: string;
+  private tokenEndpoint: string;
+
+  constructor(clientId: string, tokenEndpoint: string) {
+    this.clientId = clientId;
+    this.tokenEndpoint = tokenEndpoint;
+    this.loadFromStorage();
+  }
+
+  async getAccessToken(): Promise&lt;string&gt; {
+    // Check if current token is still valid (with 1 minute buffer)
+    if (this.accessToken && this.expiresAt) {
+      const bufferMs = 60 * 1000;
+      if (new Date().getTime() < this.expiresAt.getTime() - bufferMs) {
+        return this.accessToken;
+      }
+    }
+
+    // Need to refresh
+    if (!this.refreshToken) {
+      throw new Error('No refresh token available - user must re-authenticate');
+    }
+
+    return this.refresh();
+  }
+
+  private async refresh(): Promise&lt;string&gt; {
+    const response = await fetch(this.tokenEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: this.refreshToken!,
+        client_id: this.clientId,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      if (error.error === 'invalid_grant') {
+        // Refresh token is expired or revoked
+        this.clearTokens();
+        throw new Error('Session expired - user must re-authenticate');
+      }
+      throw new Error(`Token refresh failed: ${error.error_description}`);
+    }
+
+    const data: TokenResponse = await response.json();
+
+    // IMPORTANT: Store the new refresh token (rotation)
+    this.accessToken = data.access_token;
+    this.refreshToken = data.refresh_token || this.refreshToken;
+    this.expiresAt = new Date(Date.now() + data.expires_in * 1000);
+
+    this.saveToStorage();
+
+    return this.accessToken;
+  }
+
+  setTokens(tokens: TokenResponse): void {
+    this.accessToken = tokens.access_token;
+    this.refreshToken = tokens.refresh_token || null;
+    this.expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
+    this.saveToStorage();
+  }
+
+  clearTokens(): void {
+    this.accessToken = null;
+    this.refreshToken = null;
+    this.expiresAt = null;
+    localStorage.removeItem('auth_tokens');
+  }
+
+  private saveToStorage(): void {
+    localStorage.setItem('auth_tokens', JSON.stringify({
+      accessToken: this.accessToken,
+      refreshToken: this.refreshToken,
+      expiresAt: this.expiresAt?.toISOString(),
+    }));
+  }
+
+  private loadFromStorage(): void {
+    const stored = localStorage.getItem('auth_tokens');
+    if (stored) {
+      const data = JSON.parse(stored);
+      this.accessToken = data.accessToken;
+      this.refreshToken = data.refreshToken;
+      this.expiresAt = data.expiresAt ? new Date(data.expiresAt) : null;
+    }
+  }
+}</code></pre>
+            </div>
+
+            <h3>Python - Automatic Token Refresh</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">python</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>import requests
+from datetime import datetime, timedelta
+from dataclasses import dataclass
+from typing import Optional
+import json
+
+
+@dataclass
+class TokenSet:
+    access_token: str
+    refresh_token: Optional[str]
+    expires_at: datetime
+    scope: str
+
+
+class OAuth2Session:
+    def __init__(
+        self,
+        client_id: str,
+        token_endpoint: str,
+        client_secret: Optional[str] = None
+    ):
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.token_endpoint = token_endpoint
+        self.tokens: Optional[TokenSet] = None
+
+    def set_tokens(self, token_response: dict) -> None:
+        """Store tokens from a token response."""
+        expires_at = datetime.now() + timedelta(
+            seconds=token_response['expires_in']
+        )
+        self.tokens = TokenSet(
+            access_token=token_response['access_token'],
+            refresh_token=token_response.get('refresh_token'),
+            expires_at=expires_at,
+            scope=token_response.get('scope', '')
+        )
+
+    def get_access_token(self) -> str:
+        """Get a valid access token, refreshing if necessary."""
+        if not self.tokens:
+            raise ValueError("No tokens available")
+
+        # Check if token needs refresh (with 60 second buffer)
+        if datetime.now() >= self.tokens.expires_at - timedelta(seconds=60):
+            self._refresh_tokens()
+
+        return self.tokens.access_token
+
+    def _refresh_tokens(self) -> None:
+        """Refresh the access token using the refresh token."""
+        if not self.tokens or not self.tokens.refresh_token:
+            raise ValueError("No refresh token available")
+
+        data = {
+            'grant_type': 'refresh_token',
+            'refresh_token': self.tokens.refresh_token,
+            'client_id': self.client_id,
+        }
+
+        if self.client_secret:
+            data['client_secret'] = self.client_secret
+
+        response = requests.post(
+            self.token_endpoint,
+            data=data
+        )
+
+        if response.status_code == 400:
+            error = response.json()
+            if error.get('error') == 'invalid_grant':
+                self.tokens = None
+                raise ValueError("Refresh token expired or revoked")
+            raise ValueError(f"Token refresh failed: {error}")
+
+        response.raise_for_status()
+        token_data = response.json()
+
+        # Store new tokens (including rotated refresh token)
+        self.set_tokens(token_data)
+
+    def authorized_request(
+        self,
+        method: str,
+        url: str,
+        **kwargs
+    ) -> requests.Response:
+        """Make an authorized HTTP request with automatic token refresh."""
+        headers = kwargs.pop('headers', {})
+        headers['Authorization'] = f'Bearer {self.get_access_token()}'
+
+        response = requests.request(method, url, headers=headers, **kwargs)
+
+        # If unauthorized, try refreshing and retrying once
+        if response.status_code == 401:
+            self._refresh_tokens()
+            headers['Authorization'] = f'Bearer {self.tokens.access_token}'
+            response = requests.request(method, url, headers=headers, **kwargs)
+
+        return response
+
+
+# Usage
+session = OAuth2Session(
+    client_id='my-app',
+    token_endpoint='https://auth.example.com/connect/token'
+)
+
+# After initial authentication
+session.set_tokens({
+    'access_token': 'eyJhbG...',
+    'refresh_token': 'rt_abc123...',
+    'expires_in': 3600,
+    'scope': 'openid profile email offline_access'
+})
+
+# Make authorized requests - tokens refresh automatically
+response = session.authorized_request('GET', 'https://api.example.com/me')</code></pre>
+            </div>
+
+            <h2 id="revocation">Revoking Refresh Tokens</h2>
+
+            <p>
+                Refresh tokens can be revoked when a user logs out or when suspicious activity is detected.
+                Use the token revocation endpoint:
+            </p>
+
+            <div class="endpoint">
+                <span class="endpoint-method post">POST</span>
+                <span class="endpoint-path">/connect/revoke</span>
+            </div>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>curl -X POST https://auth.example.com/connect/revoke \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "token=rt_a1b2c3d4e5f6g7h8i9j0..." \
+  -d "token_type_hint=refresh_token" \
+  -d "client_id=my-app"</code></pre>
+            </div>
+
+            <h2 id="best-practices">Best Practices</h2>
+
+            <ul>
+                <li><strong>Store securely</strong> - Refresh tokens grant long-term access; store them in secure, encrypted storage</li>
+                <li><strong>Always update after rotation</strong> - Store the new refresh token immediately after each refresh</li>
+                <li><strong>Handle refresh failures gracefully</strong> - Prompt users to re-authenticate when refresh fails</li>
+                <li><strong>Revoke on logout</strong> - Always revoke refresh tokens when users explicitly log out</li>
+                <li><strong>Monitor for reuse</strong> - Implement detection for attempted reuse of rotated tokens</li>
+                <li><strong>Use HTTPS only</strong> - Never transmit refresh tokens over unencrypted connections</li>
+                <li><strong>Limit scope</strong> - Only request <code>offline_access</code> when truly needed</li>
+            </ul>
+
+            <h2 id="error-handling">Common Errors</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Error</th>
+                        <th>Cause</th>
+                        <th>Resolution</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>invalid_grant</code></td>
+                        <td>Refresh token is expired, revoked, or already used</td>
+                        <td>User must re-authenticate</td>
+                    </tr>
+                    <tr>
+                        <td><code>invalid_client</code></td>
+                        <td>Client authentication failed</td>
+                        <td>Verify client credentials</td>
+                    </tr>
+                    <tr>
+                        <td><code>invalid_scope</code></td>
+                        <td>Requested scope exceeds original grant</td>
+                        <td>Request only scopes from original authorization</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/oauth/access-tokens.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Access Tokens</span>
+                </a>
+                <a href="/docs/oauth/scopes.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Scopes</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

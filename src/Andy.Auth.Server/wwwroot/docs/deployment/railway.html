@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Railway Deployment - Andy Auth Documentation</title>
+    <meta name="description" content="Deploy Andy Auth to Railway - a modern cloud platform with automatic HTTPS, PostgreSQL, and zero-config deployments">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Deployment <span class="badge badge-new">New</span></div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/deployment/railway.html" class="docs-sidebar-link active">Railway</a></li>
+                    <li><a href="/docs/deployment/docker.html" class="docs-sidebar-link">Docker</a></li>
+                    <li><a href="/docs/deployment/azure.html" class="docs-sidebar-link">Azure App Service</a></li>
+                    <li><a href="/docs/deployment/production.html" class="docs-sidebar-link">Production Checklist</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/deployment/railway.html">Deployment</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Railway</span>
+            </nav>
+
+            <h1>Deploying to Railway</h1>
+            <p class="lead">
+                Railway is the primary deployment target for Andy Auth. It provides automatic HTTPS,
+                PostgreSQL databases, and zero-config deployments from your Git repository.
+            </p>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Why Railway?
+                </div>
+                <p>
+                    Railway offers a seamless deployment experience with automatic SSL certificates,
+                    built-in PostgreSQL support, and environment variable management. Andy Auth is
+                    pre-configured with <code>railway.json</code> and <code>nixpacks.toml</code> for
+                    optimal deployment.
+                </p>
+            </div>
+
+            <h2 id="prerequisites">Prerequisites</h2>
+
+            <ul>
+                <li>A <a href="https://railway.app" target="_blank">Railway account</a> (free tier available)</li>
+                <li>Andy Auth source code in a Git repository (GitHub, GitLab, or Bitbucket)</li>
+                <li>Basic understanding of environment variables</li>
+            </ul>
+
+            <h2 id="quick-deploy">Quick Deploy</h2>
+
+            <div class="docs-steps">
+                <div class="docs-step">
+                    <div class="docs-step-title">Create a New Project</div>
+                    <p>Log into Railway and click "New Project". Select "Deploy from GitHub repo" and connect your repository.</p>
+                </div>
+                <div class="docs-step">
+                    <div class="docs-step-title">Add PostgreSQL Database</div>
+                    <p>In your project, click "New" and select "Database" then "PostgreSQL". Railway will provision a database and set the <code>DATABASE_URL</code> automatically.</p>
+                </div>
+                <div class="docs-step">
+                    <div class="docs-step-title">Configure Environment Variables</div>
+                    <p>Add the required environment variables in the "Variables" tab. See the configuration section below.</p>
+                </div>
+                <div class="docs-step">
+                    <div class="docs-step-title">Deploy</div>
+                    <p>Railway will automatically build and deploy your application using the Dockerfile.</p>
+                </div>
+            </div>
+
+            <h2 id="configuration-files">Configuration Files</h2>
+
+            <h3 id="railway-json">railway.json</h3>
+
+            <p>Andy Auth includes a pre-configured <code>railway.json</code> that specifies the build and deploy settings:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
+  },
+  "deploy": {
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  }
+}</code></pre>
+            </div>
+
+            <h3 id="nixpacks-toml">nixpacks.toml (Alternative)</h3>
+
+            <p>For builds without Docker, Railway can use Nixpacks. The included <code>nixpacks.toml</code> configures a self-contained .NET 8 build:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">toml</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>[phases.setup]
+nixPkgs = ["dotnet-sdk_8"]
+
+[phases.build]
+cmds = ["dotnet publish src/Andy.Auth.Server/Andy.Auth.Server.csproj -c Release -o out --self-contained true -r linux-x64"]
+
+[start]
+cmd = "./out/Andy.Auth.Server"</code></pre>
+            </div>
+
+            <h2 id="environment-variables">Environment Variables</h2>
+
+            <p>Configure these environment variables in Railway's "Variables" tab:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Variable</th>
+                        <th>Required</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>ConnectionStrings__DefaultConnection</code></td>
+                        <td><span class="badge badge-warning">Required</span></td>
+                        <td>PostgreSQL connection string. Use <code>$DATABASE_URL</code> reference or copy from Railway PostgreSQL service.</td>
+                    </tr>
+                    <tr>
+                        <td><code>ASPNETCORE_ENVIRONMENT</code></td>
+                        <td><span class="badge badge-warning">Required</span></td>
+                        <td>Set to <code>Production</code> for production deployments.</td>
+                    </tr>
+                    <tr>
+                        <td><code>OpenIddict__UseEphemeralKeys</code></td>
+                        <td><span class="badge badge-warning">Required</span></td>
+                        <td>Set to <code>true</code> for Railway deployments (tokens invalidate on restart).</td>
+                    </tr>
+                    <tr>
+                        <td><code>CorsOrigins__AllowedOrigins__0</code></td>
+                        <td>Optional</td>
+                        <td>First allowed CORS origin (e.g., <code>https://myapp.com</code>).</td>
+                    </tr>
+                    <tr>
+                        <td><code>CorsOrigins__AllowedOrigins__1</code></td>
+                        <td>Optional</td>
+                        <td>Second allowed CORS origin. Add more with incrementing indices.</td>
+                    </tr>
+                    <tr>
+                        <td><code>AzureAd__ClientId</code></td>
+                        <td>Optional</td>
+                        <td>Azure AD/Microsoft Entra ID client ID for external authentication.</td>
+                    </tr>
+                    <tr>
+                        <td><code>AzureAd__ClientSecret</code></td>
+                        <td>Optional</td>
+                        <td>Azure AD client secret.</td>
+                    </tr>
+                    <tr>
+                        <td><code>AzureAd__TenantId</code></td>
+                        <td>Optional</td>
+                        <td>Azure AD tenant ID. Use <code>common</code> for multi-tenant.</td>
+                    </tr>
+                    <tr>
+                        <td><code>DynamicClientRegistration__RequireInitialAccessToken</code></td>
+                        <td>Optional</td>
+                        <td>Set to <code>true</code> to require tokens for DCR (recommended for production).</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Ephemeral Keys Warning
+                </div>
+                <p>
+                    When using <code>OpenIddict__UseEphemeralKeys=true</code>, all tokens are invalidated when the
+                    application restarts. This is acceptable for UAT/staging but consider using persistent keys
+                    for production (see <a href="/docs/deployment/production.html">Production Checklist</a>).
+                </p>
+            </div>
+
+            <h2 id="database-setup">Database Setup</h2>
+
+            <h3>Using Railway PostgreSQL</h3>
+
+            <p>Railway provides managed PostgreSQL databases. The connection string is automatically available as <code>DATABASE_URL</code>:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Railway provides this automatically:
+DATABASE_URL=postgresql://user:password@host:port/database
+
+# Andy Auth converts this URI format automatically to:
+Host=host;Port=port;Database=database;Username=user;Password=password</code></pre>
+            </div>
+
+            <p>Set the connection string variable using Railway's reference syntax:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>ConnectionStrings__DefaultConnection=${{Postgres.DATABASE_URL}}</code></pre>
+            </div>
+
+            <h3>Database Migrations</h3>
+
+            <p>Andy Auth automatically runs database migrations on startup. No manual migration steps are required.</p>
+
+            <h2 id="ssl-https">SSL/HTTPS Configuration</h2>
+
+            <p>Railway automatically provisions SSL certificates for your domain. Andy Auth is configured to work behind Railway's HTTPS proxy:</p>
+
+            <ul>
+                <li><strong>Forwarded Headers</strong> - Andy Auth reads <code>X-Forwarded-For</code> and <code>X-Forwarded-Proto</code> headers</li>
+                <li><strong>HTTP Internally</strong> - The app runs on HTTP internally; Railway handles SSL termination</li>
+                <li><strong>PORT Variable</strong> - Railway sets the <code>PORT</code> environment variable automatically</li>
+            </ul>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>Internet (HTTPS) -> Railway Proxy -> Andy Auth (HTTP on $PORT)</code></pre>
+            </div>
+
+            <h2 id="custom-domain">Custom Domain</h2>
+
+            <p>To use a custom domain with Railway:</p>
+
+            <ol>
+                <li>Go to your service's "Settings" tab</li>
+                <li>Under "Domains", click "Add Custom Domain"</li>
+                <li>Enter your domain (e.g., <code>auth.mycompany.com</code>)</li>
+                <li>Add the provided CNAME record to your DNS</li>
+                <li>Railway will automatically provision an SSL certificate</li>
+            </ol>
+
+            <h2 id="health-checks">Health Checks</h2>
+
+            <p>Andy Auth exposes endpoints that can be used for health monitoring:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/.well-known/openid-configuration</code></td>
+                        <td><span class="endpoint-method get">GET</span></td>
+                        <td>OpenID Connect discovery document - confirms server is operational</td>
+                    </tr>
+                    <tr>
+                        <td><code>/.well-known/jwks</code></td>
+                        <td><span class="endpoint-method get">GET</span></td>
+                        <td>JSON Web Key Set - confirms signing keys are available</td>
+                    </tr>
+                    <tr>
+                        <td><code>/</code></td>
+                        <td><span class="endpoint-method get">GET</span></td>
+                        <td>Home page - basic availability check</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="monitoring">Monitoring and Logs</h2>
+
+            <p>Railway provides built-in logging and monitoring:</p>
+
+            <ul>
+                <li><strong>Logs</strong> - View real-time logs in the "Deployments" tab</li>
+                <li><strong>Metrics</strong> - CPU, memory, and network metrics available in the dashboard</li>
+                <li><strong>Alerts</strong> - Configure deployment notifications in project settings</li>
+            </ul>
+
+            <h2 id="troubleshooting">Troubleshooting</h2>
+
+            <h3>Build Fails</h3>
+
+            <p>If the Docker build fails, check:</p>
+            <ul>
+                <li>The Dockerfile is in the repository root</li>
+                <li>All project files are committed to Git</li>
+                <li>The .NET SDK version matches (8.0)</li>
+            </ul>
+
+            <h3>Database Connection Errors</h3>
+
+            <p>If you see connection errors:</p>
+            <ul>
+                <li>Verify <code>ConnectionStrings__DefaultConnection</code> is set correctly</li>
+                <li>Check that the PostgreSQL service is running in your Railway project</li>
+                <li>Ensure the database URL format is correct (Railway provides <code>postgresql://</code> format)</li>
+            </ul>
+
+            <h3>HTTPS/Redirect Issues</h3>
+
+            <p>If OAuth redirects fail:</p>
+            <ul>
+                <li>Ensure <code>ASPNETCORE_ENVIRONMENT</code> is set to <code>Production</code></li>
+                <li>Verify your redirect URIs use HTTPS</li>
+                <li>Check CORS origins are configured correctly</li>
+            </ul>
+
+            <h2 id="next-steps">Next Steps</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/deployment/production.html" class="docs-card">
+                    <div class="docs-card-title">Production Checklist</div>
+                    <div class="docs-card-desc">Security hardening and best practices for production deployments.</div>
+                </a>
+                <a href="/docs/deployment/docker.html" class="docs-card">
+                    <div class="docs-card-title">Docker Deployment</div>
+                    <div class="docs-card-desc">Deploy using Docker and docker-compose for more control.</div>
+                </a>
+                <a href="/docs/mcp/overview.html" class="docs-card">
+                    <div class="docs-card-title">MCP Integration</div>
+                    <div class="docs-card-desc">Configure AI assistants to authenticate with your deployment.</div>
+                </a>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/configuration.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Configuration</span>
+                </a>
+                <a href="/docs/deployment/docker.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Docker Deployment</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

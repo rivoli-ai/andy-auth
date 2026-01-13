@@ -1,0 +1,303 @@
+[
+  {
+    "title": "Documentation Home",
+    "url": "/docs/",
+    "path": "Getting Started",
+    "content": "Andy Auth is a modern OAuth 2.1 and OpenID Connect authorization server built for AI assistants and MCP integration.",
+    "keywords": ["home", "overview", "introduction", "getting started"]
+  },
+  {
+    "title": "Quick Start",
+    "url": "/docs/quickstart.html",
+    "path": "Getting Started > Quick Start",
+    "content": "Get Andy Auth running locally in 5 minutes. Clone, start PostgreSQL, run the server, test OAuth flow.",
+    "keywords": ["quick", "start", "setup", "5 minutes", "docker", "postgresql", "run"]
+  },
+  {
+    "title": "Installation",
+    "url": "/docs/installation.html",
+    "path": "Getting Started > Installation",
+    "content": "Prerequisites, cloning the repository, database setup, running locally, Docker installation.",
+    "keywords": ["install", "setup", "prerequisites", "dotnet", "postgresql", "database", "docker"]
+  },
+  {
+    "title": "Configuration",
+    "url": "/docs/configuration.html",
+    "path": "Getting Started > Configuration",
+    "content": "appsettings.json structure, environment variables, database connection strings, OpenIddict settings, CORS, rate limiting.",
+    "keywords": ["config", "settings", "environment", "variables", "appsettings", "cors", "rate limit"]
+  },
+  {
+    "title": "OAuth Core Concepts",
+    "url": "/docs/oauth/concepts.html",
+    "path": "OAuth & OIDC > Concepts",
+    "content": "OAuth 2.0 and OpenID Connect fundamentals, roles, grant types, tokens, security best practices.",
+    "keywords": ["oauth", "oidc", "openid", "connect", "concepts", "authorization", "authentication"]
+  },
+  {
+    "title": "Authorization Code Flow",
+    "url": "/docs/oauth/authorization-code.html",
+    "path": "OAuth & OIDC > Authorization Code",
+    "content": "Authorization code flow with PKCE, step-by-step implementation, code exchange, token response.",
+    "keywords": ["authorization", "code", "flow", "pkce", "grant", "redirect"]
+  },
+  {
+    "title": "PKCE",
+    "url": "/docs/oauth/pkce.html",
+    "path": "OAuth & OIDC > PKCE",
+    "content": "Proof Key for Code Exchange, code verifier, code challenge, S256 method, security protection.",
+    "keywords": ["pkce", "proof", "key", "code", "exchange", "verifier", "challenge", "security"]
+  },
+  {
+    "title": "Client Credentials Flow",
+    "url": "/docs/oauth/client-credentials.html",
+    "path": "OAuth & OIDC > Client Credentials",
+    "content": "Server-to-server authentication, confidential clients, machine-to-machine communication.",
+    "keywords": ["client", "credentials", "server", "machine", "m2m", "confidential"]
+  },
+  {
+    "title": "Access Tokens",
+    "url": "/docs/oauth/access-tokens.html",
+    "path": "OAuth & OIDC > Access Tokens",
+    "content": "Access token structure, validation, introspection, JWT claims, token lifetime.",
+    "keywords": ["access", "token", "jwt", "bearer", "validation", "introspection", "claims"]
+  },
+  {
+    "title": "Refresh Tokens",
+    "url": "/docs/oauth/refresh-tokens.html",
+    "path": "OAuth & OIDC > Refresh Tokens",
+    "content": "Refresh token rotation, offline_access scope, token renewal, session management.",
+    "keywords": ["refresh", "token", "rotation", "offline", "access", "renewal", "session"]
+  },
+  {
+    "title": "Scopes",
+    "url": "/docs/oauth/scopes.html",
+    "path": "OAuth & OIDC > Scopes",
+    "content": "OpenID Connect scopes, openid, profile, email, address, phone, offline_access, custom scopes.",
+    "keywords": ["scope", "scopes", "openid", "profile", "email", "permissions", "consent"]
+  },
+  {
+    "title": "Claims",
+    "url": "/docs/oauth/claims.html",
+    "path": "OAuth & OIDC > Claims",
+    "content": "Standard OIDC claims, custom claims, ID token claims, access token claims, UserInfo claims.",
+    "keywords": ["claims", "oidc", "identity", "sub", "name", "email", "custom"]
+  },
+  {
+    "title": "MCP Integration Overview",
+    "url": "/docs/mcp/overview.html",
+    "path": "MCP Integration > Overview",
+    "content": "Model Context Protocol integration, AI assistants, Claude Desktop, ChatGPT, VS Code extensions.",
+    "keywords": ["mcp", "model", "context", "protocol", "ai", "assistant", "claude", "chatgpt"]
+  },
+  {
+    "title": "MCP OAuth 2.1 Flow",
+    "url": "/docs/mcp/oauth-flow.html",
+    "path": "MCP Integration > OAuth Flow",
+    "content": "OAuth 2.1 flow for MCP clients, PKCE requirements, token introspection, AI authentication.",
+    "keywords": ["mcp", "oauth", "flow", "ai", "authentication", "pkce"]
+  },
+  {
+    "title": "Claude Desktop Setup",
+    "url": "/docs/mcp/claude-desktop.html",
+    "path": "MCP Integration > Claude Desktop",
+    "content": "Configure Claude Desktop with Andy Auth, MCP server configuration, OAuth settings.",
+    "keywords": ["claude", "desktop", "anthropic", "mcp", "configuration", "setup"]
+  },
+  {
+    "title": "ChatGPT Integration",
+    "url": "/docs/mcp/chatgpt.html",
+    "path": "MCP Integration > ChatGPT",
+    "content": "ChatGPT custom actions, GPT OAuth configuration, OpenAI integration.",
+    "keywords": ["chatgpt", "openai", "gpt", "custom", "actions", "integration"]
+  },
+  {
+    "title": "VS Code Extensions",
+    "url": "/docs/mcp/vscode-extensions.html",
+    "path": "MCP Integration > VS Code",
+    "content": "Cline, Roo, Continue.dev extension configuration, VS Code MCP integration.",
+    "keywords": ["vscode", "cline", "roo", "continue", "extension", "ide"]
+  },
+  {
+    "title": "Dynamic Client Registration",
+    "url": "/docs/mcp/dcr.html",
+    "path": "MCP Integration > DCR",
+    "content": "RFC 7591 Dynamic Client Registration, automatic client onboarding, registration endpoint.",
+    "keywords": ["dcr", "dynamic", "client", "registration", "rfc7591", "automatic"]
+  },
+  {
+    "title": "API Endpoints Overview",
+    "url": "/docs/api/endpoints.html",
+    "path": "API Reference > Endpoints",
+    "content": "Complete API reference, OAuth endpoints, OpenID Connect endpoints, discovery.",
+    "keywords": ["api", "endpoints", "reference", "oauth", "oidc"]
+  },
+  {
+    "title": "Authorization Endpoint",
+    "url": "/docs/api/authorize.html",
+    "path": "API Reference > Authorization",
+    "content": "/connect/authorize endpoint, authorization request parameters, redirect handling.",
+    "keywords": ["authorize", "endpoint", "connect", "authorization", "request"]
+  },
+  {
+    "title": "Token Endpoint",
+    "url": "/docs/api/token.html",
+    "path": "API Reference > Token",
+    "content": "/connect/token endpoint, token exchange, grant types, token response.",
+    "keywords": ["token", "endpoint", "connect", "exchange", "grant"]
+  },
+  {
+    "title": "UserInfo Endpoint",
+    "url": "/docs/api/userinfo.html",
+    "path": "API Reference > UserInfo",
+    "content": "/connect/userinfo endpoint, user claims, profile information.",
+    "keywords": ["userinfo", "endpoint", "user", "profile", "claims"]
+  },
+  {
+    "title": "Introspection Endpoint",
+    "url": "/docs/api/introspect.html",
+    "path": "API Reference > Introspection",
+    "content": "/connect/introspect endpoint, token validation, RFC 7662, active tokens.",
+    "keywords": ["introspect", "introspection", "endpoint", "validate", "token", "rfc7662"]
+  },
+  {
+    "title": "Revocation Endpoint",
+    "url": "/docs/api/revoke.html",
+    "path": "API Reference > Revocation",
+    "content": "/connect/revoke endpoint, token revocation, RFC 7009, logout.",
+    "keywords": ["revoke", "revocation", "endpoint", "token", "logout", "rfc7009"]
+  },
+  {
+    "title": "Registration Endpoint",
+    "url": "/docs/api/register.html",
+    "path": "API Reference > Registration",
+    "content": "/connect/register endpoint, Dynamic Client Registration, RFC 7591.",
+    "keywords": ["register", "registration", "endpoint", "client", "dcr", "rfc7591"]
+  },
+  {
+    "title": "Discovery Endpoints",
+    "url": "/docs/api/discovery.html",
+    "path": "API Reference > Discovery",
+    "content": "/.well-known/openid-configuration, /.well-known/jwks, OpenID Discovery.",
+    "keywords": ["discovery", "well-known", "openid", "configuration", "jwks", "metadata"]
+  },
+  {
+    "title": "Admin Dashboard",
+    "url": "/docs/admin/dashboard.html",
+    "path": "Administration > Dashboard",
+    "content": "Admin dashboard overview, statistics, quick actions, administrative access.",
+    "keywords": ["admin", "dashboard", "overview", "statistics", "management"]
+  },
+  {
+    "title": "User Management",
+    "url": "/docs/admin/users.html",
+    "path": "Administration > Users",
+    "content": "User administration, create users, edit users, disable accounts, 2FA management.",
+    "keywords": ["users", "management", "admin", "accounts", "2fa", "disable"]
+  },
+  {
+    "title": "Client Management",
+    "url": "/docs/admin/clients.html",
+    "path": "Administration > Clients",
+    "content": "OAuth client administration, create clients, client secrets, permissions.",
+    "keywords": ["clients", "management", "admin", "oauth", "secrets", "permissions"]
+  },
+  {
+    "title": "Token Management",
+    "url": "/docs/admin/tokens.html",
+    "path": "Administration > Tokens",
+    "content": "Active token management, token revocation, session management.",
+    "keywords": ["tokens", "management", "admin", "revoke", "sessions", "active"]
+  },
+  {
+    "title": "Audit Logs",
+    "url": "/docs/admin/audit-logs.html",
+    "path": "Administration > Audit Logs",
+    "content": "Security audit logging, authentication events, user actions, compliance.",
+    "keywords": ["audit", "logs", "security", "events", "compliance", "logging"]
+  },
+  {
+    "title": "Deploy to Railway",
+    "url": "/docs/deployment/railway.html",
+    "path": "Deployment > Railway",
+    "content": "Railway deployment guide, environment variables, PostgreSQL, custom domains.",
+    "keywords": ["railway", "deploy", "deployment", "hosting", "cloud"]
+  },
+  {
+    "title": "Docker Deployment",
+    "url": "/docs/deployment/docker.html",
+    "path": "Deployment > Docker",
+    "content": "Docker deployment, docker-compose, container configuration, reverse proxy.",
+    "keywords": ["docker", "container", "compose", "deployment", "nginx"]
+  },
+  {
+    "title": "Production Checklist",
+    "url": "/docs/deployment/production.html",
+    "path": "Deployment > Production",
+    "content": "Production deployment checklist, security settings, best practices, SSL/TLS.",
+    "keywords": ["production", "checklist", "security", "ssl", "tls", "best practices"]
+  },
+  {
+    "title": "Azure Deployment",
+    "url": "/docs/deployment/azure.html",
+    "path": "Deployment > Azure",
+    "content": "Azure App Service deployment, Azure AD integration, Key Vault, Application Insights.",
+    "keywords": ["azure", "app service", "deployment", "microsoft", "cloud"]
+  },
+  {
+    "title": "Security Overview",
+    "url": "/docs/security/overview.html",
+    "path": "Security > Overview",
+    "content": "Security features, OAuth 2.1 compliance, PKCE, rate limiting, 2FA, audit logging, security headers.",
+    "keywords": ["security", "oauth", "pkce", "rate limit", "2fa", "audit", "headers"]
+  },
+  {
+    "title": "Python Tutorial",
+    "url": "/docs/tutorials/python.html",
+    "path": "Tutorials > Python",
+    "content": "Python OAuth integration, Flask, FastAPI, MCP server implementation.",
+    "keywords": ["python", "tutorial", "flask", "fastapi", "integration"]
+  },
+  {
+    "title": "C# / .NET Tutorial",
+    "url": "/docs/tutorials/csharp.html",
+    "path": "Tutorials > C#",
+    "content": "C# OAuth integration, ASP.NET Core, .NET client implementation.",
+    "keywords": ["csharp", "dotnet", "aspnet", "tutorial", "integration"]
+  },
+  {
+    "title": "JavaScript Tutorial",
+    "url": "/docs/tutorials/javascript.html",
+    "path": "Tutorials > JavaScript",
+    "content": "JavaScript OAuth integration, Node.js, Express, browser implementation.",
+    "keywords": ["javascript", "nodejs", "express", "tutorial", "browser"]
+  },
+  {
+    "title": "TypeScript Tutorial",
+    "url": "/docs/tutorials/typescript.html",
+    "path": "Tutorials > TypeScript",
+    "content": "TypeScript OAuth integration, type-safe implementation, Node.js.",
+    "keywords": ["typescript", "nodejs", "tutorial", "types", "integration"]
+  },
+  {
+    "title": "Java Tutorial",
+    "url": "/docs/tutorials/java.html",
+    "path": "Tutorials > Java",
+    "content": "Java OAuth integration, Spring Boot, Spring Security implementation.",
+    "keywords": ["java", "spring", "boot", "security", "tutorial", "integration"]
+  },
+  {
+    "title": "Go Tutorial",
+    "url": "/docs/tutorials/go.html",
+    "path": "Tutorials > Go",
+    "content": "Go OAuth integration, Golang client implementation.",
+    "keywords": ["go", "golang", "tutorial", "integration"]
+  },
+  {
+    "title": "Rust Tutorial",
+    "url": "/docs/tutorials/rust.html",
+    "path": "Tutorials > Rust",
+    "content": "Rust OAuth integration, Rust client implementation.",
+    "keywords": ["rust", "tutorial", "integration"]
+  }
+]

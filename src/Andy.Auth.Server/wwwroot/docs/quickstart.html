@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Start - Andy Auth Documentation</title>
+    <meta name="description" content="Get Andy Auth up and running in minutes with this quick start guide">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/></svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                </button>
+                <a href="https://github.com/anthropics/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link active">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link">Core Concepts</a></li>
+                    <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                    <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link">PKCE</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token Endpoint</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Quick Start</span>
+            </nav>
+
+            <h1>Quick Start</h1>
+            <p class="lead">
+                Get Andy Auth running locally in under 5 minutes. This guide covers the fastest path
+                to a working OAuth 2.1 authorization server.
+            </p>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Prerequisites
+                </div>
+                <ul>
+                    <li><a href="https://dotnet.microsoft.com/download/dotnet/8.0">.NET 8 SDK</a></li>
+                    <li><a href="https://www.docker.com/products/docker-desktop">Docker Desktop</a> (for PostgreSQL)</li>
+                    <li>Git</li>
+                </ul>
+            </div>
+
+            <h2 id="step-1">Step 1: Clone the Repository</h2>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code>git clone https://github.com/rivoli-ai/andy-auth.git
+cd andy-auth</code></pre>
+            </div>
+
+            <h2 id="step-2">Step 2: Start PostgreSQL</h2>
+
+            <p>Start the database using Docker Compose:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code>docker-compose up -d</code></pre>
+            </div>
+
+            <p>This starts PostgreSQL on port 5432 with:</p>
+            <ul>
+                <li>Database: <code>andy_auth_dev</code></li>
+                <li>Username: <code>postgres</code></li>
+                <li>Password: <code>postgres</code></li>
+            </ul>
+
+            <h2 id="step-3">Step 3: Run the Server</h2>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code>cd src/Andy.Auth.Server
+dotnet run</code></pre>
+            </div>
+
+            <p>The server will:</p>
+            <ol>
+                <li>Apply database migrations automatically</li>
+                <li>Seed default OAuth clients for AI assistants</li>
+                <li>Start listening on <code>https://localhost:5001</code></li>
+            </ol>
+
+            <div class="callout callout-success">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    Server Running!
+                </div>
+                <p>You should see: <code>Now listening on: https://localhost:5001</code></p>
+            </div>
+
+            <h2 id="step-4">Step 4: Verify Installation</h2>
+
+            <p>Open your browser and navigate to:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>URL</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><a href="https://localhost:5001" target="_blank">https://localhost:5001</a></td>
+                        <td>Home page</td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://localhost:5001/.well-known/openid-configuration" target="_blank">/.well-known/openid-configuration</a></td>
+                        <td>OpenID Discovery</td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://localhost:5001/docs/" target="_blank">/docs/</a></td>
+                        <td>Documentation</td>
+                    </tr>
+                    <tr>
+                        <td><a href="https://localhost:5001/admin" target="_blank">/admin</a></td>
+                        <td>Admin Dashboard</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="step-5">Step 5: Create Your First User</h2>
+
+            <p>Register a new account:</p>
+
+            <ol>
+                <li>Go to <a href="https://localhost:5001/Account/Register">https://localhost:5001/Account/Register</a></li>
+                <li>Enter your email and password</li>
+                <li>Click <strong>Register</strong></li>
+            </ol>
+
+            <p>To make yourself an admin, run this SQL:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">sql</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code>-- Connect to andy_auth_dev database
+UPDATE "AspNetUsers"
+SET "IsAdmin" = true
+WHERE "Email" = 'your-email@example.com';</code></pre>
+            </div>
+
+            <h2 id="test-oauth">Test OAuth Flow</h2>
+
+            <p>Try a quick authorization code flow using curl:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code># 1. Open this URL in your browser (it will redirect to login)
+open "https://localhost:5001/connect/authorize?\
+client_id=claude-desktop&\
+response_type=code&\
+redirect_uri=http://localhost:3000/callback&\
+scope=openid%20profile%20email&\
+code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&\
+code_challenge_method=S256&\
+state=abc123"
+
+# 2. After login, you'll be redirected with an authorization code
+# Example: http://localhost:3000/callback?code=ABC123&state=abc123
+
+# 3. Exchange the code for tokens (use the code from step 2)
+curl -k -X POST https://localhost:5001/connect/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=authorization_code" \
+  -d "client_id=claude-desktop" \
+  -d "code=YOUR_CODE_HERE" \
+  -d "redirect_uri=http://localhost:3000/callback" \
+  -d "code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"</code></pre>
+            </div>
+
+            <h2 id="pre-configured-clients">Pre-configured OAuth Clients</h2>
+
+            <p>Andy Auth comes with these AI assistant clients pre-configured:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Client ID</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>claude-desktop</code></td>
+                        <td>Public</td>
+                        <td>Anthropic Claude Desktop</td>
+                    </tr>
+                    <tr>
+                        <td><code>chatgpt</code></td>
+                        <td>Public</td>
+                        <td>OpenAI ChatGPT</td>
+                    </tr>
+                    <tr>
+                        <td><code>cline</code></td>
+                        <td>Public</td>
+                        <td>Cline VS Code Extension</td>
+                    </tr>
+                    <tr>
+                        <td><code>roo</code></td>
+                        <td>Public</td>
+                        <td>Roo VS Code Extension</td>
+                    </tr>
+                    <tr>
+                        <td><code>continue-dev</code></td>
+                        <td>Public</td>
+                        <td>Continue.dev Extension</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="next-steps">Next Steps</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/mcp/overview.html" class="docs-card">
+                    <div class="docs-card-title">MCP Integration</div>
+                    <div class="docs-card-desc">Connect Claude Desktop, ChatGPT, or VS Code extensions.</div>
+                </a>
+                <a href="/docs/oauth/concepts.html" class="docs-card">
+                    <div class="docs-card-title">OAuth Concepts</div>
+                    <div class="docs-card-desc">Learn OAuth 2.0 and OpenID Connect fundamentals.</div>
+                </a>
+                <a href="/docs/admin/dashboard.html" class="docs-card">
+                    <div class="docs-card-title">Admin Dashboard</div>
+                    <div class="docs-card-desc">Manage users, clients, and tokens.</div>
+                </a>
+                <a href="/docs/deployment/railway.html" class="docs-card">
+                    <div class="docs-card-title">Deploy to Production</div>
+                    <div class="docs-card-desc">Deploy Andy Auth to Railway or other platforms.</div>
+                </a>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Documentation Home</span>
+                </a>
+                <a href="/docs/installation.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Installation</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

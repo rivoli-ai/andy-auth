@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Deployment Checklist - Andy Auth Documentation</title>
+    <meta name="description" content="Production deployment checklist and security best practices for Andy Auth OAuth 2.1 server">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Deployment <span class="badge badge-new">New</span></div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/deployment/railway.html" class="docs-sidebar-link">Railway</a></li>
+                    <li><a href="/docs/deployment/docker.html" class="docs-sidebar-link">Docker</a></li>
+                    <li><a href="/docs/deployment/azure.html" class="docs-sidebar-link">Azure App Service</a></li>
+                    <li><a href="/docs/deployment/production.html" class="docs-sidebar-link active">Production Checklist</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/deployment/production.html">Deployment</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Production Checklist</span>
+            </nav>
+
+            <h1>Production Deployment Checklist</h1>
+            <p class="lead">
+                Security hardening, configuration best practices, and operational guidelines
+                for deploying Andy Auth in production environments.
+            </p>
+
+            <div class="callout callout-danger">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    Security Critical
+                </div>
+                <p>
+                    Andy Auth is an OAuth 2.1 authorization server that handles sensitive authentication data.
+                    Proper security configuration is essential. Review this entire checklist before deploying
+                    to production.
+                </p>
+            </div>
+
+            <h2 id="pre-deployment">Pre-Deployment Checklist</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>HTTPS/TLS configured</td>
+                        <td><input type="checkbox"></td>
+                        <td><span class="badge badge-warning">Critical</span></td>
+                    </tr>
+                    <tr>
+                        <td>Database connection secured</td>
+                        <td><input type="checkbox"></td>
+                        <td><span class="badge badge-warning">Critical</span></td>
+                    </tr>
+                    <tr>
+                        <td>Signing keys configured (not ephemeral)</td>
+                        <td><input type="checkbox"></td>
+                        <td><span class="badge badge-warning">Critical</span></td>
+                    </tr>
+                    <tr>
+                        <td>CORS origins restricted</td>
+                        <td><input type="checkbox"></td>
+                        <td><span class="badge badge-warning">Critical</span></td>
+                    </tr>
+                    <tr>
+                        <td>DCR requires initial access tokens</td>
+                        <td><input type="checkbox"></td>
+                        <td><span class="badge badge-warning">Critical</span></td>
+                    </tr>
+                    <tr>
+                        <td>Localhost redirect URIs disabled</td>
+                        <td><input type="checkbox"></td>
+                        <td><span class="badge badge-warning">Critical</span></td>
+                    </tr>
+                    <tr>
+                        <td>Rate limiting configured</td>
+                        <td><input type="checkbox"></td>
+                        <td><span class="badge badge-primary">High</span></td>
+                    </tr>
+                    <tr>
+                        <td>Logging configured (not verbose)</td>
+                        <td><input type="checkbox"></td>
+                        <td><span class="badge badge-primary">High</span></td>
+                    </tr>
+                    <tr>
+                        <td>Backup strategy in place</td>
+                        <td><input type="checkbox"></td>
+                        <td><span class="badge badge-primary">High</span></td>
+                    </tr>
+                    <tr>
+                        <td>Health monitoring configured</td>
+                        <td><input type="checkbox"></td>
+                        <td><span class="badge badge-success">Medium</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="environment">Environment Configuration</h2>
+
+            <h3 id="required-settings">Required Production Settings</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Core settings
+ASPNETCORE_ENVIRONMENT=Production
+
+# Database - use strong password
+ConnectionStrings__DefaultConnection=Host=db.example.com;Port=5432;Database=andy_auth;Username=andy_auth_user;Password=STRONG_PASSWORD;SSL Mode=Require
+
+# For cloud deployments with ephemeral storage (Railway, etc.)
+# WARNING: Tokens invalidate on restart
+OpenIddict__UseEphemeralKeys=true
+
+# For persistent deployments - use proper certificates
+# OpenIddict__Server__SigningKey=BASE64_ENCODED_KEY
+# OpenIddict__Server__EncryptionKey=BASE64_ENCODED_KEY
+
+# CORS - specify exact origins, no wildcards
+CorsOrigins__AllowedOrigins__0=https://app.example.com
+CorsOrigins__AllowedOrigins__1=https://www.example.com
+
+# Dynamic Client Registration - secure settings
+DynamicClientRegistration__RequireInitialAccessToken=true
+DynamicClientRegistration__AllowLocalhostRedirectUris=false
+DynamicClientRegistration__AllowHttpLocalhostRedirectUris=false
+
+# Logging - reduce verbosity
+Logging__LogLevel__Default=Warning
+Logging__LogLevel__Microsoft.AspNetCore=Warning
+Logging__LogLevel__Microsoft.EntityFrameworkCore=Warning</code></pre>
+            </div>
+
+            <h2 id="ssl-tls">SSL/TLS Configuration</h2>
+
+            <h3>HTTPS Requirements</h3>
+
+            <p>Andy Auth <strong>requires</strong> HTTPS in production for:</p>
+
+            <ul>
+                <li>OAuth authorization requests</li>
+                <li>Token endpoint calls</li>
+                <li>All redirect URIs (except localhost in development)</li>
+                <li>OpenID Connect Discovery</li>
+            </ul>
+
+            <h3>Certificate Options</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Platform</th>
+                        <th>Certificate Source</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Railway</td>
+                        <td>Automatic (Let's Encrypt)</td>
+                        <td>No configuration needed</td>
+                    </tr>
+                    <tr>
+                        <td>Azure App Service</td>
+                        <td>Azure-managed or custom</td>
+                        <td>Free SSL for *.azurewebsites.net</td>
+                    </tr>
+                    <tr>
+                        <td>Docker + Nginx</td>
+                        <td>Let's Encrypt / Certbot</td>
+                        <td>Configure reverse proxy</td>
+                    </tr>
+                    <tr>
+                        <td>Docker + Traefik</td>
+                        <td>Automatic (ACME)</td>
+                        <td>Built-in certificate management</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>TLS Best Practices</h3>
+
+            <ul>
+                <li>Use TLS 1.2 or higher (TLS 1.3 preferred)</li>
+                <li>Disable older protocols (SSL, TLS 1.0, TLS 1.1)</li>
+                <li>Use strong cipher suites</li>
+                <li>Enable HSTS (HTTP Strict Transport Security)</li>
+            </ul>
+
+            <h2 id="signing-keys">Signing Keys Configuration</h2>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Key Persistence
+                </div>
+                <p>
+                    Ephemeral keys (<code>OpenIddict__UseEphemeralKeys=true</code>) regenerate on every restart,
+                    invalidating all existing tokens. This is acceptable for UAT but problematic for production
+                    where users would need to re-authenticate after every deployment.
+                </p>
+            </div>
+
+            <h3>Options for Key Management</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Option</th>
+                        <th>Pros</th>
+                        <th>Cons</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Ephemeral Keys</strong></td>
+                        <td>Simple, no key management</td>
+                        <td>Tokens invalidate on restart</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Environment Variables</strong></td>
+                        <td>Easy configuration</td>
+                        <td>Keys visible in environment</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Key Vault (Azure/AWS)</strong></td>
+                        <td>Most secure, rotation support</td>
+                        <td>Requires additional setup</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Certificate Files</strong></td>
+                        <td>Standard approach</td>
+                        <td>File management complexity</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Generating Keys</h3>
+
+            <p>Generate secure 256-bit keys for signing and encryption:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Generate random 32-byte (256-bit) keys
+openssl rand -base64 32  # For SigningKey
+openssl rand -base64 32  # For EncryptionKey
+
+# Or using .NET
+dotnet run --project KeyGenerator -- generate-keys</code></pre>
+            </div>
+
+            <h2 id="database-security">Database Security</h2>
+
+            <h3>Connection String Security</h3>
+
+            <ul>
+                <li>Use SSL/TLS for database connections (<code>SSL Mode=Require</code>)</li>
+                <li>Create a dedicated database user with minimal permissions</li>
+                <li>Use strong, unique passwords</li>
+                <li>Never commit connection strings to source control</li>
+            </ul>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">sql</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>-- Create dedicated user with minimal permissions
+CREATE USER andy_auth_user WITH PASSWORD 'STRONG_PASSWORD';
+GRANT CONNECT ON DATABASE andy_auth TO andy_auth_user;
+GRANT USAGE ON SCHEMA public TO andy_auth_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO andy_auth_user;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO andy_auth_user;</code></pre>
+            </div>
+
+            <h3>Regular Backups</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Daily backup script
+#!/bin/bash
+BACKUP_DIR="/backups/andy-auth"
+DATE=$(date +%Y%m%d_%H%M%S)
+pg_dump -h localhost -U andy_auth_user -d andy_auth | gzip > "$BACKUP_DIR/backup_$DATE.sql.gz"
+
+# Keep only last 30 days
+find $BACKUP_DIR -name "backup_*.sql.gz" -mtime +30 -delete</code></pre>
+            </div>
+
+            <h2 id="dcr-security">Dynamic Client Registration Security</h2>
+
+            <p>For production, configure DCR with strict security settings:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "DynamicClientRegistration": {
+    "Enabled": true,
+    "RequireInitialAccessToken": true,
+    "RequireAdminApproval": false,
+    "AllowLocalhostRedirectUris": false,
+    "AllowHttpLocalhostRedirectUris": false,
+    "MaxRedirectUrisPerClient": 5,
+    "MaxClientNameLength": 100,
+    "AllowedGrantTypes": [
+      "authorization_code",
+      "refresh_token"
+    ],
+    "AllowedScopes": [
+      "openid",
+      "profile",
+      "email",
+      "offline_access"
+    ]
+  }
+}</code></pre>
+            </div>
+
+            <h2 id="rate-limiting">Rate Limiting</h2>
+
+            <p>Andy Auth includes built-in rate limiting. Review and adjust limits for production:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "IpRateLimiting": {
+    "EnableEndpointRateLimiting": true,
+    "GeneralRules": [
+      {
+        "Endpoint": "*/Account/Login",
+        "Period": "1m",
+        "Limit": 10
+      },
+      {
+        "Endpoint": "*/Account/Register",
+        "Period": "1h",
+        "Limit": 5
+      },
+      {
+        "Endpoint": "*/connect/token",
+        "Period": "1m",
+        "Limit": 30
+      },
+      {
+        "Endpoint": "POST:*/connect/register",
+        "Period": "1h",
+        "Limit": 10
+      }
+    ]
+  }
+}</code></pre>
+            </div>
+
+            <h2 id="security-headers">Security Headers</h2>
+
+            <p>Andy Auth automatically adds security headers. Verify they're present in responses:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Header</th>
+                        <th>Value</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>X-Frame-Options</code></td>
+                        <td>DENY</td>
+                        <td>Prevents clickjacking</td>
+                    </tr>
+                    <tr>
+                        <td><code>X-Content-Type-Options</code></td>
+                        <td>nosniff</td>
+                        <td>Prevents MIME sniffing</td>
+                    </tr>
+                    <tr>
+                        <td><code>Referrer-Policy</code></td>
+                        <td>no-referrer</td>
+                        <td>Controls referrer information</td>
+                    </tr>
+                    <tr>
+                        <td><code>X-Permitted-Cross-Domain-Policies</code></td>
+                        <td>none</td>
+                        <td>Restricts Adobe cross-domain</td>
+                    </tr>
+                    <tr>
+                        <td><code>Permissions-Policy</code></td>
+                        <td>restrictive</td>
+                        <td>Limits browser features</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="health-checks">Health Checks and Monitoring</h2>
+
+            <h3>Health Check Endpoints</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/.well-known/openid-configuration</code></td>
+                        <td><span class="endpoint-method get">GET</span></td>
+                        <td>OpenID Connect discovery - confirms server is operational</td>
+                    </tr>
+                    <tr>
+                        <td><code>/.well-known/jwks</code></td>
+                        <td><span class="endpoint-method get">GET</span></td>
+                        <td>JSON Web Key Set - confirms signing keys are available</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Monitoring Recommendations</h3>
+
+            <ul>
+                <li><strong>Uptime Monitoring</strong> - Check <code>/.well-known/openid-configuration</code> every minute</li>
+                <li><strong>Response Time</strong> - Alert if token endpoint exceeds 500ms</li>
+                <li><strong>Error Rate</strong> - Monitor 4xx/5xx responses on OAuth endpoints</li>
+                <li><strong>Database Health</strong> - Monitor connection pool and query times</li>
+                <li><strong>Certificate Expiry</strong> - Alert 30 days before SSL certificate expires</li>
+            </ul>
+
+            <h2 id="logging">Logging Best Practices</h2>
+
+            <h3>Production Logging Configuration</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Warning",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore": "Warning",
+      "OpenIddict": "Warning"
+    }
+  }
+}</code></pre>
+            </div>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Sensitive Data Warning
+                </div>
+                <p>
+                    Never log access tokens, refresh tokens, authorization codes, or client secrets.
+                    Andy Auth is configured to avoid logging sensitive data, but verify if you add
+                    custom logging.
+                </p>
+            </div>
+
+            <h2 id="password-policy">Password Policy</h2>
+
+            <p>Andy Auth enforces the following password requirements:</p>
+
+            <ul>
+                <li>Minimum 8 characters</li>
+                <li>At least one uppercase letter</li>
+                <li>At least one lowercase letter</li>
+                <li>At least one digit</li>
+                <li>Account lockout after 5 failed attempts (30 minutes)</li>
+            </ul>
+
+            <h2 id="deployment-workflow">Recommended Deployment Workflow</h2>
+
+            <ol>
+                <li><strong>Staging Environment</strong> - Deploy to staging with production-like configuration</li>
+                <li><strong>Security Scan</strong> - Run security tools (OWASP ZAP, etc.)</li>
+                <li><strong>Load Testing</strong> - Verify performance under expected load</li>
+                <li><strong>Backup Database</strong> - Create backup before production deployment</li>
+                <li><strong>Deploy to Production</strong> - Use blue-green or rolling deployment</li>
+                <li><strong>Smoke Tests</strong> - Verify OAuth flows work correctly</li>
+                <li><strong>Monitor</strong> - Watch logs and metrics for 24 hours</li>
+            </ol>
+
+            <h2 id="next-steps">Next Steps</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/deployment/railway.html" class="docs-card">
+                    <div class="docs-card-title">Railway Deployment</div>
+                    <div class="docs-card-desc">Deploy to Railway with automatic HTTPS and database.</div>
+                </a>
+                <a href="/docs/deployment/docker.html" class="docs-card">
+                    <div class="docs-card-title">Docker Deployment</div>
+                    <div class="docs-card-desc">Self-hosted deployment with Docker and docker-compose.</div>
+                </a>
+                <a href="/docs/deployment/azure.html" class="docs-card">
+                    <div class="docs-card-title">Azure Deployment</div>
+                    <div class="docs-card-desc">Deploy to Azure App Service with managed database.</div>
+                </a>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/deployment/azure.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Azure App Service</span>
+                </a>
+                <a href="/docs/api/endpoints.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">API Reference</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

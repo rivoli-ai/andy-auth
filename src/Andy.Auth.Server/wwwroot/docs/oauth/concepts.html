@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth & OpenID Connect Concepts - Andy Auth Documentation</title>
+    <meta name="description" content="Learn the core concepts of OAuth 2.0 and OpenID Connect authentication protocols">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/></svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                </button>
+                <a href="https://github.com/anthropics/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link active">Core Concepts</a></li>
+                    <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                    <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link">PKCE</a></li>
+                    <li><a href="/docs/oauth/client-credentials.html" class="docs-sidebar-link">Client Credentials</a></li>
+                    <li><a href="/docs/oauth/access-tokens.html" class="docs-sidebar-link">Access Tokens</a></li>
+                    <li><a href="/docs/oauth/refresh-tokens.html" class="docs-sidebar-link">Refresh Tokens</a></li>
+                    <li><a href="/docs/oauth/scopes.html" class="docs-sidebar-link">Scopes</a></li>
+                    <li><a href="/docs/oauth/claims.html" class="docs-sidebar-link">Claims</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token Endpoint</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/userinfo.html" class="docs-sidebar-link">UserInfo</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/oauth/concepts.html">OAuth</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Core Concepts</span>
+            </nav>
+
+            <h1>OAuth 2.0 & OpenID Connect Concepts</h1>
+            <p class="lead">
+                Understand the fundamental concepts behind OAuth 2.0 and OpenID Connect,
+                the industry-standard protocols that power Andy Auth's authentication and authorization.
+            </p>
+
+            <h2 id="overview">What is OAuth 2.0?</h2>
+            <p>
+                OAuth 2.0 is an authorization framework that enables applications to obtain limited access to
+                user accounts on third-party services. Instead of sharing passwords, users can grant specific
+                permissions to applications through access tokens.
+            </p>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    OAuth vs OpenID Connect
+                </div>
+                <p>
+                    <strong>OAuth 2.0</strong> handles authorization (what you can access), while
+                    <strong>OpenID Connect (OIDC)</strong> is built on top of OAuth 2.0 to handle
+                    authentication (who you are). Andy Auth implements both protocols.
+                </p>
+            </div>
+
+            <h2 id="roles">Key Roles</h2>
+            <p>OAuth 2.0 defines four roles in the authorization process:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Role</th>
+                        <th>Description</th>
+                        <th>Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Resource Owner</strong></td>
+                        <td>The user who owns the data and grants access</td>
+                        <td>You, the end user</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Client</strong></td>
+                        <td>The application requesting access</td>
+                        <td>Claude Desktop, ChatGPT, your web app</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Authorization Server</strong></td>
+                        <td>Issues access tokens after authentication</td>
+                        <td>Andy Auth</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Resource Server</strong></td>
+                        <td>Hosts protected resources, validates tokens</td>
+                        <td>Your API, MCP servers</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="grant-types">Grant Types</h2>
+            <p>Andy Auth supports the following OAuth 2.0 grant types:</p>
+
+            <h3 id="authorization-code">Authorization Code Grant</h3>
+            <p>
+                The most secure flow for web and mobile applications. Users authenticate directly
+                with Andy Auth and an authorization code is exchanged for tokens.
+            </p>
+            <ul>
+                <li><strong>Best for:</strong> Web applications, mobile apps, SPAs</li>
+                <li><strong>Security:</strong> Tokens never exposed to browser</li>
+                <li><strong>Requires:</strong> PKCE for public clients</li>
+            </ul>
+
+            <h3 id="client-credentials">Client Credentials Grant</h3>
+            <p>
+                Used for server-to-server communication where no user is involved. The client
+                authenticates with its own credentials.
+            </p>
+            <ul>
+                <li><strong>Best for:</strong> Backend services, scheduled jobs, APIs</li>
+                <li><strong>Security:</strong> Requires confidential client with secret</li>
+                <li><strong>Note:</strong> No user context in the token</li>
+            </ul>
+
+            <h3 id="refresh-token">Refresh Token Grant</h3>
+            <p>
+                Allows clients to obtain new access tokens without requiring the user to
+                re-authenticate. Essential for maintaining long-lived sessions.
+            </p>
+            <ul>
+                <li><strong>Best for:</strong> Any flow requiring extended access</li>
+                <li><strong>Security:</strong> Refresh tokens are single-use in Andy Auth</li>
+                <li><strong>Requires:</strong> <code>offline_access</code> scope</li>
+            </ul>
+
+            <h2 id="tokens">Token Types</h2>
+
+            <h3>Access Tokens</h3>
+            <p>
+                Short-lived credentials used to access protected resources. Andy Auth issues
+                reference tokens (opaque strings) that must be validated via introspection.
+            </p>
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                </div>
+                <pre><code>Authorization: Bearer kYjE7d5GS2mLZ8wQP3F1nXrT9vHcA0bU</code></pre>
+            </div>
+
+            <h3>Refresh Tokens</h3>
+            <p>
+                Long-lived tokens used to obtain new access tokens. They are stored securely
+                and automatically rotated when used.
+            </p>
+
+            <h3>ID Tokens (OpenID Connect)</h3>
+            <p>
+                JWT tokens containing identity claims about the authenticated user. Used by
+                clients to verify the user's identity.
+            </p>
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">Copy</button>
+                </div>
+                <pre><code>{
+  "iss": "https://auth.example.com/",
+  "sub": "user_123456",
+  "aud": "my-client-id",
+  "exp": 1704067200,
+  "iat": 1704063600,
+  "name": "John Doe",
+  "email": "john@example.com"
+}</code></pre>
+            </div>
+
+            <h2 id="openid-connect">OpenID Connect</h2>
+            <p>
+                OpenID Connect (OIDC) extends OAuth 2.0 with an identity layer. It provides:
+            </p>
+            <ul>
+                <li><strong>ID Tokens:</strong> JWT tokens with user identity claims</li>
+                <li><strong>UserInfo Endpoint:</strong> API to retrieve user profile data</li>
+                <li><strong>Discovery:</strong> Standardized metadata endpoint</li>
+                <li><strong>Standard Claims:</strong> Predefined user attributes (name, email, etc.)</li>
+            </ul>
+
+            <h3>Standard Scopes</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Scope</th>
+                        <th>Description</th>
+                        <th>Claims Returned</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>openid</code></td>
+                        <td>Required for OIDC. Returns ID token</td>
+                        <td><code>sub</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>profile</code></td>
+                        <td>Basic profile information</td>
+                        <td><code>name</code>, <code>given_name</code>, <code>family_name</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>email</code></td>
+                        <td>User's email address</td>
+                        <td><code>email</code>, <code>email_verified</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>offline_access</code></td>
+                        <td>Request a refresh token</td>
+                        <td>N/A (returns refresh token)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="security">Security Best Practices</h2>
+            <p>Andy Auth implements modern security best practices:</p>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    OAuth 2.1 Requirements
+                </div>
+                <p>
+                    Andy Auth follows OAuth 2.1 guidelines, which means:
+                </p>
+                <ul>
+                    <li>PKCE is <strong>required</strong> for all public clients</li>
+                    <li>Implicit flow is <strong>not supported</strong></li>
+                    <li>Resource Owner Password flow is <strong>not supported</strong></li>
+                </ul>
+            </div>
+
+            <ul>
+                <li><strong>PKCE:</strong> Required for all public clients to prevent authorization code interception</li>
+                <li><strong>Token Binding:</strong> Tokens are bound to the client that requested them</li>
+                <li><strong>Short Expiration:</strong> Access tokens expire after 1 hour by default</li>
+                <li><strong>Token Rotation:</strong> Refresh tokens are rotated on each use</li>
+                <li><strong>HTTPS Only:</strong> All endpoints require HTTPS in production</li>
+            </ul>
+
+            <h2 id="next-steps">Next Steps</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/oauth/authorization-code.html" class="docs-card">
+                    <div class="docs-card-title">Authorization Code Flow</div>
+                    <div class="docs-card-desc">Learn how to implement the most common OAuth flow.</div>
+                </a>
+                <a href="/docs/oauth/pkce.html" class="docs-card">
+                    <div class="docs-card-title">PKCE</div>
+                    <div class="docs-card-desc">Understand Proof Key for Code Exchange security.</div>
+                </a>
+                <a href="/docs/api/endpoints.html" class="docs-card">
+                    <div class="docs-card-title">API Reference</div>
+                    <div class="docs-card-desc">Explore all OAuth and OIDC endpoints.</div>
+                </a>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Documentation Home</span>
+                </a>
+                <a href="/docs/oauth/authorization-code.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Authorization Code Flow</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

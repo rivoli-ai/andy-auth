@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker Deployment - Andy Auth Documentation</title>
+    <meta name="description" content="Deploy Andy Auth using Docker and docker-compose for containerized deployments with full control over your infrastructure">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Deployment <span class="badge badge-new">New</span></div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/deployment/railway.html" class="docs-sidebar-link">Railway</a></li>
+                    <li><a href="/docs/deployment/docker.html" class="docs-sidebar-link active">Docker</a></li>
+                    <li><a href="/docs/deployment/azure.html" class="docs-sidebar-link">Azure App Service</a></li>
+                    <li><a href="/docs/deployment/production.html" class="docs-sidebar-link">Production Checklist</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/deployment/docker.html">Deployment</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Docker</span>
+            </nav>
+
+            <h1>Docker Deployment</h1>
+            <p class="lead">
+                Deploy Andy Auth using Docker and docker-compose for containerized deployments
+                with full control over your infrastructure.
+            </p>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    When to Use Docker
+                </div>
+                <p>
+                    Docker deployment is ideal for self-hosted environments, on-premises deployments,
+                    or when you need full control over the infrastructure. For simpler deployments,
+                    consider <a href="/docs/deployment/railway.html">Railway</a>.
+                </p>
+            </div>
+
+            <h2 id="prerequisites">Prerequisites</h2>
+
+            <ul>
+                <li><a href="https://docs.docker.com/get-docker/" target="_blank">Docker</a> installed (version 20.10+)</li>
+                <li><a href="https://docs.docker.com/compose/install/" target="_blank">Docker Compose</a> (version 2.0+)</li>
+                <li>PostgreSQL database (can be containerized or external)</li>
+            </ul>
+
+            <h2 id="dockerfile">Dockerfile</h2>
+
+            <p>Andy Auth includes a multi-stage Dockerfile optimized for production:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">dockerfile</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Build stage
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy csproj and restore
+COPY src/Andy.Auth.Server/Andy.Auth.Server.csproj src/Andy.Auth.Server/
+RUN dotnet restore src/Andy.Auth.Server/Andy.Auth.Server.csproj
+
+# Copy source and build
+COPY src/Andy.Auth.Server/ src/Andy.Auth.Server/
+RUN dotnet publish src/Andy.Auth.Server/Andy.Auth.Server.csproj -c Release -o /app/publish
+
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+WORKDIR /app
+COPY --from=build /app/publish .
+
+ENTRYPOINT ["dotnet", "Andy.Auth.Server.dll"]</code></pre>
+            </div>
+
+            <h2 id="docker-compose">Docker Compose Setup</h2>
+
+            <p>Create a <code>docker-compose.yml</code> file for a complete deployment with PostgreSQL:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">yaml</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>version: '3.8'
+
+services:
+  andy-auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: andy-auth
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=andy_auth;Username=postgres;Password=${POSTGRES_PASSWORD}
+      - OpenIddict__UseEphemeralKeys=true
+      - CorsOrigins__AllowedOrigins__0=https://myapp.com
+      - DynamicClientRegistration__RequireInitialAccessToken=true
+      - DynamicClientRegistration__AllowLocalhostRedirectUris=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - andy-auth-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: andy-auth-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=andy_auth
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - andy-auth-network
+
+volumes:
+  postgres_data:
+
+networks:
+  andy-auth-network:
+    driver: bridge</code></pre>
+            </div>
+
+            <h2 id="environment-file">Environment File</h2>
+
+            <p>Create a <code>.env</code> file to store sensitive configuration:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Database
+POSTGRES_PASSWORD=your-secure-password-here
+
+# Optional: Azure AD for external authentication
+AZUREAD_CLIENT_ID=
+AZUREAD_CLIENT_SECRET=
+AZUREAD_TENANT_ID=common</code></pre>
+            </div>
+
+            <div class="callout callout-danger">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    Security Warning
+                </div>
+                <p>
+                    Never commit <code>.env</code> files to version control. Add <code>.env</code> to your
+                    <code>.gitignore</code> file and use secure secret management in production.
+                </p>
+            </div>
+
+            <h2 id="building-running">Building and Running</h2>
+
+            <h3>Build the Images</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Build all services
+docker-compose build
+
+# Or build only andy-auth
+docker-compose build andy-auth</code></pre>
+            </div>
+
+            <h3>Start the Services</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Start in detached mode
+docker-compose up -d
+
+# View logs
+docker-compose logs -f andy-auth
+
+# Stop services
+docker-compose down
+
+# Stop and remove volumes (WARNING: deletes data)
+docker-compose down -v</code></pre>
+            </div>
+
+            <h2 id="reverse-proxy">Reverse Proxy with HTTPS</h2>
+
+            <p>For production, use a reverse proxy like Nginx or Traefik for SSL termination:</p>
+
+            <h3>Nginx Configuration</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">nginx</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>server {
+    listen 443 ssl http2;
+    server_name auth.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/auth.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/auth.example.com/privkey.pem;
+
+    # SSL configuration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
+    ssl_prefer_server_ciphers off;
+
+    # Security headers
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection keep-alive;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+server {
+    listen 80;
+    server_name auth.example.com;
+    return 301 https://$server_name$request_uri;
+}</code></pre>
+            </div>
+
+            <h3>Docker Compose with Traefik</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">yaml</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v2.10
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@example.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    networks:
+      - andy-auth-network
+
+  andy-auth:
+    build: .
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.andy-auth.rule=Host(`auth.example.com`)"
+      - "traefik.http.routers.andy-auth.entrypoints=websecure"
+      - "traefik.http.routers.andy-auth.tls.certresolver=letsencrypt"
+      - "traefik.http.services.andy-auth.loadbalancer.server.port=5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=andy_auth;Username=postgres;Password=${POSTGRES_PASSWORD}
+      - OpenIddict__UseEphemeralKeys=true
+    depends_on:
+      - postgres
+    networks:
+      - andy-auth-network
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=andy_auth
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - andy-auth-network
+
+volumes:
+  postgres_data:
+  letsencrypt:
+
+networks:
+  andy-auth-network:</code></pre>
+            </div>
+
+            <h2 id="health-checks">Health Checks</h2>
+
+            <p>Add health checks to your Docker Compose configuration:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">yaml</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>andy-auth:
+  # ... other configuration ...
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:5000/.well-known/openid-configuration"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 40s</code></pre>
+            </div>
+
+            <p>Available health check endpoints:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/.well-known/openid-configuration</code></td>
+                        <td><span class="endpoint-method get">GET</span></td>
+                        <td>OpenID Connect discovery - confirms server is operational</td>
+                    </tr>
+                    <tr>
+                        <td><code>/.well-known/jwks</code></td>
+                        <td><span class="endpoint-method get">GET</span></td>
+                        <td>JSON Web Key Set - confirms signing keys are available</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="scaling">Scaling Considerations</h2>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Ephemeral Keys and Scaling
+                </div>
+                <p>
+                    When using ephemeral keys (<code>OpenIddict__UseEphemeralKeys=true</code>), each container
+                    instance generates different signing keys. This means tokens issued by one instance cannot
+                    be validated by another. For multi-instance deployments, use shared persistent keys.
+                </p>
+            </div>
+
+            <p>For horizontal scaling with multiple instances:</p>
+
+            <ol>
+                <li>Use external PostgreSQL (not containerized) for data persistence</li>
+                <li>Configure shared signing keys (see <a href="/docs/deployment/production.html">Production Checklist</a>)</li>
+                <li>Use sticky sessions or configure proper load balancing</li>
+                <li>Consider Redis for distributed session storage</li>
+            </ol>
+
+            <h2 id="backup">Backup and Restore</h2>
+
+            <h3>Database Backup</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Backup database
+docker-compose exec postgres pg_dump -U postgres andy_auth > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Restore database
+docker-compose exec -T postgres psql -U postgres andy_auth < backup_20240115_120000.sql</code></pre>
+            </div>
+
+            <h2 id="troubleshooting">Troubleshooting</h2>
+
+            <h3>Container Won't Start</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Check container logs
+docker-compose logs andy-auth
+
+# Check if postgres is healthy
+docker-compose ps
+
+# Inspect container
+docker inspect andy-auth</code></pre>
+            </div>
+
+            <h3>Database Connection Issues</h3>
+
+            <ul>
+                <li>Ensure PostgreSQL container is running and healthy</li>
+                <li>Verify the connection string uses the Docker service name (<code>postgres</code>) not <code>localhost</code></li>
+                <li>Check that both containers are on the same Docker network</li>
+            </ul>
+
+            <h2 id="next-steps">Next Steps</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/deployment/production.html" class="docs-card">
+                    <div class="docs-card-title">Production Checklist</div>
+                    <div class="docs-card-desc">Security hardening and best practices for production deployments.</div>
+                </a>
+                <a href="/docs/deployment/azure.html" class="docs-card">
+                    <div class="docs-card-title">Azure Deployment</div>
+                    <div class="docs-card-desc">Deploy to Azure App Service with managed database.</div>
+                </a>
+                <a href="/docs/deployment/railway.html" class="docs-card">
+                    <div class="docs-card-title">Railway Deployment</div>
+                    <div class="docs-card-desc">Simpler deployment with Railway's managed platform.</div>
+                </a>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/deployment/railway.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Railway Deployment</span>
+                </a>
+                <a href="/docs/deployment/azure.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Azure App Service</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

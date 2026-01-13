@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Andy Auth Documentation</title>
+    <meta name="description" content="Comprehensive documentation for Andy Auth - Self-hosted OAuth 2.0 / OpenID Connect server with MCP support">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/docs/images/favicon.png">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <!-- Getting Started -->
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link active">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        Overview
+                    </a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        Quick Start
+                    </a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Installation
+                    </a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                        Configuration
+                    </a></li>
+                </ul>
+            </div>
+
+            <!-- MCP Integration -->
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration <span class="badge badge-new">Important</span></div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                        MCP Overview
+                    </a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        OAuth 2.1 Flow
+                    </a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        Claude Desktop
+                    </a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                        ChatGPT
+                    </a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>
+                        VS Code Extensions
+                    </a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+                        Dynamic Client Registration
+                    </a></li>
+                </ul>
+            </div>
+
+            <!-- OAuth/OIDC -->
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <div class="docs-sidebar-group expanded">
+                    <div class="docs-sidebar-group-header">
+                        <span>Fundamentals</span>
+                        <svg class="docs-sidebar-group-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                    <ul class="docs-sidebar-group-items docs-sidebar-nav">
+                        <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link">Core Concepts</a></li>
+                        <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                        <li><a href="/docs/oauth/client-credentials.html" class="docs-sidebar-link">Client Credentials Flow</a></li>
+                        <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link">PKCE</a></li>
+                        <li><a href="/docs/oauth/refresh-tokens.html" class="docs-sidebar-link">Refresh Tokens</a></li>
+                    </ul>
+                </div>
+                <div class="docs-sidebar-group">
+                    <div class="docs-sidebar-group-header">
+                        <span>Tokens & Claims</span>
+                        <svg class="docs-sidebar-group-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                    <ul class="docs-sidebar-group-items docs-sidebar-nav">
+                        <li><a href="/docs/oauth/access-tokens.html" class="docs-sidebar-link">Access Tokens</a></li>
+                        <li><a href="/docs/oauth/id-tokens.html" class="docs-sidebar-link">ID Tokens</a></li>
+                        <li><a href="/docs/oauth/claims.html" class="docs-sidebar-link">Claims & Scopes</a></li>
+                        <li><a href="/docs/oauth/introspection.html" class="docs-sidebar-link">Token Introspection</a></li>
+                        <li><a href="/docs/oauth/revocation.html" class="docs-sidebar-link">Token Revocation</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Admin UI -->
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Administration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/admin/dashboard.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        Dashboard
+                    </a></li>
+                    <li><a href="/docs/admin/users.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                        User Management
+                    </a></li>
+                    <li><a href="/docs/admin/clients.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+                        OAuth Clients
+                    </a></li>
+                    <li><a href="/docs/admin/tokens.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                        Token Management
+                    </a></li>
+                    <li><a href="/docs/admin/audit-logs.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        Audit Logs
+                    </a></li>
+                </ul>
+            </div>
+
+            <!-- API Reference -->
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>
+                        Endpoints Overview
+                    </a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/userinfo.html" class="docs-sidebar-link">UserInfo</a></li>
+                    <li><a href="/docs/api/introspect.html" class="docs-sidebar-link">Introspection</a></li>
+                    <li><a href="/docs/api/revoke.html" class="docs-sidebar-link">Revocation</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                    <li><a href="/docs/api/discovery.html" class="docs-sidebar-link">Discovery</a></li>
+                </ul>
+            </div>
+
+            <!-- Tutorials -->
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Tutorials</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/tutorials/csharp.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                        C# / .NET
+                    </a></li>
+                    <li><a href="/docs/tutorials/python.html" class="docs-sidebar-link">Python</a></li>
+                    <li><a href="/docs/tutorials/javascript.html" class="docs-sidebar-link">JavaScript / Node.js</a></li>
+                    <li><a href="/docs/tutorials/typescript.html" class="docs-sidebar-link">TypeScript</a></li>
+                    <li><a href="/docs/tutorials/java.html" class="docs-sidebar-link">Java</a></li>
+                    <li><a href="/docs/tutorials/go.html" class="docs-sidebar-link">Go</a></li>
+                    <li><a href="/docs/tutorials/rust.html" class="docs-sidebar-link">Rust</a></li>
+                </ul>
+            </div>
+
+            <!-- Security -->
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Security</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/security/best-practices.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        Best Practices
+                    </a></li>
+                    <li><a href="/docs/security/rate-limiting.html" class="docs-sidebar-link">Rate Limiting</a></li>
+                    <li><a href="/docs/security/cors.html" class="docs-sidebar-link">CORS Configuration</a></li>
+                </ul>
+            </div>
+
+            <!-- Deployment -->
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Deployment</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/deployment/railway.html" class="docs-sidebar-link">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                        Railway
+                    </a></li>
+                    <li><a href="/docs/deployment/docker.html" class="docs-sidebar-link">Docker</a></li>
+                    <li><a href="/docs/deployment/azure.html" class="docs-sidebar-link">Azure</a></li>
+                    <li><a href="/docs/deployment/production.html" class="docs-sidebar-link">Production Checklist</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <h1>Andy Auth Documentation</h1>
+            <p class="lead">
+                Self-hosted OAuth 2.0 / OpenID Connect server built with ASP.NET Core,
+                designed for seamless AI assistant integration via the Model Context Protocol (MCP).
+            </p>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Welcome to Andy Auth
+                </div>
+                <p>
+                    Andy Auth provides a complete OAuth 2.0 and OpenID Connect implementation
+                    with native support for MCP OAuth 2.1 flows, enabling secure authentication
+                    for AI assistants like Claude Desktop, ChatGPT, and VS Code extensions.
+                </p>
+            </div>
+
+            <h2 id="features">Key Features</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/mcp/overview.html" class="docs-card">
+                    <svg class="docs-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                    <div class="docs-card-title">MCP Integration</div>
+                    <div class="docs-card-desc">Native OAuth 2.1 support for AI assistants including Claude Desktop, ChatGPT, and more.</div>
+                </a>
+                <a href="/docs/oauth/concepts.html" class="docs-card">
+                    <svg class="docs-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2"/>
+                        <path d="M7 11V7a5 5 0 0110 0v4"/>
+                    </svg>
+                    <div class="docs-card-title">OAuth 2.0 & OIDC</div>
+                    <div class="docs-card-desc">Standards-compliant implementation with Authorization Code, Client Credentials, and PKCE.</div>
+                </a>
+                <a href="/docs/mcp/dcr.html" class="docs-card">
+                    <svg class="docs-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/>
+                        <rect x="8" y="2" width="8" height="4" rx="1"/>
+                    </svg>
+                    <div class="docs-card-title">Dynamic Client Registration</div>
+                    <div class="docs-card-desc">RFC 7591/7592 compliant DCR for automated client onboarding.</div>
+                </a>
+                <a href="/docs/admin/dashboard.html" class="docs-card">
+                    <svg class="docs-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"/>
+                        <rect x="14" y="3" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                    <div class="docs-card-title">Admin Dashboard</div>
+                    <div class="docs-card-desc">Complete UI for managing users, clients, tokens, and audit logs.</div>
+                </a>
+            </div>
+
+            <h2 id="quickstart">Quick Start</h2>
+
+            <div class="docs-steps">
+                <div class="docs-step">
+                    <div class="docs-step-title">Start PostgreSQL</div>
+                    <div class="code-block">
+                        <div class="code-block-header">
+                            <span class="code-block-lang">bash</span>
+                            <button class="code-block-copy">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                                Copy
+                            </button>
+                        </div>
+                        <pre><code>docker-compose up -d</code></pre>
+                    </div>
+                </div>
+                <div class="docs-step">
+                    <div class="docs-step-title">Run the Server</div>
+                    <div class="code-block">
+                        <div class="code-block-header">
+                            <span class="code-block-lang">bash</span>
+                            <button class="code-block-copy">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                                Copy
+                            </button>
+                        </div>
+                        <pre><code>cd src/Andy.Auth.Server
+dotnet run</code></pre>
+                    </div>
+                </div>
+                <div class="docs-step">
+                    <div class="docs-step-title">Access the Server</div>
+                    <p>Server runs at <code>https://localhost:7088</code></p>
+                    <p><strong>Test credentials:</strong></p>
+                    <ul>
+                        <li>Email: <code>test@andy.local</code></li>
+                        <li>Password: <code>Test123!</code></li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2 id="endpoints">OAuth Endpoints</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>URL</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Authorization</td>
+                        <td><code>/connect/authorize</code></td>
+                        <td>Start OAuth flow</td>
+                    </tr>
+                    <tr>
+                        <td>Token</td>
+                        <td><code>/connect/token</code></td>
+                        <td>Exchange code for tokens</td>
+                    </tr>
+                    <tr>
+                        <td>UserInfo</td>
+                        <td><code>/connect/userinfo</code></td>
+                        <td>Get user claims</td>
+                    </tr>
+                    <tr>
+                        <td>Introspection</td>
+                        <td><code>/connect/introspect</code></td>
+                        <td>Validate tokens</td>
+                    </tr>
+                    <tr>
+                        <td>Revocation</td>
+                        <td><code>/connect/revoke</code></td>
+                        <td>Revoke tokens</td>
+                    </tr>
+                    <tr>
+                        <td>Registration</td>
+                        <td><code>/connect/register</code></td>
+                        <td>Dynamic client registration</td>
+                    </tr>
+                    <tr>
+                        <td>Discovery</td>
+                        <td><code>/.well-known/openid-configuration</code></td>
+                        <td>OpenID configuration</td>
+                    </tr>
+                    <tr>
+                        <td>JWKS</td>
+                        <td><code>/.well-known/jwks</code></td>
+                        <td>JSON Web Key Set</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="mcp">MCP Support</h2>
+
+            <p>Andy Auth provides native support for the <strong>Model Context Protocol (MCP)</strong> OAuth 2.1 specification, enabling secure authentication for AI assistants:</p>
+
+            <div class="docs-cards">
+                <a href="/docs/mcp/claude-desktop.html" class="docs-card">
+                    <div class="docs-card-title">Claude Desktop</div>
+                    <div class="docs-card-desc">Configure Claude Desktop to authenticate with your MCP servers.</div>
+                </a>
+                <a href="/docs/mcp/chatgpt.html" class="docs-card">
+                    <div class="docs-card-title">ChatGPT</div>
+                    <div class="docs-card-desc">Set up ChatGPT custom actions with OAuth authentication.</div>
+                </a>
+                <a href="/docs/mcp/vscode-extensions.html" class="docs-card">
+                    <div class="docs-card-title">VS Code Extensions</div>
+                    <div class="docs-card-desc">Integrate Cline, Roo, and Continue.dev with OAuth.</div>
+                </a>
+            </div>
+
+            <h2 id="client-library">Client Library</h2>
+
+            <p>The <code>Andy.Auth</code> NuGet package provides easy integration for ASP.NET Core APIs:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>dotnet add package Andy.Auth</code></pre>
+            </div>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">csharp</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>// Program.cs
+builder.Services.AddAndyAuth(builder.Configuration);</code></pre>
+            </div>
+
+            <!-- Page Navigation -->
+            <nav class="docs-page-nav">
+                <div></div>
+                <a href="/docs/quickstart.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Quick Start Guide</span>
+                </a>
+            </nav>
+        </article>
+
+        <!-- Table of Contents -->
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list">
+                <!-- Generated by JS -->
+            </ul>
+        </aside>
+    </main>
+
+    <!-- Search Modal -->
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

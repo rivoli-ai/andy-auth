@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - Andy Auth Documentation</title>
+    <meta name="description" content="Learn how to manage user accounts in Andy Auth, including viewing, editing, suspending, and resetting passwords">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Admin Dashboard <span class="badge badge-new">New</span></div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/admin/dashboard.html" class="docs-sidebar-link">Dashboard Overview</a></li>
+                    <li><a href="/docs/admin/users.html" class="docs-sidebar-link active">User Management</a></li>
+                    <li><a href="/docs/admin/clients.html" class="docs-sidebar-link">OAuth Clients</a></li>
+                    <li><a href="/docs/admin/tokens.html" class="docs-sidebar-link">Token Management</a></li>
+                    <li><a href="/docs/admin/audit-logs.html" class="docs-sidebar-link">Audit Logs</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/admin/dashboard.html">Admin Dashboard</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">User Management</span>
+            </nav>
+
+            <h1>User Management</h1>
+            <p class="lead">
+                The User Management interface allows administrators to view, search, and manage all user accounts
+                in the system. Access it at <code>/admin/users</code>.
+            </p>
+
+            <div class="endpoint">
+                <span class="endpoint-method get">GET</span>
+                <span class="endpoint-path">/admin/users</span>
+            </div>
+
+            <h2 id="user-list">User List Overview</h2>
+
+            <p>The user list displays all registered users with the following information:</p>
+
+            <!-- Screenshot Placeholder -->
+            <div class="screenshot-placeholder">
+                <div class="screenshot-placeholder-inner">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <path d="M21 15l-5-5L5 21"/>
+                    </svg>
+                    <span>User List Screenshot</span>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Column</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Email</strong></td>
+                        <td>User's email address with verification status badge</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Full Name</strong></td>
+                        <td>User's display name (if set)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Role</strong></td>
+                        <td>User role - either "Admin" or "User"</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Status</strong></td>
+                        <td>Account status: Active, Inactive, Suspended, or Deleted</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Expiration</strong></td>
+                        <td>Account expiration date (if set)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Created</strong></td>
+                        <td>Account creation date</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Last Login</strong></td>
+                        <td>Most recent login timestamp</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="searching-filtering">Searching and Filtering</h2>
+
+            <p>Use the search bar to find users by email or name:</p>
+
+            <ol>
+                <li>Enter a search term in the search input field</li>
+                <li>Click <strong>Search</strong> or press Enter</li>
+                <li>Click <strong>Clear</strong> to reset the search</li>
+            </ol>
+
+            <p>The user list also supports sorting by clicking on column headers:</p>
+
+            <ul>
+                <li><strong>Email</strong> - Sort alphabetically by email</li>
+                <li><strong>Full Name</strong> - Sort alphabetically by name</li>
+                <li><strong>Created</strong> - Sort by account creation date</li>
+                <li><strong>Last Login</strong> - Sort by most recent login</li>
+            </ul>
+
+            <h2 id="user-status">Understanding User Status</h2>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">User Status Types</span>
+                </div>
+                <pre><code>Active      - User can log in and access the system
+Inactive    - User has not confirmed their email
+Suspended   - User has been temporarily disabled by an admin
+Deleted     - User has been soft-deleted (cannot be restored)</code></pre>
+            </div>
+
+            <h2 id="user-actions">User Actions</h2>
+
+            <p>Each user row provides action buttons for managing that account:</p>
+
+            <h3 id="suspend-user">Suspending a User</h3>
+
+            <p>To temporarily disable a user account:</p>
+
+            <ol>
+                <li>Click the <strong>Suspend</strong> button (warning icon) next to the user</li>
+                <li>Enter a reason for the suspension in the modal dialog</li>
+                <li>Click <strong>Suspend User</strong> to confirm</li>
+            </ol>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Suspension Notes
+                </div>
+                <p>
+                    Suspended users cannot log in until an administrator unsuspends their account.
+                    The suspension reason is recorded and visible in the audit logs.
+                </p>
+            </div>
+
+            <h3 id="unsuspend-user">Unsuspending a User</h3>
+
+            <p>To restore access for a suspended user:</p>
+
+            <ol>
+                <li>Click the <strong>Unsuspend</strong> button (checkmark icon) next to the suspended user</li>
+                <li>Confirm the action in the prompt</li>
+            </ol>
+
+            <h3 id="set-expiration">Setting Account Expiration</h3>
+
+            <p>To set a date when a user account will automatically expire:</p>
+
+            <ol>
+                <li>Click the <strong>Set Expiration</strong> button (calendar icon)</li>
+                <li>Select an expiration date from the date picker</li>
+                <li>Click <strong>Set Expiration</strong> to save</li>
+            </ol>
+
+            <p>Leave the date field empty to remove an existing expiration.</p>
+
+            <h3 id="edit-name">Editing User Name</h3>
+
+            <p>To update a user's display name:</p>
+
+            <ol>
+                <li>Click the <strong>Edit Name</strong> button (pencil icon)</li>
+                <li>Enter the new name in the modal dialog</li>
+                <li>Click <strong>Update Name</strong> to save</li>
+            </ol>
+
+            <h3 id="reset-password">Resetting User Password</h3>
+
+            <p>To reset a user's password:</p>
+
+            <ol>
+                <li>Click the <strong>Reset Password</strong> button (lock icon)</li>
+                <li>Enter the new password in the modal dialog</li>
+                <li>Click <strong>Reset Password</strong> to apply</li>
+            </ol>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Password Requirements
+                </div>
+                <p>
+                    Passwords must be at least 8 characters and include uppercase letters,
+                    lowercase letters, and numbers. Consider informing the user of their new
+                    password through a secure channel.
+                </p>
+            </div>
+
+            <h3 id="delete-user">Deleting a User</h3>
+
+            <p>To permanently remove a user account:</p>
+
+            <ol>
+                <li>Click the <strong>Delete</strong> button (trash icon)</li>
+                <li>Review the warning message</li>
+                <li>Click <strong>Delete User</strong> to confirm</li>
+            </ol>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Deletion Warning
+                </div>
+                <p>
+                    User deletion is a soft-delete operation. The user record is marked as deleted
+                    but retained in the database. System users cannot be deleted.
+                </p>
+            </div>
+
+            <h2 id="email-verification">Email Verification Status</h2>
+
+            <p>Users with verified email addresses display a "Verified" badge next to their email. Unverified users may have limited access depending on your system configuration.</p>
+
+            <h2 id="admin-role">Admin Role Indicator</h2>
+
+            <p>Users with administrator privileges display an "Admin" badge in the Role column. Admin users have access to the admin dashboard and can manage other users.</p>
+
+            <h2 id="pagination">Pagination</h2>
+
+            <p>The user list is paginated to improve performance with large numbers of users. Use the pagination controls at the bottom of the list to navigate between pages.</p>
+
+            <h2 id="best-practices">Best Practices</h2>
+
+            <ul>
+                <li><strong>Regular Reviews</strong> - Periodically review user accounts to identify inactive or suspicious accounts</li>
+                <li><strong>Document Suspensions</strong> - Always provide clear reasons when suspending accounts</li>
+                <li><strong>Expiration Dates</strong> - Use account expiration for temporary access or contractors</li>
+                <li><strong>Secure Password Distribution</strong> - When resetting passwords, use secure methods to communicate new credentials</li>
+                <li><strong>Audit Trail</strong> - All user management actions are logged in the audit logs</li>
+            </ul>
+
+            <h2 id="next-steps">Next Steps</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/admin/clients.html" class="docs-card">
+                    <div class="docs-card-title">OAuth Client Management</div>
+                    <div class="docs-card-desc">Learn how to create and manage OAuth client applications.</div>
+                </a>
+                <a href="/docs/admin/audit-logs.html" class="docs-card">
+                    <div class="docs-card-title">Audit Logs</div>
+                    <div class="docs-card-desc">Review security events and user management actions.</div>
+                </a>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/admin/dashboard.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Dashboard Overview</span>
+                </a>
+                <a href="/docs/admin/clients.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">OAuth Client Management</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <style>
+        .screenshot-placeholder {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ed 100%);
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 3rem;
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+        .screenshot-placeholder-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            color: #6b7280;
+        }
+        .screenshot-placeholder-inner svg {
+            opacity: 0.5;
+        }
+        .screenshot-placeholder-inner span {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+    </style>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

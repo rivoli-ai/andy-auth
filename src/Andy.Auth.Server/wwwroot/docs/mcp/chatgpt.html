@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Integration - Andy Auth Documentation</title>
+    <meta name="description" content="Configure OpenAI's ChatGPT custom actions to authenticate with Andy Auth for secure MCP server access">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration <span class="badge badge-new">Important</span></div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link active">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link">Core Concepts</a></li>
+                    <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                    <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link">PKCE</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Tutorials</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/tutorials/csharp.html" class="docs-sidebar-link">C# / .NET</a></li>
+                    <li><a href="/docs/tutorials/python.html" class="docs-sidebar-link">Python</a></li>
+                    <li><a href="/docs/tutorials/javascript.html" class="docs-sidebar-link">JavaScript</a></li>
+                    <li><a href="/docs/tutorials/typescript.html" class="docs-sidebar-link">TypeScript</a></li>
+                    <li><a href="/docs/tutorials/java.html" class="docs-sidebar-link">Java</a></li>
+                    <li><a href="/docs/tutorials/go.html" class="docs-sidebar-link">Go</a></li>
+                    <li><a href="/docs/tutorials/rust.html" class="docs-sidebar-link">Rust</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/mcp/overview.html">MCP Integration</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">ChatGPT</span>
+            </nav>
+
+            <h1>ChatGPT Integration</h1>
+            <p class="lead">
+                Configure OpenAI's ChatGPT custom actions to authenticate with Andy Auth,
+                enabling secure access to your MCP-enabled APIs and services.
+            </p>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Pre-configured Client
+                </div>
+                <p>
+                    Andy Auth includes a pre-configured OAuth client for ChatGPT with the client ID
+                    <code>chatgpt</code>. This works with ChatGPT Plus, Team, and Enterprise plans
+                    that support custom GPTs and actions.
+                </p>
+            </div>
+
+            <h2 id="prerequisites">Prerequisites</h2>
+
+            <ul>
+                <li>ChatGPT Plus, Team, or Enterprise subscription</li>
+                <li>Access to create custom GPTs</li>
+                <li>Andy Auth server with a publicly accessible URL (HTTPS required)</li>
+                <li>An API or MCP server to integrate</li>
+            </ul>
+
+            <h2 id="create-gpt">Step 1: Create a Custom GPT</h2>
+
+            <ol>
+                <li>Navigate to <a href="https://chat.openai.com" target="_blank">chat.openai.com</a></li>
+                <li>Click on your profile icon and select <strong>"My GPTs"</strong></li>
+                <li>Click <strong>"Create a GPT"</strong></li>
+                <li>Configure your GPT's name, description, and instructions</li>
+            </ol>
+
+            <h2 id="configure-action">Step 2: Configure an Action</h2>
+
+            <p>In the GPT builder, navigate to the <strong>"Configure"</strong> tab and scroll to <strong>"Actions"</strong>:</p>
+
+            <ol>
+                <li>Click <strong>"Create new action"</strong></li>
+                <li>You'll need to provide an OpenAPI schema for your API</li>
+            </ol>
+
+            <h3 id="openapi-schema">OpenAPI Schema Example</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">yaml</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>openapi: 3.1.0
+info:
+  title: My Company API
+  description: API for accessing company data through ChatGPT
+  version: 1.0.0
+servers:
+  - url: https://api.example.com
+    description: Production API server
+paths:
+  /api/data:
+    get:
+      operationId: getData
+      summary: Retrieve data
+      description: Fetches data from the company database
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          description: Unauthorized
+  /api/documents:
+    get:
+      operationId: getDocuments
+      summary: List documents
+      description: Returns a list of available documents
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    title:
+                      type: string
+                    createdAt:
+                      type: string
+                      format: date-time</code></pre>
+            </div>
+
+            <h2 id="configure-oauth">Step 3: Configure OAuth Authentication</h2>
+
+            <p>In the action configuration, select <strong>"Authentication"</strong> and choose <strong>"OAuth"</strong>:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                </div>
+                <pre><code>Authentication Type: OAuth
+
+Client ID: chatgpt
+
+Client Secret: (leave empty for public clients)
+
+Authorization URL: https://auth.example.com/connect/authorize
+
+Token URL: https://auth.example.com/connect/token
+
+Scope: openid profile email offline_access
+
+Token Exchange Method: POST request</code></pre>
+            </div>
+
+            <h3 id="oauth-settings">OAuth Settings Reference</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Setting</th>
+                        <th>Value</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Client ID</strong></td>
+                        <td><code>chatgpt</code></td>
+                        <td>Pre-configured client in Andy Auth</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Client Secret</strong></td>
+                        <td>(empty)</td>
+                        <td>Not required for public clients</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Authorization URL</strong></td>
+                        <td><code>https://auth.example.com/connect/authorize</code></td>
+                        <td>Andy Auth authorization endpoint</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Token URL</strong></td>
+                        <td><code>https://auth.example.com/connect/token</code></td>
+                        <td>Andy Auth token endpoint</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Scope</strong></td>
+                        <td><code>openid profile email</code></td>
+                        <td>Requested permissions</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="callback-url">Step 4: Configure Callback URL in Andy Auth</h2>
+
+            <p>ChatGPT uses a specific callback URL format. Ensure your Andy Auth client configuration includes the ChatGPT callback URL:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                </div>
+                <pre><code>https://chat.openai.com/aip/{plugin-id}/oauth/callback</code></pre>
+            </div>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Callback URL Note
+                </div>
+                <p>
+                    The exact callback URL is shown in the ChatGPT action configuration after you save the OAuth settings.
+                    Copy this URL and ensure it's added to the allowed redirect URIs in Andy Auth.
+                </p>
+            </div>
+
+            <p>The pre-configured <code>chatgpt</code> client in Andy Auth typically allows these redirect patterns:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "client_id": "chatgpt",
+  "redirect_uris": [
+    "https://chat.openai.com/aip/*/oauth/callback",
+    "https://chatgpt.com/aip/*/oauth/callback"
+  ]
+}</code></pre>
+            </div>
+
+            <h2 id="user-flow">Step 5: User Authentication Flow</h2>
+
+            <p>When a user interacts with your GPT and triggers an action:</p>
+
+            <ol>
+                <li><strong>ChatGPT</strong> detects the action requires authentication</li>
+                <li><strong>User clicks</strong> "Sign in" button in the chat</li>
+                <li><strong>Browser popup</strong> opens to Andy Auth login page</li>
+                <li><strong>User authenticates</strong> and grants consent</li>
+                <li><strong>ChatGPT receives</strong> the access token</li>
+                <li><strong>Action executes</strong> with the authenticated token</li>
+            </ol>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                </div>
+                <pre><code>┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│    User      │     │   ChatGPT    │     │  Andy Auth   │     │   Your API   │
+└──────┬───────┘     └──────┬───────┘     └──────┬───────┘     └──────┬───────┘
+       │                    │                    │                    │
+       │  "Get my data"     │                    │                    │
+       │───────────────────>│                    │                    │
+       │                    │                    │                    │
+       │  "Please sign in"  │                    │                    │
+       │<───────────────────│                    │                    │
+       │                    │                    │                    │
+       │  Click "Sign in"   │                    │                    │
+       │───────────────────>│                    │                    │
+       │                    │                    │                    │
+       │  Popup: Login page │                    │                    │
+       │<───────────────────────────────────────│                    │
+       │                    │                    │                    │
+       │  Enter credentials │                    │                    │
+       │───────────────────────────────────────>│                    │
+       │                    │                    │                    │
+       │                    │  Access token      │                    │
+       │                    │<───────────────────│                    │
+       │                    │                    │                    │
+       │                    │  API call with token                   │
+       │                    │────────────────────────────────────────>│
+       │                    │                    │                    │
+       │  "Here's your data"│                    │                    │
+       │<───────────────────│                    │                    │</code></pre>
+            </div>
+
+            <h2 id="api-validation">Step 6: Validate Tokens in Your API</h2>
+
+            <p>Your API should validate the access tokens sent by ChatGPT:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">python</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>from flask import Flask, request, jsonify
+import requests
+
+app = Flask(__name__)
+
+ANDY_AUTH_INTROSPECTION_URL = "https://auth.example.com/connect/introspect"
+
+def validate_token(token):
+    """Validate access token via Andy Auth introspection."""
+    response = requests.post(
+        ANDY_AUTH_INTROSPECTION_URL,
+        data={
+            "token": token,
+            "token_type_hint": "access_token"
+        }
+    )
+    result = response.json()
+    return result if result.get("active") else None
+
+@app.route("/api/data")
+def get_data():
+    # Extract token from Authorization header
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Missing bearer token"}), 401
+
+    token = auth_header[7:]  # Remove "Bearer " prefix
+
+    # Validate token
+    token_info = validate_token(token)
+    if not token_info:
+        return jsonify({"error": "Invalid or expired token"}), 401
+
+    # Token is valid - get user info
+    user_id = token_info.get("sub")
+    email = token_info.get("email")
+
+    # Fetch and return data for this user
+    data = fetch_user_data(user_id)
+    return jsonify({"results": data})
+
+if __name__ == "__main__":
+    app.run(port=5000)</code></pre>
+            </div>
+
+            <h2 id="privacy-policy">Step 7: Privacy Policy & Terms</h2>
+
+            <p>ChatGPT requires custom actions to have a privacy policy. Add these URLs to your action configuration:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                </div>
+                <pre><code>Privacy Policy URL: https://example.com/privacy
+Terms of Service URL: https://example.com/terms</code></pre>
+            </div>
+
+            <h2 id="testing">Testing Your Integration</h2>
+
+            <ol>
+                <li><strong>Save</strong> your GPT configuration</li>
+                <li><strong>Open</strong> a new chat with your custom GPT</li>
+                <li><strong>Ask</strong> the GPT to perform an action that requires API access</li>
+                <li><strong>Click</strong> "Sign in" when prompted</li>
+                <li><strong>Complete</strong> authentication in the popup</li>
+                <li><strong>Verify</strong> the action executes successfully</li>
+            </ol>
+
+            <h2 id="troubleshooting">Troubleshooting</h2>
+
+            <h3 id="issue-oauth-error">OAuth Error During Sign-in</h3>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Common Causes
+                </div>
+                <ul>
+                    <li><strong>Invalid redirect URI</strong>: Ensure the ChatGPT callback URL is registered in Andy Auth</li>
+                    <li><strong>HTTPS required</strong>: Andy Auth must be accessible via HTTPS for ChatGPT</li>
+                    <li><strong>Client ID mismatch</strong>: Verify you're using <code>chatgpt</code> as the client ID</li>
+                </ul>
+            </div>
+
+            <h3 id="issue-action-fails">"Action Failed" After Sign-in</h3>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Common Causes
+                </div>
+                <ul>
+                    <li><strong>API not responding</strong>: Check your API server is running and accessible</li>
+                    <li><strong>Token validation failed</strong>: Verify introspection endpoint is working</li>
+                    <li><strong>CORS issues</strong>: Ensure your API allows requests from ChatGPT's origins</li>
+                    <li><strong>OpenAPI schema mismatch</strong>: Verify paths match your actual API</li>
+                </ul>
+            </div>
+
+            <h3 id="issue-popup-blocked">Sign-in Popup Blocked</h3>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Solution
+                </div>
+                <ul>
+                    <li>Disable popup blockers for chat.openai.com</li>
+                    <li>Allow popups in your browser settings</li>
+                    <li>Try a different browser</li>
+                </ul>
+            </div>
+
+            <h2 id="security-best-practices">Security Best Practices</h2>
+
+            <ul>
+                <li><strong>Scope limitation</strong>: Request only the scopes your GPT needs</li>
+                <li><strong>Token validation</strong>: Always validate tokens server-side</li>
+                <li><strong>Rate limiting</strong>: Implement rate limits on your API</li>
+                <li><strong>Audit logging</strong>: Log all API access for security monitoring</li>
+                <li><strong>Input validation</strong>: Sanitize all inputs from ChatGPT</li>
+            </ul>
+
+            <h2 id="next-steps">Next Steps</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/mcp/vscode-extensions.html" class="docs-card">
+                    <div class="docs-card-title">VS Code Extensions</div>
+                    <div class="docs-card-desc">Configure Cline, Roo, and Continue.dev with Andy Auth.</div>
+                </a>
+                <a href="/docs/mcp/dcr.html" class="docs-card">
+                    <div class="docs-card-title">Dynamic Client Registration</div>
+                    <div class="docs-card-desc">Learn about automatic client onboarding for custom GPTs.</div>
+                </a>
+                <a href="/docs/api/token.html" class="docs-card">
+                    <div class="docs-card-title">Token API Reference</div>
+                    <div class="docs-card-desc">Complete API documentation for token operations.</div>
+                </a>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/mcp/claude-desktop.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Claude Desktop</span>
+                </a>
+                <a href="/docs/mcp/vscode-extensions.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">VS Code Extensions</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

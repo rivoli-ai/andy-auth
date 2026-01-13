@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth Client Management - Andy Auth Documentation</title>
+    <meta name="description" content="Learn how to create, edit, and manage OAuth 2.0 client applications in Andy Auth">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Admin Dashboard <span class="badge badge-new">New</span></div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/admin/dashboard.html" class="docs-sidebar-link">Dashboard Overview</a></li>
+                    <li><a href="/docs/admin/users.html" class="docs-sidebar-link">User Management</a></li>
+                    <li><a href="/docs/admin/clients.html" class="docs-sidebar-link active">OAuth Clients</a></li>
+                    <li><a href="/docs/admin/tokens.html" class="docs-sidebar-link">Token Management</a></li>
+                    <li><a href="/docs/admin/audit-logs.html" class="docs-sidebar-link">Audit Logs</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/admin/dashboard.html">Admin Dashboard</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">OAuth Clients</span>
+            </nav>
+
+            <h1>OAuth Client Management</h1>
+            <p class="lead">
+                Manage OAuth 2.0 and OpenID Connect client applications. Create new clients, configure
+                redirect URIs, manage secrets, and control client permissions at <code>/admin/clients</code>.
+            </p>
+
+            <div class="endpoint">
+                <span class="endpoint-method get">GET</span>
+                <span class="endpoint-path">/admin/clients</span>
+            </div>
+
+            <h2 id="client-overview">Client Overview</h2>
+
+            <p>The OAuth Clients page displays all registered client applications in a card-based layout:</p>
+
+            <!-- Screenshot Placeholder -->
+            <div class="screenshot-placeholder">
+                <div class="screenshot-placeholder-inner">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <path d="M21 15l-5-5L5 21"/>
+                    </svg>
+                    <span>OAuth Clients List Screenshot</span>
+                </div>
+            </div>
+
+            <p>Each client card shows:</p>
+
+            <ul>
+                <li><strong>Display Name</strong> - Human-readable name of the client</li>
+                <li><strong>Client ID</strong> - Unique identifier used in OAuth requests</li>
+                <li><strong>Client Type</strong> - Public or Confidential</li>
+                <li><strong>DCR Badge</strong> - Indicates dynamically registered clients</li>
+                <li><strong>Redirect URIs</strong> - Allowed callback URLs</li>
+                <li><strong>Permissions</strong> - Granted scopes and grant types</li>
+            </ul>
+
+            <h2 id="client-types">Understanding Client Types</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th>Use Case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Public</strong></td>
+                        <td>Cannot securely store a client secret</td>
+                        <td>Single-page apps, mobile apps, CLI tools</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Confidential</strong></td>
+                        <td>Can securely store a client secret</td>
+                        <td>Server-side web applications, backend services</td>
+                    </tr>
+                    <tr>
+                        <td><strong>DCR</strong></td>
+                        <td>Dynamically registered via RFC 7591</td>
+                        <td>AI assistants, automated client onboarding</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="create-client">Creating a New Client</h2>
+
+            <p>To create a new OAuth client:</p>
+
+            <ol>
+                <li>Click the <strong>Create Client</strong> button</li>
+                <li>Fill in the client details (see below)</li>
+                <li>Click <strong>Create Client</strong> to save</li>
+            </ol>
+
+            <!-- Screenshot Placeholder -->
+            <div class="screenshot-placeholder">
+                <div class="screenshot-placeholder-inner">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <path d="M21 15l-5-5L5 21"/>
+                    </svg>
+                    <span>Create Client Form Screenshot</span>
+                </div>
+            </div>
+
+            <h3>Client Configuration Fields</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Required</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Client ID</strong></td>
+                        <td>Yes</td>
+                        <td>Unique identifier (alphanumeric, hyphens allowed)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Display Name</strong></td>
+                        <td>Yes</td>
+                        <td>Human-readable name shown to users during consent</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Client Type</strong></td>
+                        <td>Yes</td>
+                        <td>Public or Confidential</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Redirect URIs</strong></td>
+                        <td>Yes</td>
+                        <td>One or more callback URLs (one per line)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grant Types</strong></td>
+                        <td>Yes</td>
+                        <td>Authorization code, refresh token, client credentials</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Scopes</strong></td>
+                        <td>Yes</td>
+                        <td>OpenID, profile, email, offline_access</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="client-secrets">Managing Client Secrets</h2>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Important: Save Your Secret
+                </div>
+                <p>
+                    When you create a confidential client, the client secret is displayed <strong>only once</strong>.
+                    Copy and securely store this secret immediately. It cannot be retrieved later.
+                </p>
+            </div>
+
+            <p>After creating a confidential client, the secret will be displayed in a highlighted box:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">Client Secret Example</span>
+                </div>
+                <pre><code>Client Secret: abc123def456ghi789jkl012mno345pqr678stu901vwx234</code></pre>
+            </div>
+
+            <h3>Regenerating a Client Secret</h3>
+
+            <p>To generate a new secret for a confidential client:</p>
+
+            <ol>
+                <li>Find the client in the list</li>
+                <li>Click <strong>Regenerate Secret</strong></li>
+                <li>Confirm the action in the prompt</li>
+                <li>Copy the new secret immediately</li>
+            </ol>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Secret Rotation
+                </div>
+                <p>
+                    Regenerating a secret invalidates the old one immediately. Make sure to update
+                    all applications using this client before regenerating.
+                </p>
+            </div>
+
+            <h2 id="edit-client">Editing a Client</h2>
+
+            <p>To modify an existing client:</p>
+
+            <ol>
+                <li>Click the <strong>Edit</strong> button on the client card</li>
+                <li>Update the desired fields</li>
+                <li>Click <strong>Save Changes</strong></li>
+            </ol>
+
+            <p>You can modify:</p>
+
+            <ul>
+                <li>Display name</li>
+                <li>Redirect URIs</li>
+                <li>Grant types</li>
+                <li>Scopes/permissions</li>
+            </ul>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Note
+                </div>
+                <p>
+                    The Client ID cannot be changed after creation. If you need a different
+                    Client ID, create a new client and delete the old one.
+                </p>
+            </div>
+
+            <h2 id="delete-client">Deleting a Client</h2>
+
+            <p>To remove an OAuth client:</p>
+
+            <ol>
+                <li>Click the <strong>Delete</strong> button on the client card</li>
+                <li>Confirm the deletion in the prompt</li>
+            </ol>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Deletion Warning
+                </div>
+                <p>
+                    Deleting a client is permanent and cannot be undone. All tokens issued to this
+                    client will be invalidated, and users will need to re-authenticate with any
+                    replacement client.
+                </p>
+            </div>
+
+            <h2 id="dcr-clients">Managing DCR Clients</h2>
+
+            <p>Dynamically registered clients (via RFC 7591) have additional management options:</p>
+
+            <h3>Approving a DCR Client</h3>
+
+            <p>If your system requires approval for DCR clients:</p>
+
+            <ol>
+                <li>New DCR clients appear with a "Pending Approval" badge</li>
+                <li>Click <strong>Approve</strong> to allow the client to be used</li>
+            </ol>
+
+            <h3>Disabling/Enabling a DCR Client</h3>
+
+            <p>To temporarily disable a DCR client without deleting it:</p>
+
+            <ol>
+                <li>Click <strong>Disable</strong> on the client card</li>
+                <li>The client will show a "Disabled" badge</li>
+                <li>Click <strong>Enable</strong> to restore access</li>
+            </ol>
+
+            <h2 id="permissions">Understanding Permissions</h2>
+
+            <p>Client permissions are displayed as badges on each card. Common permissions include:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Permission</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>authorization_code</code></td>
+                        <td>Can use the authorization code grant flow</td>
+                    </tr>
+                    <tr>
+                        <td><code>refresh_token</code></td>
+                        <td>Can obtain and use refresh tokens</td>
+                    </tr>
+                    <tr>
+                        <td><code>client_credentials</code></td>
+                        <td>Can authenticate without user involvement</td>
+                    </tr>
+                    <tr>
+                        <td><code>openid</code></td>
+                        <td>Can request OpenID Connect authentication</td>
+                    </tr>
+                    <tr>
+                        <td><code>profile</code></td>
+                        <td>Can access user profile information</td>
+                    </tr>
+                    <tr>
+                        <td><code>email</code></td>
+                        <td>Can access user email address</td>
+                    </tr>
+                    <tr>
+                        <td><code>offline_access</code></td>
+                        <td>Can request refresh tokens for offline use</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="best-practices">Best Practices</h2>
+
+            <ul>
+                <li><strong>Use descriptive names</strong> - Make client names clear and identifiable</li>
+                <li><strong>Minimal permissions</strong> - Only grant the scopes and grant types needed</li>
+                <li><strong>Secure redirect URIs</strong> - Use HTTPS for all redirect URIs in production</li>
+                <li><strong>Regular audits</strong> - Periodically review and remove unused clients</li>
+                <li><strong>Secret rotation</strong> - Regenerate secrets periodically for confidential clients</li>
+                <li><strong>Monitor DCR</strong> - Review dynamically registered clients regularly</li>
+            </ul>
+
+            <h2 id="next-steps">Next Steps</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/admin/tokens.html" class="docs-card">
+                    <div class="docs-card-title">Token Management</div>
+                    <div class="docs-card-desc">View and revoke active tokens issued to clients.</div>
+                </a>
+                <a href="/docs/mcp/dcr.html" class="docs-card">
+                    <div class="docs-card-title">Dynamic Client Registration</div>
+                    <div class="docs-card-desc">Learn about automatic client registration for AI assistants.</div>
+                </a>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/admin/users.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">User Management</span>
+                </a>
+                <a href="/docs/admin/tokens.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Token Management</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <style>
+        .screenshot-placeholder {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ed 100%);
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 3rem;
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+        .screenshot-placeholder-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            color: #6b7280;
+        }
+        .screenshot-placeholder-inner svg {
+            opacity: 0.5;
+        }
+        .screenshot-placeholder-inner span {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+    </style>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

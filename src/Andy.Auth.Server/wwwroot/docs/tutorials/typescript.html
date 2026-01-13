@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TypeScript Tutorial - Andy Auth Documentation</title>
+    <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body>
+    <header class="docs-header">
+        <div class="docs-header-content">
+            <a href="../" class="docs-logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="4" width="24" height="24" rx="6" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 16L14 18L20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Andy Auth</span>
+            </a>
+            <div class="docs-header-actions">
+                <button class="docs-search-btn" data-search-trigger>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <span>Search</span>
+                    <kbd>Ctrl+K</kbd>
+                </button>
+                <button id="theme-toggle" class="docs-theme-toggle" onclick="toggleTheme()"></button>
+                <a href="https://github.com/anthropics/andy-auth" class="docs-github-link">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="docs-layout">
+        <aside class="docs-sidebar">
+            <nav class="docs-nav">
+                <div class="docs-sidebar-group expanded">
+                    <div class="docs-sidebar-group-header">
+                        <span>Getting Started</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="docs-sidebar-group-content">
+                        <a href="../" class="docs-sidebar-link">Overview</a>
+                        <a href="../quickstart.html" class="docs-sidebar-link">Quick Start</a>
+                    </div>
+                </div>
+                <div class="docs-sidebar-group expanded">
+                    <div class="docs-sidebar-group-header">
+                        <span>Tutorials</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="docs-sidebar-group-content">
+                        <a href="python.html" class="docs-sidebar-link">Python</a>
+                        <a href="csharp.html" class="docs-sidebar-link">C# / .NET</a>
+                        <a href="javascript.html" class="docs-sidebar-link">JavaScript</a>
+                        <a href="typescript.html" class="docs-sidebar-link active">TypeScript</a>
+                        <a href="java.html" class="docs-sidebar-link">Java</a>
+                        <a href="go.html" class="docs-sidebar-link">Go</a>
+                        <a href="rust.html" class="docs-sidebar-link">Rust</a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="docs-main">
+            <article class="docs-content">
+                <div class="docs-breadcrumb">
+                    <a href="../">Docs</a>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    <a href="#">Tutorials</a>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    <span>TypeScript</span>
+                </div>
+
+                <h1>TypeScript OAuth Integration</h1>
+                <p class="docs-lead">Type-safe OAuth integration with full TypeScript support for Node.js and browser applications.</p>
+
+                <h2 id="types">Type Definitions</h2>
+                <p>Define your OAuth types for full type safety:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">TypeScript - types.ts</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>// OAuth configuration
+export interface AuthConfig {
+    authority: string;
+    clientId: string;
+    clientSecret?: string;
+    redirectUri: string;
+    scopes: string[];
+    postLogoutRedirectUri?: string;
+}
+
+// Token response from Andy Auth
+export interface TokenResponse {
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+    refresh_token?: string;
+    id_token?: string;
+    scope?: string;
+}
+
+// Stored tokens with expiration
+export interface StoredTokens extends TokenResponse {
+    expires_at: number;
+}
+
+// User info from /connect/userinfo
+export interface UserInfo {
+    sub: string;
+    name?: string;
+    given_name?: string;
+    family_name?: string;
+    email?: string;
+    email_verified?: boolean;
+    picture?: string;
+    [key: string]: unknown;
+}
+
+// JWT claims
+export interface JwtClaims {
+    iss: string;
+    sub: string;
+    aud: string | string[];
+    exp: number;
+    iat: number;
+    nbf?: number;
+    scope?: string;
+    client_id?: string;
+    [key: string]: unknown;
+}
+
+// Error response
+export interface OAuthError {
+    error: string;
+    error_description?: string;
+    error_uri?: string;
+}
+
+// Dynamic client registration request
+export interface ClientRegistrationRequest {
+    redirect_uris: string[];
+    client_name?: string;
+    client_uri?: string;
+    logo_uri?: string;
+    grant_types?: string[];
+    response_types?: string[];
+    scope?: string;
+    token_endpoint_auth_method?: 'client_secret_basic' | 'client_secret_post' | 'none';
+    contacts?: string[];
+}
+
+// Registration response
+export interface ClientRegistrationResponse {
+    client_id: string;
+    client_secret?: string;
+    client_secret_expires_at?: number;
+    registration_access_token?: string;
+    registration_client_uri?: string;
+    redirect_uris: string[];
+    client_name?: string;
+}</code></pre>
+                </div>
+
+                <h2 id="client">Type-Safe OAuth Client</h2>
+                <p>A fully typed OAuth client implementation:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">TypeScript - auth-client.ts</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>import type {
+    AuthConfig,
+    TokenResponse,
+    StoredTokens,
+    UserInfo,
+    OAuthError
+} from './types';
+
+export class AndyAuthClient {
+    private config: AuthConfig;
+    private readonly storageKey = 'andy_auth_tokens';
+
+    constructor(config: AuthConfig) {
+        this.config = config;
+    }
+
+    // PKCE helpers
+    private generateCodeVerifier(): string {
+        const array = new Uint8Array(32);
+        crypto.getRandomValues(array);
+        return this.base64UrlEncode(array);
+    }
+
+    private async generateCodeChallenge(verifier: string): Promise&lt;string&gt; {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(verifier);
+        const hash = await crypto.subtle.digest('SHA-256', data);
+        return this.base64UrlEncode(new Uint8Array(hash));
+    }
+
+    private base64UrlEncode(buffer: Uint8Array): string {
+        const base64 = btoa(String.fromCharCode(...buffer));
+        return base64
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=/g, '');
+    }
+
+    // Start OAuth login flow
+    async login(): Promise&lt;void&gt; {
+        const state = this.generateCodeVerifier().substring(0, 16);
+        const codeVerifier = this.generateCodeVerifier();
+        const codeChallenge = await this.generateCodeChallenge(codeVerifier);
+
+        sessionStorage.setItem('oauth_state', state);
+        sessionStorage.setItem('code_verifier', codeVerifier);
+
+        const params = new URLSearchParams({
+            client_id: this.config.clientId,
+            redirect_uri: this.config.redirectUri,
+            response_type: 'code',
+            scope: this.config.scopes.join(' '),
+            state,
+            code_challenge: codeChallenge,
+            code_challenge_method: 'S256'
+        });
+
+        window.location.href = `${this.config.authority}/connect/authorize?${params}`;
+    }
+
+    // Handle OAuth callback
+    async handleCallback(): Promise&lt;StoredTokens&gt; {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const state = params.get('state');
+        const error = params.get('error');
+        const errorDescription = params.get('error_description');
+
+        if (error) {
+            throw new OAuthCallbackError(error, errorDescription ?? undefined);
+        }
+
+        if (!code) {
+            throw new OAuthCallbackError('missing_code', 'No authorization code received');
+        }
+
+        const savedState = sessionStorage.getItem('oauth_state');
+        if (state !== savedState) {
+            throw new OAuthCallbackError('invalid_state', 'State parameter mismatch');
+        }
+
+        const codeVerifier = sessionStorage.getItem('code_verifier');
+        if (!codeVerifier) {
+            throw new OAuthCallbackError('missing_verifier', 'Code verifier not found');
+        }
+
+        const tokens = await this.exchangeCode(code, codeVerifier);
+        this.saveTokens(tokens);
+
+        sessionStorage.removeItem('oauth_state');
+        sessionStorage.removeItem('code_verifier');
+        window.history.replaceState({}, '', window.location.pathname);
+
+        return tokens;
+    }
+
+    // Exchange authorization code for tokens
+    private async exchangeCode(code: string, codeVerifier: string): Promise&lt;StoredTokens&gt; {
+        const body = new URLSearchParams({
+            grant_type: 'authorization_code',
+            code,
+            redirect_uri: this.config.redirectUri,
+            client_id: this.config.clientId,
+            code_verifier: codeVerifier
+        });
+
+        if (this.config.clientSecret) {
+            body.set('client_secret', this.config.clientSecret);
+        }
+
+        const response = await fetch(`${this.config.authority}/connect/token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body
+        });
+
+        if (!response.ok) {
+            const error: OAuthError = await response.json();
+            throw new OAuthCallbackError(error.error, error.error_description);
+        }
+
+        const tokens: TokenResponse = await response.json();
+        return {
+            ...tokens,
+            expires_at: Date.now() + tokens.expires_in * 1000
+        };
+    }
+
+    // Refresh tokens
+    async refreshTokens(): Promise&lt;StoredTokens | null&gt; {
+        const tokens = this.getStoredTokens();
+        if (!tokens?.refresh_token) return null;
+
+        const body = new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: tokens.refresh_token,
+            client_id: this.config.clientId
+        });
+
+        if (this.config.clientSecret) {
+            body.set('client_secret', this.config.clientSecret);
+        }
+
+        const response = await fetch(`${this.config.authority}/connect/token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body
+        });
+
+        if (!response.ok) {
+            this.logout();
+            return null;
+        }
+
+        const newTokens: TokenResponse = await response.json();
+        const stored: StoredTokens = {
+            ...newTokens,
+            expires_at: Date.now() + newTokens.expires_in * 1000
+        };
+
+        this.saveTokens(stored);
+        return stored;
+    }
+
+    // Get user info
+    async getUserInfo(): Promise&lt;UserInfo&gt; {
+        const token = await this.getValidAccessToken();
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        const response = await fetch(`${this.config.authority}/connect/userinfo`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to get user info');
+        }
+
+        return response.json();
+    }
+
+    // Get valid access token (refreshing if needed)
+    async getValidAccessToken(): Promise&lt;string | null&gt; {
+        const tokens = this.getStoredTokens();
+        if (!tokens) return null;
+
+        // Check if token is about to expire (5 minute buffer)
+        if (Date.now() >= tokens.expires_at - 300000) {
+            const refreshed = await this.refreshTokens();
+            return refreshed?.access_token ?? null;
+        }
+
+        return tokens.access_token;
+    }
+
+    // Storage operations
+    private saveTokens(tokens: StoredTokens): void {
+        localStorage.setItem(this.storageKey, JSON.stringify(tokens));
+    }
+
+    private getStoredTokens(): StoredTokens | null {
+        const data = localStorage.getItem(this.storageKey);
+        return data ? JSON.parse(data) : null;
+    }
+
+    isAuthenticated(): boolean {
+        const tokens = this.getStoredTokens();
+        return tokens !== null && Date.now() < tokens.expires_at;
+    }
+
+    logout(): void {
+        localStorage.removeItem(this.storageKey);
+    }
+
+    // Authenticated fetch wrapper
+    async fetch&lt;T&gt;(url: string, options: RequestInit = {}): Promise&lt;T&gt; {
+        const token = await this.getValidAccessToken();
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                ...options.headers,
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Request failed: ${response.status}`);
+        }
+
+        return response.json();
+    }
+}
+
+// Custom error class
+export class OAuthCallbackError extends Error {
+    constructor(
+        public readonly error: string,
+        public readonly errorDescription?: string
+    ) {
+        super(errorDescription ?? error);
+        this.name = 'OAuthCallbackError';
+    }
+}</code></pre>
+                </div>
+
+                <h2 id="express">Express.js with TypeScript</h2>
+                <p>Type-safe Express middleware for OAuth:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">TypeScript - middleware.ts</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import jwksClient from 'jwks-rsa';
+import type { JwtClaims } from './types';
+
+// Extend Express Request type
+declare global {
+    namespace Express {
+        interface Request {
+            user?: JwtClaims;
+            token?: string;
+        }
+    }
+}
+
+interface AuthMiddlewareConfig {
+    authority: string;
+    audience: string | string[];
+    requiredScopes?: string[];
+}
+
+export function createAuthMiddleware(config: AuthMiddlewareConfig) {
+    const client = jwksClient({
+        jwksUri: `${config.authority}/.well-known/openid-configuration/jwks`,
+        cache: true,
+        rateLimit: true
+    });
+
+    function getKey(
+        header: jwt.JwtHeader,
+        callback: jwt.SigningKeyCallback
+    ): void {
+        if (!header.kid) {
+            callback(new Error('No kid in token header'));
+            return;
+        }
+
+        client.getSigningKey(header.kid, (err, key) => {
+            if (err) {
+                callback(err);
+                return;
+            }
+            callback(null, key?.getPublicKey());
+        });
+    }
+
+    return function authenticate(
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): void {
+        const authHeader = req.headers.authorization;
+
+        if (!authHeader?.startsWith('Bearer ')) {
+            res.status(401).json({ error: 'Missing authorization header' });
+            return;
+        }
+
+        const token = authHeader.substring(7);
+
+        jwt.verify(
+            token,
+            getKey,
+            {
+                issuer: config.authority,
+                audience: config.audience
+            },
+            (err, decoded) => {
+                if (err) {
+                    res.status(401).json({
+                        error: 'invalid_token',
+                        error_description: err.message
+                    });
+                    return;
+                }
+
+                const claims = decoded as JwtClaims;
+
+                // Check required scopes
+                if (config.requiredScopes?.length) {
+                    const tokenScopes = claims.scope?.split(' ') ?? [];
+                    const hasScopes = config.requiredScopes.every(
+                        s => tokenScopes.includes(s)
+                    );
+
+                    if (!hasScopes) {
+                        res.status(403).json({
+                            error: 'insufficient_scope',
+                            error_description: 'Missing required scopes'
+                        });
+                        return;
+                    }
+                }
+
+                req.user = claims;
+                req.token = token;
+                next();
+            }
+        );
+    };
+}
+
+// Scope-checking middleware factory
+export function requireScopes(...scopes: string[]) {
+    return (req: Request, res: Response, next: NextFunction): void => {
+        if (!req.user) {
+            res.status(401).json({ error: 'Not authenticated' });
+            return;
+        }
+
+        const tokenScopes = req.user.scope?.split(' ') ?? [];
+        const hasScopes = scopes.every(s => tokenScopes.includes(s));
+
+        if (!hasScopes) {
+            res.status(403).json({
+                error: 'insufficient_scope',
+                required: scopes,
+                provided: tokenScopes
+            });
+            return;
+        }
+
+        next();
+    };
+}
+
+// Usage in Express app
+import express from 'express';
+
+const app = express();
+app.use(express.json());
+
+const authenticate = createAuthMiddleware({
+    authority: 'https://your-andy-auth-server.com',
+    audience: 'my-api'
+});
+
+// Protected route
+app.get('/api/profile', authenticate, (req, res) => {
+    res.json({
+        userId: req.user!.sub,
+        email: req.user!.email,
+        scopes: req.user!.scope
+    });
+});
+
+// Route with specific scopes
+app.post(
+    '/api/admin/action',
+    authenticate,
+    requireScopes('admin', 'write'),
+    (req, res) => {
+        res.json({ success: true });
+    }
+);</code></pre>
+                </div>
+
+                <h2 id="react">React with TypeScript</h2>
+                <p>Type-safe React context and hooks:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">TypeScript - AuthContext.tsx</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>import React, {
+    createContext,
+    useContext,
+    useState,
+    useEffect,
+    useCallback,
+    useMemo,
+    type ReactNode
+} from 'react';
+import { AndyAuthClient } from './auth-client';
+import type { AuthConfig, UserInfo } from './types';
+
+interface AuthContextValue {
+    user: UserInfo | null;
+    loading: boolean;
+    error: string | null;
+    isAuthenticated: boolean;
+    login: () => void;
+    logout: () => void;
+    getAccessToken: () => Promise&lt;string | null&gt;;
+}
+
+const AuthContext = createContext&lt;AuthContextValue | null&gt;(null);
+
+interface AuthProviderProps {
+    children: ReactNode;
+    config: AuthConfig;
+}
+
+export function AuthProvider({ children, config }: AuthProviderProps): JSX.Element {
+    const [user, setUser] = useState&lt;UserInfo | null&gt;(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState&lt;string | null&gt;(null);
+
+    const client = useMemo(() => new AndyAuthClient(config), [config]);
+
+    const loadUser = useCallback(async () => {
+        try {
+            const userInfo = await client.getUserInfo();
+            setUser(userInfo);
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load user');
+            client.logout();
+        }
+    }, [client]);
+
+    useEffect(() => {
+        const init = async () => {
+            try {
+                if (window.location.search.includes('code=')) {
+                    await client.handleCallback();
+                    await loadUser();
+                } else if (client.isAuthenticated()) {
+                    await loadUser();
+                }
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Authentication failed');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        init();
+    }, [client, loadUser]);
+
+    const login = useCallback(() => {
+        client.login();
+    }, [client]);
+
+    const logout = useCallback(() => {
+        client.logout();
+        setUser(null);
+    }, [client]);
+
+    const getAccessToken = useCallback(async () => {
+        return client.getValidAccessToken();
+    }, [client]);
+
+    const value: AuthContextValue = {
+        user,
+        loading,
+        error,
+        isAuthenticated: user !== null,
+        login,
+        logout,
+        getAccessToken
+    };
+
+    return (
+        &lt;AuthContext.Provider value={value}&gt;
+            {children}
+        &lt;/AuthContext.Provider&gt;
+    );
+}
+
+export function useAuth(): AuthContextValue {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
+}
+
+// Type-safe protected route
+interface ProtectedRouteProps {
+    children: ReactNode;
+    fallback?: ReactNode;
+}
+
+export function ProtectedRoute({
+    children,
+    fallback
+}: ProtectedRouteProps): JSX.Element {
+    const { isAuthenticated, loading, login } = useAuth();
+
+    if (loading) {
+        return &lt;div&gt;Loading...&lt;/div&gt;;
+    }
+
+    if (!isAuthenticated) {
+        return fallback ? (
+            &lt;&gt;{fallback}&lt;/&gt;
+        ) : (
+            &lt;div&gt;
+                &lt;p&gt;Please log in to continue&lt;/p&gt;
+                &lt;button onClick={login}&gt;Login&lt;/button&gt;
+            &lt;/div&gt;
+        );
+    }
+
+    return &lt;&gt;{children}&lt;/&gt;;
+}
+
+// Custom hook for authenticated API calls
+export function useAuthenticatedFetch() {
+    const { getAccessToken } = useAuth();
+
+    return useCallback(
+        async &lt;T,&gt;(url: string, options: RequestInit = {}): Promise&lt;T&gt; => {
+            const token = await getAccessToken();
+            if (!token) {
+                throw new Error('Not authenticated');
+            }
+
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    ...options.headers,
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Request failed: ${response.status}`);
+            }
+
+            return response.json();
+        },
+        [getAccessToken]
+    );
+}</code></pre>
+                </div>
+
+                <h2 id="dcr">Dynamic Client Registration</h2>
+                <p>Type-safe dynamic client registration:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">TypeScript - dcr.ts</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>import type {
+    ClientRegistrationRequest,
+    ClientRegistrationResponse,
+    OAuthError
+} from './types';
+
+export class DynamicClientRegistration {
+    private readonly registrationEndpoint: string;
+
+    constructor(authority: string) {
+        this.registrationEndpoint = `${authority.replace(/\/$/, '')}/connect/register`;
+    }
+
+    async register(
+        request: ClientRegistrationRequest
+    ): Promise&lt;ClientRegistrationResponse&gt; {
+        const response = await fetch(this.registrationEndpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(request)
+        });
+
+        if (!response.ok) {
+            const error: OAuthError = await response.json();
+            throw new RegistrationError(error.error, error.error_description);
+        }
+
+        return response.json();
+    }
+
+    async getClient(
+        clientUri: string,
+        accessToken: string
+    ): Promise&lt;ClientRegistrationResponse&gt; {
+        const response = await fetch(clientUri, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to get client: ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    async updateClient(
+        clientUri: string,
+        accessToken: string,
+        updates: Partial&lt;ClientRegistrationRequest&gt;
+    ): Promise&lt;ClientRegistrationResponse&gt; {
+        const response = await fetch(clientUri, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(updates)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to update client: ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    async deleteClient(
+        clientUri: string,
+        accessToken: string
+    ): Promise&lt;void&gt; {
+        const response = await fetch(clientUri, {
+            method: 'DELETE',
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to delete client: ${response.status}`);
+        }
+    }
+}
+
+class RegistrationError extends Error {
+    constructor(
+        public readonly error: string,
+        public readonly description?: string
+    ) {
+        super(description ?? error);
+        this.name = 'RegistrationError';
+    }
+}
+
+// Usage example
+async function registerMcpClient(): Promise&lt;void&gt; {
+    const dcr = new DynamicClientRegistration(
+        'https://your-andy-auth-server.com'
+    );
+
+    const client = await dcr.register({
+        redirect_uris: ['https://myapp.com/callback'],
+        client_name: 'My MCP Client',
+        grant_types: ['authorization_code', 'refresh_token'],
+        response_types: ['code'],
+        scope: 'openid profile email mcp:tools',
+        token_endpoint_auth_method: 'client_secret_post'
+    });
+
+    console.log('Registered client:', client.client_id);
+    console.log('Client secret:', client.client_secret);
+}</code></pre>
+                </div>
+
+                <div class="docs-callout docs-callout-success">
+                    <div class="docs-callout-title">Next Steps</div>
+                    <ul>
+                        <li>See the <a href="javascript.html">JavaScript Tutorial</a> for vanilla JS examples</li>
+                        <li>Learn about <a href="../mcp/overview.html">MCP Integration</a></li>
+                        <li>Check out <a href="../api/endpoints.html">API Reference</a></li>
+                    </ul>
+                </div>
+            </article>
+
+            <aside class="docs-toc">
+                <div class="docs-toc-title">On this page</div>
+                <ul class="docs-toc-list"></ul>
+            </aside>
+        </main>
+    </div>
+
+    <div id="search-modal" class="docs-search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" id="search-modal-input" placeholder="Search documentation..." class="docs-search-modal-input">
+            <div id="search-results" class="docs-search-results"></div>
+        </div>
+    </div>
+
+    <script src="../js/docs.js"></script>
+</body>
+</html>

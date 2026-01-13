@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revocation Endpoint - Andy Auth Documentation</title>
+    <meta name="description" content="Complete reference for the /connect/revoke OAuth 2.0 Token Revocation endpoint (RFC 7009)">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link">Core Concepts</a></li>
+                    <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                    <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link">PKCE</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Tutorials</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/tutorials/csharp.html" class="docs-sidebar-link">C# / .NET</a></li>
+                    <li><a href="/docs/tutorials/python.html" class="docs-sidebar-link">Python</a></li>
+                    <li><a href="/docs/tutorials/javascript.html" class="docs-sidebar-link">JavaScript</a></li>
+                    <li><a href="/docs/tutorials/typescript.html" class="docs-sidebar-link">TypeScript</a></li>
+                    <li><a href="/docs/tutorials/java.html" class="docs-sidebar-link">Java</a></li>
+                    <li><a href="/docs/tutorials/go.html" class="docs-sidebar-link">Go</a></li>
+                    <li><a href="/docs/tutorials/rust.html" class="docs-sidebar-link">Rust</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/userinfo.html" class="docs-sidebar-link">UserInfo</a></li>
+                    <li><a href="/docs/api/introspect.html" class="docs-sidebar-link">Introspection</a></li>
+                    <li><a href="/docs/api/revoke.html" class="docs-sidebar-link active">Revocation</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                    <li><a href="/docs/api/discovery.html" class="docs-sidebar-link">Discovery</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/api/endpoints.html">API Reference</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Revocation</span>
+            </nav>
+
+            <h1>Revocation Endpoint</h1>
+            <p class="lead">
+                The revocation endpoint allows clients to invalidate access tokens and refresh tokens.
+                This implements RFC 7009 (OAuth 2.0 Token Revocation).
+            </p>
+
+            <div class="endpoint">
+                <span class="endpoint-method post">POST</span>
+                <span class="endpoint-path">/connect/revoke</span>
+            </div>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    When to Revoke Tokens
+                </div>
+                <p>
+                    Revoke tokens when a user logs out, when a session needs to be terminated, when a device
+                    is lost or compromised, or when a user disconnects an MCP integration.
+                </p>
+            </div>
+
+            <h2 id="request">Request</h2>
+
+            <h3 id="request-parameters">Request Parameters</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Required</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>token</code></td>
+                        <td><span class="badge badge-new">Required</span></td>
+                        <td>The token to revoke (access token or refresh token)</td>
+                    </tr>
+                    <tr>
+                        <td><code>token_type_hint</code></td>
+                        <td>Optional</td>
+                        <td>Hint about the token type: <code>access_token</code> or <code>refresh_token</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>client_id</code></td>
+                        <td><span class="badge badge-new">Required</span></td>
+                        <td>The client identifier</td>
+                    </tr>
+                    <tr>
+                        <td><code>client_secret</code></td>
+                        <td>Conditional</td>
+                        <td>Required for confidential clients</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 id="request-example">Request Example</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">http</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>POST /connect/revoke HTTP/1.1
+Host: auth.example.com
+Content-Type: application/x-www-form-urlencoded
+
+token=8xLOxBtZp8&
+token_type_hint=refresh_token&
+client_id=my-client</code></pre>
+            </div>
+
+            <h4>For Confidential Clients</h4>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">http</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>POST /connect/revoke HTTP/1.1
+Host: auth.example.com
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic bXktY2xpZW50Om15LXNlY3JldA==
+
+token=eyJhbGciOiJSUzI1NiIsInR5cCI6ImF0K2p3dCJ9...&
+token_type_hint=access_token</code></pre>
+            </div>
+
+            <h2 id="response">Response</h2>
+
+            <p>
+                The revocation endpoint returns <code>200 OK</code> whether the token was successfully revoked,
+                was already invalid, or was unknown. This prevents information leakage about token validity.
+            </p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">http</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>HTTP/1.1 200 OK
+Cache-Control: no-store
+Pragma: no-cache</code></pre>
+            </div>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Always Returns 200
+                </div>
+                <p>
+                    Per RFC 7009, the server returns <code>200 OK</code> even if the token was already invalid
+                    or didn't exist. This prevents attackers from determining if a token was valid by observing
+                    the response.
+                </p>
+            </div>
+
+            <h2 id="revocation-cascade">Revocation Cascade</h2>
+
+            <p>When you revoke a token, the following cascade behavior applies:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Token Revoked</th>
+                        <th>Effect</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Refresh Token</strong></td>
+                        <td>The refresh token and all access tokens issued from it are revoked</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Access Token</strong></td>
+                        <td>Only the specific access token is revoked; refresh token remains valid</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Best Practice
+                </div>
+                <p>
+                    When logging a user out, revoke the <strong>refresh token</strong> to ensure all associated
+                    access tokens are also invalidated. This provides a complete logout experience.
+                </p>
+            </div>
+
+            <h2 id="code-examples">Code Examples</h2>
+
+            <h3>JavaScript - Logout Implementation</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">javascript</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>async function logout() {
+  const refreshToken = localStorage.getItem('refresh_token');
+
+  if (refreshToken) {
+    // Revoke the refresh token (which also revokes all associated access tokens)
+    await fetch('https://auth.example.com/connect/revoke', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        token: refreshToken,
+        token_type_hint: 'refresh_token',
+        client_id: 'my-client'
+      })
+    });
+  }
+
+  // Clear local storage
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('id_token');
+
+  // Redirect to login page
+  window.location.href = '/login';
+}
+
+// Revoke specific access token (e.g., when disconnecting a device)
+async function revokeAccessToken(accessToken) {
+  await fetch('https://auth.example.com/connect/revoke', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams({
+      token: accessToken,
+      token_type_hint: 'access_token',
+      client_id: 'my-client'
+    })
+  });
+}</code></pre>
+            </div>
+
+            <h3>Python</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">python</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>import requests
+
+def revoke_token(token: str, token_type: str = 'refresh_token') -> bool:
+    """Revoke an OAuth token.
+
+    Args:
+        token: The token to revoke
+        token_type: Either 'access_token' or 'refresh_token'
+
+    Returns:
+        True if the request succeeded (token may or may not have existed)
+    """
+    response = requests.post(
+        'https://auth.example.com/connect/revoke',
+        data={
+            'token': token,
+            'token_type_hint': token_type,
+            'client_id': 'my-client',
+            'client_secret': 'my-secret'  # For confidential clients
+        }
+    )
+    return response.status_code == 200
+
+def logout(refresh_token: str):
+    """Perform a complete logout by revoking the refresh token."""
+    revoke_token(refresh_token, 'refresh_token')
+    # Clear session data
+    session.clear()
+
+# Usage
+logout(user_refresh_token)</code></pre>
+            </div>
+
+            <h3>cURL</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Revoke a refresh token (public client)
+curl -X POST https://auth.example.com/connect/revoke \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "token=8xLOxBtZp8" \
+  -d "token_type_hint=refresh_token" \
+  -d "client_id=my-client"
+
+# Revoke an access token (confidential client)
+curl -X POST https://auth.example.com/connect/revoke \
+  -u "my-client:my-secret" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "token=eyJhbGciOiJSUzI1NiIsInR5cCI6ImF0K2p3dCJ9..." \
+  -d "token_type_hint=access_token"</code></pre>
+            </div>
+
+            <h2 id="error-responses">Error Responses</h2>
+
+            <p>Errors are only returned for client authentication failures or malformed requests:</p>
+
+            <h3>401 Unauthorized</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "error": "invalid_client",
+  "error_description": "Client authentication failed"
+}</code></pre>
+            </div>
+
+            <h3>400 Bad Request</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "error": "invalid_request",
+  "error_description": "The 'token' parameter is required"
+}</code></pre>
+            </div>
+
+            <h2 id="use-cases">Common Use Cases</h2>
+
+            <h3>1. User Logout</h3>
+            <p>Revoke the refresh token when the user clicks "Sign Out" to invalidate the entire session.</p>
+
+            <h3>2. Device Disconnection</h3>
+            <p>When a user wants to disconnect a specific device or MCP client, revoke that device's tokens.</p>
+
+            <h3>3. Security Response</h3>
+            <p>If suspicious activity is detected, revoke all tokens for the affected user or client.</p>
+
+            <h3>4. MCP Integration Removal</h3>
+            <p>When a user disconnects an AI assistant (like Claude Desktop), revoke the tokens issued to that client.</p>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/api/introspect.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Introspection Endpoint</span>
+                </a>
+                <a href="/docs/api/register.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Client Registration</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

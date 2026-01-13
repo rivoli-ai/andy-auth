@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure App Service Deployment - Andy Auth Documentation</title>
+    <meta name="description" content="Deploy Andy Auth to Azure App Service with Azure Database for PostgreSQL and Azure Key Vault">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Deployment <span class="badge badge-new">New</span></div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/deployment/railway.html" class="docs-sidebar-link">Railway</a></li>
+                    <li><a href="/docs/deployment/docker.html" class="docs-sidebar-link">Docker</a></li>
+                    <li><a href="/docs/deployment/azure.html" class="docs-sidebar-link active">Azure App Service</a></li>
+                    <li><a href="/docs/deployment/production.html" class="docs-sidebar-link">Production Checklist</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/deployment/azure.html">Deployment</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Azure App Service</span>
+            </nav>
+
+            <h1>Azure App Service Deployment</h1>
+            <p class="lead">
+                Deploy Andy Auth to Azure App Service with Azure Database for PostgreSQL,
+                Azure Key Vault for secrets, and Microsoft Entra ID (Azure AD) integration.
+            </p>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Azure Benefits
+                </div>
+                <p>
+                    Azure App Service provides managed .NET hosting with auto-scaling, deployment slots,
+                    and seamless integration with Azure services. Combined with Azure Database for PostgreSQL
+                    and Key Vault, you get enterprise-grade security and reliability.
+                </p>
+            </div>
+
+            <h2 id="prerequisites">Prerequisites</h2>
+
+            <ul>
+                <li>An <a href="https://azure.microsoft.com/free/" target="_blank">Azure subscription</a></li>
+                <li><a href="https://docs.microsoft.com/cli/azure/install-azure-cli" target="_blank">Azure CLI</a> installed</li>
+                <li>.NET 8 SDK for local development</li>
+                <li>Git repository with Andy Auth source code</li>
+            </ul>
+
+            <h2 id="architecture">Architecture Overview</h2>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                </div>
+                <pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                        Azure Cloud                               │
+│                                                                  │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
+│  │   Azure      │    │    Azure     │    │    Azure     │      │
+│  │   App        │───▶│   Database   │    │   Key        │      │
+│  │   Service    │    │   PostgreSQL │    │   Vault      │      │
+│  │   (Andy Auth)│◀───│              │    │   (Secrets)  │      │
+│  └──────┬───────┘    └──────────────┘    └──────┬───────┘      │
+│         │                                        │               │
+│         │            ┌──────────────┐           │               │
+│         └───────────▶│   Microsoft  │◀──────────┘               │
+│                      │   Entra ID   │                           │
+│                      │   (Azure AD) │                           │
+│                      └──────────────┘                           │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+            </div>
+
+            <h2 id="quick-deploy">Quick Deploy with Azure CLI</h2>
+
+            <div class="docs-steps">
+                <div class="docs-step">
+                    <div class="docs-step-title">Create Resource Group</div>
+                    <div class="code-block">
+                        <div class="code-block-header">
+                            <span class="code-block-lang">bash</span>
+                        </div>
+                        <pre><code>az group create --name andy-auth-rg --location eastus</code></pre>
+                    </div>
+                </div>
+                <div class="docs-step">
+                    <div class="docs-step-title">Create App Service Plan</div>
+                    <div class="code-block">
+                        <div class="code-block-header">
+                            <span class="code-block-lang">bash</span>
+                        </div>
+                        <pre><code>az appservice plan create \
+  --name andy-auth-plan \
+  --resource-group andy-auth-rg \
+  --sku B1 \
+  --is-linux</code></pre>
+                    </div>
+                </div>
+                <div class="docs-step">
+                    <div class="docs-step-title">Create Web App</div>
+                    <div class="code-block">
+                        <div class="code-block-header">
+                            <span class="code-block-lang">bash</span>
+                        </div>
+                        <pre><code>az webapp create \
+  --name andy-auth-app \
+  --resource-group andy-auth-rg \
+  --plan andy-auth-plan \
+  --runtime "DOTNETCORE:8.0"</code></pre>
+                    </div>
+                </div>
+                <div class="docs-step">
+                    <div class="docs-step-title">Create PostgreSQL Database</div>
+                    <div class="code-block">
+                        <div class="code-block-header">
+                            <span class="code-block-lang">bash</span>
+                        </div>
+                        <pre><code>az postgres flexible-server create \
+  --name andy-auth-db \
+  --resource-group andy-auth-rg \
+  --admin-user andyadmin \
+  --admin-password "YOUR_SECURE_PASSWORD" \
+  --sku-name Standard_B1ms \
+  --tier Burstable \
+  --version 16
+
+# Create database
+az postgres flexible-server db create \
+  --resource-group andy-auth-rg \
+  --server-name andy-auth-db \
+  --database-name andy_auth</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <h2 id="app-settings">Application Settings</h2>
+
+            <p>Configure the application settings in Azure Portal or via CLI:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>az webapp config appsettings set \
+  --name andy-auth-app \
+  --resource-group andy-auth-rg \
+  --settings \
+    ASPNETCORE_ENVIRONMENT="Production" \
+    ConnectionStrings__DefaultConnection="Host=andy-auth-db.postgres.database.azure.com;Port=5432;Database=andy_auth;Username=andyadmin;Password=YOUR_PASSWORD;SSL Mode=Require" \
+    OpenIddict__UseEphemeralKeys="true" \
+    CorsOrigins__AllowedOrigins__0="https://myapp.azurewebsites.net" \
+    DynamicClientRegistration__RequireInitialAccessToken="true" \
+    DynamicClientRegistration__AllowLocalhostRedirectUris="false"</code></pre>
+            </div>
+
+            <h2 id="environment-variables">Environment Variables Reference</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Variable</th>
+                        <th>Required</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>ASPNETCORE_ENVIRONMENT</code></td>
+                        <td><span class="badge badge-warning">Required</span></td>
+                        <td>Set to <code>Production</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>ConnectionStrings__DefaultConnection</code></td>
+                        <td><span class="badge badge-warning">Required</span></td>
+                        <td>PostgreSQL connection string with SSL Mode=Require</td>
+                    </tr>
+                    <tr>
+                        <td><code>OpenIddict__UseEphemeralKeys</code></td>
+                        <td><span class="badge badge-warning">Required</span></td>
+                        <td>Set to <code>true</code> or configure Key Vault</td>
+                    </tr>
+                    <tr>
+                        <td><code>CorsOrigins__AllowedOrigins__0</code></td>
+                        <td>Optional</td>
+                        <td>First allowed CORS origin</td>
+                    </tr>
+                    <tr>
+                        <td><code>AzureAd__ClientId</code></td>
+                        <td>Optional</td>
+                        <td>Microsoft Entra ID client ID</td>
+                    </tr>
+                    <tr>
+                        <td><code>AzureAd__ClientSecret</code></td>
+                        <td>Optional</td>
+                        <td>Microsoft Entra ID client secret</td>
+                    </tr>
+                    <tr>
+                        <td><code>AzureAd__TenantId</code></td>
+                        <td>Optional</td>
+                        <td>Tenant ID or <code>common</code> for multi-tenant</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="deployment-options">Deployment Options</h2>
+
+            <h3>Option 1: GitHub Actions (Recommended)</h3>
+
+            <p>Create <code>.github/workflows/azure-deploy.yml</code>:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">yaml</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>name: Deploy to Azure App Service
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  AZURE_WEBAPP_NAME: andy-auth-app
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore src/Andy.Auth.Server/Andy.Auth.Server.csproj
+
+    - name: Build
+      run: dotnet build src/Andy.Auth.Server/Andy.Auth.Server.csproj -c Release --no-restore
+
+    - name: Publish
+      run: dotnet publish src/Andy.Auth.Server/Andy.Auth.Server.csproj -c Release -o ./publish
+
+    - name: Deploy to Azure
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        package: ./publish</code></pre>
+            </div>
+
+            <h3>Option 2: Azure CLI Deployment</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Build and publish
+dotnet publish src/Andy.Auth.Server/Andy.Auth.Server.csproj -c Release -o ./publish
+
+# Create zip package
+cd publish && zip -r ../deploy.zip . && cd ..
+
+# Deploy to Azure
+az webapp deployment source config-zip \
+  --name andy-auth-app \
+  --resource-group andy-auth-rg \
+  --src deploy.zip</code></pre>
+            </div>
+
+            <h3>Option 3: Docker Container</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Create Azure Container Registry
+az acr create --name andyauthregistry --resource-group andy-auth-rg --sku Basic
+
+# Build and push image
+az acr build --registry andyauthregistry --image andy-auth:latest .
+
+# Configure Web App for containers
+az webapp config container set \
+  --name andy-auth-app \
+  --resource-group andy-auth-rg \
+  --docker-custom-image-name andyauthregistry.azurecr.io/andy-auth:latest \
+  --docker-registry-server-url https://andyauthregistry.azurecr.io</code></pre>
+            </div>
+
+            <h2 id="key-vault">Azure Key Vault Integration</h2>
+
+            <p>For production, store secrets in Azure Key Vault:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Create Key Vault
+az keyvault create \
+  --name andy-auth-kv \
+  --resource-group andy-auth-rg \
+  --location eastus
+
+# Add secrets
+az keyvault secret set \
+  --vault-name andy-auth-kv \
+  --name "ConnectionStrings--DefaultConnection" \
+  --value "Host=andy-auth-db.postgres.database.azure.com;Port=5432;..."
+
+az keyvault secret set \
+  --vault-name andy-auth-kv \
+  --name "AzureAd--ClientSecret" \
+  --value "YOUR_CLIENT_SECRET"
+
+# Grant Web App access to Key Vault
+az webapp identity assign --name andy-auth-app --resource-group andy-auth-rg
+
+# Get the identity principal ID
+PRINCIPAL_ID=$(az webapp identity show --name andy-auth-app --resource-group andy-auth-rg --query principalId -o tsv)
+
+# Grant access policy
+az keyvault set-policy \
+  --name andy-auth-kv \
+  --object-id $PRINCIPAL_ID \
+  --secret-permissions get list</code></pre>
+            </div>
+
+            <p>Reference Key Vault secrets in application settings:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>az webapp config appsettings set \
+  --name andy-auth-app \
+  --resource-group andy-auth-rg \
+  --settings \
+    ConnectionStrings__DefaultConnection="@Microsoft.KeyVault(VaultName=andy-auth-kv;SecretName=ConnectionStrings--DefaultConnection)"</code></pre>
+            </div>
+
+            <h2 id="entra-id">Microsoft Entra ID Integration</h2>
+
+            <p>Configure Microsoft Entra ID (Azure AD) for external authentication:</p>
+
+            <div class="docs-steps">
+                <div class="docs-step">
+                    <div class="docs-step-title">Register Application in Entra ID</div>
+                    <p>Go to Azure Portal > Microsoft Entra ID > App registrations > New registration</p>
+                    <ul>
+                        <li>Name: Andy Auth</li>
+                        <li>Supported account types: Choose based on your requirements</li>
+                        <li>Redirect URI: <code>https://andy-auth-app.azurewebsites.net/signin-microsoft</code></li>
+                    </ul>
+                </div>
+                <div class="docs-step">
+                    <div class="docs-step-title">Configure Client Secret</div>
+                    <p>In the app registration, go to Certificates & secrets > New client secret</p>
+                </div>
+                <div class="docs-step">
+                    <div class="docs-step-title">Add Environment Variables</div>
+                    <div class="code-block">
+                        <div class="code-block-header">
+                            <span class="code-block-lang">bash</span>
+                        </div>
+                        <pre><code>az webapp config appsettings set \
+  --name andy-auth-app \
+  --resource-group andy-auth-rg \
+  --settings \
+    AzureAd__ClientId="YOUR_CLIENT_ID" \
+    AzureAd__ClientSecret="YOUR_CLIENT_SECRET" \
+    AzureAd__TenantId="YOUR_TENANT_ID"</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <h2 id="ssl-custom-domain">Custom Domain and SSL</h2>
+
+            <h3>Add Custom Domain</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Add custom domain
+az webapp config hostname add \
+  --webapp-name andy-auth-app \
+  --resource-group andy-auth-rg \
+  --hostname auth.example.com
+
+# Create managed certificate (free)
+az webapp config ssl create \
+  --name andy-auth-app \
+  --resource-group andy-auth-rg \
+  --hostname auth.example.com
+
+# Bind certificate
+az webapp config ssl bind \
+  --name andy-auth-app \
+  --resource-group andy-auth-rg \
+  --certificate-thumbprint THUMBPRINT \
+  --ssl-type SNI</code></pre>
+            </div>
+
+            <h3>Force HTTPS</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>az webapp update \
+  --name andy-auth-app \
+  --resource-group andy-auth-rg \
+  --https-only true</code></pre>
+            </div>
+
+            <h2 id="health-checks">Health Checks</h2>
+
+            <p>Configure Azure App Service health checks:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>az webapp config set \
+  --name andy-auth-app \
+  --resource-group andy-auth-rg \
+  --generic-configurations '{"healthCheckPath": "/.well-known/openid-configuration"}'</code></pre>
+            </div>
+
+            <p>Health check endpoints available:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/.well-known/openid-configuration</code></td>
+                        <td><span class="endpoint-method get">GET</span></td>
+                        <td>OpenID Connect discovery document</td>
+                    </tr>
+                    <tr>
+                        <td><code>/.well-known/jwks</code></td>
+                        <td><span class="endpoint-method get">GET</span></td>
+                        <td>JSON Web Key Set</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="scaling">Scaling Configuration</h2>
+
+            <h3>Manual Scaling</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>az appservice plan update \
+  --name andy-auth-plan \
+  --resource-group andy-auth-rg \
+  --number-of-workers 3</code></pre>
+            </div>
+
+            <h3>Auto-scaling</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>az monitor autoscale create \
+  --resource-group andy-auth-rg \
+  --resource andy-auth-plan \
+  --resource-type Microsoft.Web/serverfarms \
+  --name autoscale-andy-auth \
+  --min-count 1 \
+  --max-count 5 \
+  --count 2
+
+az monitor autoscale rule create \
+  --resource-group andy-auth-rg \
+  --autoscale-name autoscale-andy-auth \
+  --scale out 1 \
+  --condition "CpuPercentage > 70 avg 5m"</code></pre>
+            </div>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Scaling Note
+                </div>
+                <p>
+                    When running multiple instances with ephemeral keys, tokens issued by one instance
+                    cannot be validated by another. For multi-instance deployments, configure
+                    shared signing keys stored in Azure Key Vault.
+                </p>
+            </div>
+
+            <h2 id="monitoring">Monitoring with Application Insights</h2>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Create Application Insights
+az monitor app-insights component create \
+  --app andy-auth-insights \
+  --location eastus \
+  --resource-group andy-auth-rg
+
+# Get instrumentation key
+INSTRUMENTATION_KEY=$(az monitor app-insights component show \
+  --app andy-auth-insights \
+  --resource-group andy-auth-rg \
+  --query instrumentationKey -o tsv)
+
+# Configure Web App
+az webapp config appsettings set \
+  --name andy-auth-app \
+  --resource-group andy-auth-rg \
+  --settings APPLICATIONINSIGHTS_CONNECTION_STRING="InstrumentationKey=$INSTRUMENTATION_KEY"</code></pre>
+            </div>
+
+            <h2 id="troubleshooting">Troubleshooting</h2>
+
+            <h3>View Logs</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Stream logs
+az webapp log tail --name andy-auth-app --resource-group andy-auth-rg
+
+# Enable detailed logging
+az webapp log config \
+  --name andy-auth-app \
+  --resource-group andy-auth-rg \
+  --application-logging filesystem \
+  --detailed-error-messages true \
+  --failed-request-tracing true \
+  --level verbose</code></pre>
+            </div>
+
+            <h3>Common Issues</h3>
+
+            <ul>
+                <li><strong>502 Bad Gateway</strong> - Check application logs, often a startup failure</li>
+                <li><strong>Database Connection</strong> - Verify PostgreSQL firewall allows Azure services</li>
+                <li><strong>SSL Errors</strong> - Ensure <code>SSL Mode=Require</code> in connection string</li>
+            </ul>
+
+            <h2 id="next-steps">Next Steps</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/deployment/production.html" class="docs-card">
+                    <div class="docs-card-title">Production Checklist</div>
+                    <div class="docs-card-desc">Security hardening and best practices for production.</div>
+                </a>
+                <a href="/docs/deployment/railway.html" class="docs-card">
+                    <div class="docs-card-title">Railway Deployment</div>
+                    <div class="docs-card-desc">Alternative deployment with Railway's managed platform.</div>
+                </a>
+                <a href="/docs/mcp/overview.html" class="docs-card">
+                    <div class="docs-card-title">MCP Integration</div>
+                    <div class="docs-card-desc">Configure AI assistants to authenticate with your deployment.</div>
+                </a>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/deployment/docker.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Docker Deployment</span>
+                </a>
+                <a href="/docs/deployment/production.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Production Checklist</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

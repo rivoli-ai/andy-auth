@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Overview - Andy Auth Documentation</title>
+    <meta name="description" content="Learn about Andy Auth's comprehensive security features including OAuth 2.1 compliance, PKCE, rate limiting, and audit logging">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Security <span class="badge badge-new">Important</span></div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/security/overview.html" class="docs-sidebar-link active">Security Overview</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link">Core Concepts</a></li>
+                    <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                    <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link">PKCE</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Tutorials</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/tutorials/csharp.html" class="docs-sidebar-link">C# / .NET</a></li>
+                    <li><a href="/docs/tutorials/python.html" class="docs-sidebar-link">Python</a></li>
+                    <li><a href="/docs/tutorials/javascript.html" class="docs-sidebar-link">JavaScript</a></li>
+                    <li><a href="/docs/tutorials/typescript.html" class="docs-sidebar-link">TypeScript</a></li>
+                    <li><a href="/docs/tutorials/java.html" class="docs-sidebar-link">Java</a></li>
+                    <li><a href="/docs/tutorials/go.html" class="docs-sidebar-link">Go</a></li>
+                    <li><a href="/docs/tutorials/rust.html" class="docs-sidebar-link">Rust</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/security/overview.html">Security</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Overview</span>
+            </nav>
+
+            <h1>Security Overview</h1>
+            <p class="lead">
+                Andy Auth is built with security as a top priority, implementing industry-standard protocols
+                and best practices to protect your authentication infrastructure.
+            </p>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Security by Design
+                </div>
+                <p>
+                    Andy Auth follows the principle of <strong>security by design</strong>, implementing multiple
+                    layers of protection that work together to safeguard your users and applications.
+                </p>
+            </div>
+
+            <h2 id="oauth21">OAuth 2.1 Compliance</h2>
+
+            <p>Andy Auth implements the OAuth 2.1 specification, which consolidates best practices and security improvements over OAuth 2.0:</p>
+
+            <ul>
+                <li><strong>PKCE is mandatory</strong> for all authorization code flows</li>
+                <li><strong>Implicit grant removed</strong> - no longer supported due to security concerns</li>
+                <li><strong>Resource Owner Password grant removed</strong> - deprecated for security reasons</li>
+                <li><strong>Bearer tokens only over HTTPS</strong> - enforced in production</li>
+                <li><strong>Refresh token rotation</strong> - automatic rotation on use</li>
+            </ul>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                </div>
+                <pre><code>OAuth 2.1 Security Improvements:
++----------------------------------+-------------------+
+| Feature                          | OAuth 2.1         |
++----------------------------------+-------------------+
+| PKCE                             | Required          |
+| Implicit Grant                   | Removed           |
+| Password Grant                   | Removed           |
+| Refresh Token Rotation           | Recommended       |
+| Exact Redirect URI Matching      | Required          |
++----------------------------------+-------------------+</code></pre>
+            </div>
+
+            <h2 id="pkce">PKCE Requirement</h2>
+
+            <p>Proof Key for Code Exchange (PKCE) is required for all public clients. This prevents authorization code interception attacks:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">javascript</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>// PKCE flow - required for public clients
+const codeVerifier = generateCryptographicallySecureString(64);
+const codeChallenge = base64UrlEncode(sha256(codeVerifier));
+
+// Include in authorization request
+const authUrl = new URL('/connect/authorize', authServer);
+authUrl.searchParams.set('code_challenge', codeChallenge);
+authUrl.searchParams.set('code_challenge_method', 'S256');
+
+// Include verifier in token exchange
+const tokenRequest = {
+    grant_type: 'authorization_code',
+    code: authorizationCode,
+    code_verifier: codeVerifier  // Proves possession of original challenge
+};</code></pre>
+            </div>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    S256 Only
+                </div>
+                <p>
+                    Andy Auth only supports the <code>S256</code> code challenge method. The <code>plain</code> method
+                    is rejected for security reasons.
+                </p>
+            </div>
+
+            <h2 id="token-security">Token Security</h2>
+
+            <p>Andy Auth implements comprehensive token security measures:</p>
+
+            <h3>Token Rotation</h3>
+            <p>Refresh tokens are automatically rotated on each use. When a refresh token is used to obtain a new access token, the old refresh token is invalidated and a new one is issued:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>// Token refresh response with rotation
+{
+    "access_token": "new_access_token_xyz",
+    "token_type": "Bearer",
+    "expires_in": 3600,
+    "refresh_token": "new_refresh_token_abc",  // New refresh token
+    "scope": "openid profile email"
+}</code></pre>
+            </div>
+
+            <h3>Token Expiration</h3>
+            <p>Default token lifetimes are configured for security:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Token Type</th>
+                        <th>Default Lifetime</th>
+                        <th>Configurable</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Access Token</strong></td>
+                        <td>1 hour</td>
+                        <td>Yes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Refresh Token</strong></td>
+                        <td>14 days</td>
+                        <td>Yes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Authorization Code</strong></td>
+                        <td>5 minutes</td>
+                        <td>No</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ID Token</strong></td>
+                        <td>1 hour</td>
+                        <td>Yes</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Token Revocation</h3>
+            <p>Tokens can be revoked immediately using the revocation endpoint:</p>
+
+            <div class="endpoint">
+                <span class="endpoint-method post">POST</span>
+                <span class="endpoint-path">/connect/revoke</span>
+            </div>
+
+            <h2 id="rate-limiting">Rate Limiting</h2>
+
+            <p>Andy Auth includes built-in rate limiting to protect against brute force attacks and API abuse:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>// Rate limiting configuration in appsettings.json
+{
+    "RateLimiting": {
+        "EnableRateLimiting": true,
+        "PermitLimit": 100,
+        "WindowInSeconds": 60,
+        "QueueLimit": 10,
+        "TokenEndpointPermitLimit": 20,
+        "TokenEndpointWindowInSeconds": 60,
+        "LoginPermitLimit": 5,
+        "LoginWindowInSeconds": 300
+    }
+}</code></pre>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Default Limit</th>
+                        <th>Window</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>General API</strong></td>
+                        <td>100 requests</td>
+                        <td>1 minute</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Token Endpoint</strong></td>
+                        <td>20 requests</td>
+                        <td>1 minute</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Login Endpoint</strong></td>
+                        <td>5 attempts</td>
+                        <td>5 minutes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Registration</strong></td>
+                        <td>3 requests</td>
+                        <td>1 hour</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="two-factor">Two-Factor Authentication</h2>
+
+            <p>Andy Auth supports two-factor authentication (2FA) using TOTP (Time-based One-Time Passwords):</p>
+
+            <ul>
+                <li><strong>TOTP Support</strong> - Compatible with Google Authenticator, Authy, and other TOTP apps</li>
+                <li><strong>Recovery Codes</strong> - One-time use backup codes for account recovery</li>
+                <li><strong>Per-User Enforcement</strong> - Administrators can require 2FA for specific users or roles</li>
+                <li><strong>Remember Device</strong> - Optional trusted device support</li>
+            </ul>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                </div>
+                <pre><code>2FA Authentication Flow:
++---------------+     +---------------+     +---------------+
+|    Login      | --> |  Password OK  | --> |  Enter 2FA    |
+|   (Email/PW)  |     |               |     |    Code       |
++---------------+     +---------------+     +---------------+
+                                                    |
+                                                    v
+                                            +---------------+
+                                            |   Verified    |
+                                            |  Access Token |
+                                            +---------------+</code></pre>
+            </div>
+
+            <h2 id="audit-logging">Audit Logging</h2>
+
+            <p>All security-relevant events are logged for compliance and forensic analysis:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Event Category</th>
+                        <th>Events Logged</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Authentication</strong></td>
+                        <td>Login success/failure, logout, password changes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Authorization</strong></td>
+                        <td>Token issuance, consent grants, scope changes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Client Management</strong></td>
+                        <td>Client registration, updates, deletions</td>
+                    </tr>
+                    <tr>
+                        <td><strong>User Management</strong></td>
+                        <td>Account creation, role changes, 2FA enrollment</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Security Events</strong></td>
+                        <td>Rate limit violations, suspicious activity</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>Audit logs include:</p>
+            <ul>
+                <li>Timestamp (UTC)</li>
+                <li>User ID and IP address</li>
+                <li>Action performed</li>
+                <li>Success/failure status</li>
+                <li>Additional context data</li>
+            </ul>
+
+            <h2 id="cors">CORS Configuration</h2>
+
+            <p>Cross-Origin Resource Sharing (CORS) is configured to control which origins can access the API:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>// CORS configuration in appsettings.json
+{
+    "Cors": {
+        "AllowedOrigins": [
+            "https://app.example.com",
+            "https://admin.example.com"
+        ],
+        "AllowedMethods": ["GET", "POST"],
+        "AllowedHeaders": ["Authorization", "Content-Type"],
+        "AllowCredentials": true,
+        "MaxAge": 86400
+    }
+}</code></pre>
+            </div>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Production Warning
+                </div>
+                <p>
+                    Never use wildcard (<code>*</code>) origins in production. Always explicitly list allowed origins
+                    to prevent unauthorized cross-origin requests.
+                </p>
+            </div>
+
+            <h2 id="security-headers">Security Headers</h2>
+
+            <p>Andy Auth automatically sets security headers on all responses:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Header</th>
+                        <th>Value</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>Strict-Transport-Security</code></td>
+                        <td><code>max-age=31536000; includeSubDomains</code></td>
+                        <td>Force HTTPS connections</td>
+                    </tr>
+                    <tr>
+                        <td><code>X-Content-Type-Options</code></td>
+                        <td><code>nosniff</code></td>
+                        <td>Prevent MIME type sniffing</td>
+                    </tr>
+                    <tr>
+                        <td><code>X-Frame-Options</code></td>
+                        <td><code>DENY</code></td>
+                        <td>Prevent clickjacking</td>
+                    </tr>
+                    <tr>
+                        <td><code>X-XSS-Protection</code></td>
+                        <td><code>1; mode=block</code></td>
+                        <td>Enable browser XSS filter</td>
+                    </tr>
+                    <tr>
+                        <td><code>Content-Security-Policy</code></td>
+                        <td>Restrictive policy</td>
+                        <td>Prevent XSS and data injection</td>
+                    </tr>
+                    <tr>
+                        <td><code>Referrer-Policy</code></td>
+                        <td><code>strict-origin-when-cross-origin</code></td>
+                        <td>Control referrer information</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="best-practices">Security Best Practices</h2>
+
+            <p>Follow these recommendations for maximum security:</p>
+
+            <ul>
+                <li><strong>Always use HTTPS</strong> in production environments</li>
+                <li><strong>Rotate secrets regularly</strong> - encryption keys, signing keys, client secrets</li>
+                <li><strong>Enable 2FA</strong> for all administrator accounts</li>
+                <li><strong>Review audit logs</strong> regularly for suspicious activity</li>
+                <li><strong>Keep Andy Auth updated</strong> to receive security patches</li>
+                <li><strong>Use strong passwords</strong> and enforce password policies</li>
+                <li><strong>Limit token lifetimes</strong> based on your security requirements</li>
+                <li><strong>Restrict CORS origins</strong> to only necessary domains</li>
+            </ul>
+
+            <h2 id="next-steps">Next Steps</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/configuration.html" class="docs-card">
+                    <div class="docs-card-title">Configuration Guide</div>
+                    <div class="docs-card-desc">Learn how to configure security settings for your environment.</div>
+                </a>
+                <a href="/docs/oauth/pkce.html" class="docs-card">
+                    <div class="docs-card-title">PKCE Deep Dive</div>
+                    <div class="docs-card-desc">Understand PKCE implementation details and best practices.</div>
+                </a>
+                <a href="/docs/admin/audit-logs.html" class="docs-card">
+                    <div class="docs-card-title">Audit Logs</div>
+                    <div class="docs-card-desc">Learn how to view and analyze audit logs.</div>
+                </a>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/configuration.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Configuration</span>
+                </a>
+                <a href="/docs/mcp/overview.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">MCP Overview</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

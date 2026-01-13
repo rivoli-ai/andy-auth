@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claims - Andy Auth Documentation</title>
+    <meta name="description" content="Understanding OpenID Connect claims including standard claims, custom claims, and how to request specific claims in Andy Auth">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link">Core Concepts</a></li>
+                    <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                    <li><a href="/docs/oauth/client-credentials.html" class="docs-sidebar-link">Client Credentials</a></li>
+                    <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link">PKCE</a></li>
+                    <li><a href="/docs/oauth/access-tokens.html" class="docs-sidebar-link">Access Tokens</a></li>
+                    <li><a href="/docs/oauth/refresh-tokens.html" class="docs-sidebar-link">Refresh Tokens</a></li>
+                    <li><a href="/docs/oauth/scopes.html" class="docs-sidebar-link">Scopes</a></li>
+                    <li><a href="/docs/oauth/claims.html" class="docs-sidebar-link active">Claims</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/oauth/concepts.html">OAuth & OpenID Connect</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Claims</span>
+            </nav>
+
+            <h1>Claims</h1>
+            <p class="lead">
+                Claims are name-value pairs that contain information about a user or the authentication event.
+                They are included in ID tokens, access tokens, and returned from the UserInfo endpoint.
+            </p>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    What are Claims?
+                </div>
+                <p>
+                    Claims are assertions about an entity (typically the user). The OpenID Connect specification
+                    defines a set of standard claims, and Andy Auth allows you to add custom claims for
+                    application-specific data.
+                </p>
+            </div>
+
+            <h2 id="claim-locations">Where Claims Appear</h2>
+
+            <p>Claims can be returned in different locations depending on the request:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Location</th>
+                        <th>Description</th>
+                        <th>Typical Claims</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>ID Token</strong></td>
+                        <td>JWT returned during authentication</td>
+                        <td>Authentication claims (sub, iss, aud, auth_time, etc.)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Access Token</strong></td>
+                        <td>JWT used for API authorization</td>
+                        <td>Authorization claims (sub, scope, client_id, etc.)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>UserInfo Endpoint</strong></td>
+                        <td>API endpoint for user profile data</td>
+                        <td>Profile claims (name, email, picture, etc.)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Introspection Response</strong></td>
+                        <td>Token validation response</td>
+                        <td>Token metadata and user claims</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="standard-claims">Standard OIDC Claims</h2>
+
+            <p>
+                OpenID Connect defines a set of standard claims. These are divided into categories based on
+                the scope that grants access to them.
+            </p>
+
+            <h3>Core Claims (Always Available)</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Claim</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>sub</code></td>
+                        <td>string</td>
+                        <td>Subject identifier - unique and stable user ID</td>
+                    </tr>
+                    <tr>
+                        <td><code>iss</code></td>
+                        <td>string</td>
+                        <td>Issuer identifier URL</td>
+                    </tr>
+                    <tr>
+                        <td><code>aud</code></td>
+                        <td>string/array</td>
+                        <td>Audience(s) the token is intended for</td>
+                    </tr>
+                    <tr>
+                        <td><code>exp</code></td>
+                        <td>number</td>
+                        <td>Expiration time (Unix timestamp)</td>
+                    </tr>
+                    <tr>
+                        <td><code>iat</code></td>
+                        <td>number</td>
+                        <td>Issued at time (Unix timestamp)</td>
+                    </tr>
+                    <tr>
+                        <td><code>auth_time</code></td>
+                        <td>number</td>
+                        <td>Time of authentication (Unix timestamp)</td>
+                    </tr>
+                    <tr>
+                        <td><code>nonce</code></td>
+                        <td>string</td>
+                        <td>Value to associate client session with ID token</td>
+                    </tr>
+                    <tr>
+                        <td><code>acr</code></td>
+                        <td>string</td>
+                        <td>Authentication Context Class Reference</td>
+                    </tr>
+                    <tr>
+                        <td><code>amr</code></td>
+                        <td>array</td>
+                        <td>Authentication Methods References</td>
+                    </tr>
+                    <tr>
+                        <td><code>azp</code></td>
+                        <td>string</td>
+                        <td>Authorized party (client_id)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Profile Claims (profile scope)</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Claim</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>name</code></td>
+                        <td>string</td>
+                        <td>Full name</td>
+                    </tr>
+                    <tr>
+                        <td><code>given_name</code></td>
+                        <td>string</td>
+                        <td>First name</td>
+                    </tr>
+                    <tr>
+                        <td><code>family_name</code></td>
+                        <td>string</td>
+                        <td>Last name/surname</td>
+                    </tr>
+                    <tr>
+                        <td><code>middle_name</code></td>
+                        <td>string</td>
+                        <td>Middle name</td>
+                    </tr>
+                    <tr>
+                        <td><code>nickname</code></td>
+                        <td>string</td>
+                        <td>Casual name</td>
+                    </tr>
+                    <tr>
+                        <td><code>preferred_username</code></td>
+                        <td>string</td>
+                        <td>Preferred username</td>
+                    </tr>
+                    <tr>
+                        <td><code>profile</code></td>
+                        <td>string</td>
+                        <td>Profile page URL</td>
+                    </tr>
+                    <tr>
+                        <td><code>picture</code></td>
+                        <td>string</td>
+                        <td>Profile picture URL</td>
+                    </tr>
+                    <tr>
+                        <td><code>website</code></td>
+                        <td>string</td>
+                        <td>Personal website URL</td>
+                    </tr>
+                    <tr>
+                        <td><code>gender</code></td>
+                        <td>string</td>
+                        <td>Gender</td>
+                    </tr>
+                    <tr>
+                        <td><code>birthdate</code></td>
+                        <td>string</td>
+                        <td>Birthday (YYYY-MM-DD or YYYY)</td>
+                    </tr>
+                    <tr>
+                        <td><code>zoneinfo</code></td>
+                        <td>string</td>
+                        <td>Time zone (e.g., "America/New_York")</td>
+                    </tr>
+                    <tr>
+                        <td><code>locale</code></td>
+                        <td>string</td>
+                        <td>Locale (e.g., "en-US")</td>
+                    </tr>
+                    <tr>
+                        <td><code>updated_at</code></td>
+                        <td>number</td>
+                        <td>Last profile update time (Unix timestamp)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Email Claims (email scope)</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Claim</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>email</code></td>
+                        <td>string</td>
+                        <td>Email address</td>
+                    </tr>
+                    <tr>
+                        <td><code>email_verified</code></td>
+                        <td>boolean</td>
+                        <td>Whether email is verified</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Phone Claims (phone scope)</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Claim</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>phone_number</code></td>
+                        <td>string</td>
+                        <td>Phone number (E.164 format)</td>
+                    </tr>
+                    <tr>
+                        <td><code>phone_number_verified</code></td>
+                        <td>boolean</td>
+                        <td>Whether phone is verified</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Address Claim (address scope)</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "address": {
+    "formatted": "123 Main St\nSuite 100\nNew York, NY 10001\nUSA",
+    "street_address": "123 Main St\nSuite 100",
+    "locality": "New York",
+    "region": "NY",
+    "postal_code": "10001",
+    "country": "USA"
+  }
+}</code></pre>
+            </div>
+
+            <h2 id="id-token-claims">ID Token Claims</h2>
+
+            <p>
+                The ID token is a signed JWT that contains claims about the authentication event
+                and the authenticated user. Here is an example decoded ID token:
+            </p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "iss": "https://auth.example.com",
+  "sub": "user_12345",
+  "aud": "my-app",
+  "exp": 1700003600,
+  "iat": 1700000000,
+  "auth_time": 1699999900,
+  "nonce": "n-0S6_WzA2Mj",
+  "acr": "urn:mace:incommon:iap:silver",
+  "amr": ["pwd", "mfa"],
+  "azp": "my-app",
+  "at_hash": "MTIzNDU2Nzg5MDEyMzQ1Ng",
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "email_verified": true,
+  "picture": "https://example.com/johndoe/photo.jpg"
+}</code></pre>
+            </div>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    at_hash Claim
+                </div>
+                <p>
+                    The <code>at_hash</code> claim is the access token hash. It allows the client to verify
+                    that the access token was issued together with the ID token, preventing token substitution attacks.
+                </p>
+            </div>
+
+            <h2 id="access-token-claims">Access Token Claims</h2>
+
+            <p>
+                Access tokens issued by Andy Auth are JWTs containing authorization-relevant claims:
+            </p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "iss": "https://auth.example.com",
+  "sub": "user_12345",
+  "aud": "https://api.example.com",
+  "exp": 1700003600,
+  "iat": 1700000000,
+  "nbf": 1700000000,
+  "jti": "token_unique_id_abc123",
+  "client_id": "my-app",
+  "scope": "openid profile email api.read",
+  "email": "john.doe@example.com",
+  "name": "John Doe"
+}</code></pre>
+            </div>
+
+            <h2 id="userinfo-endpoint">UserInfo Endpoint</h2>
+
+            <p>
+                The UserInfo endpoint returns claims about the authenticated user. Call it with an access token:
+            </p>
+
+            <div class="endpoint">
+                <span class="endpoint-method get">GET</span>
+                <span class="endpoint-path">/connect/userinfo</span>
+            </div>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>curl -X GET https://auth.example.com/connect/userinfo \
+  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIs..."</code></pre>
+            </div>
+
+            <h3>Response</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "sub": "user_12345",
+  "name": "John Doe",
+  "given_name": "John",
+  "family_name": "Doe",
+  "preferred_username": "johndoe",
+  "email": "john.doe@example.com",
+  "email_verified": true,
+  "picture": "https://example.com/johndoe/photo.jpg",
+  "locale": "en-US",
+  "updated_at": 1699900000
+}</code></pre>
+            </div>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Scope-Dependent Response
+                </div>
+                <p>
+                    The UserInfo endpoint only returns claims for scopes that were granted in the access token.
+                    If your token only has <code>openid email</code>, you will not receive profile claims like
+                    <code>name</code> or <code>picture</code>.
+                </p>
+            </div>
+
+            <h2 id="custom-claims">Custom Claims</h2>
+
+            <p>
+                Andy Auth supports adding custom claims to tokens for application-specific needs.
+                Custom claims can be configured per client or globally.
+            </p>
+
+            <h3>Common Custom Claims</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Claim</th>
+                        <th>Example Value</th>
+                        <th>Use Case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>roles</code></td>
+                        <td><code>["admin", "editor"]</code></td>
+                        <td>Role-based access control</td>
+                    </tr>
+                    <tr>
+                        <td><code>permissions</code></td>
+                        <td><code>["read:users", "write:posts"]</code></td>
+                        <td>Fine-grained permissions</td>
+                    </tr>
+                    <tr>
+                        <td><code>organization_id</code></td>
+                        <td><code>"org_abc123"</code></td>
+                        <td>Multi-tenant applications</td>
+                    </tr>
+                    <tr>
+                        <td><code>tenant</code></td>
+                        <td><code>"acme-corp"</code></td>
+                        <td>Tenant identification</td>
+                    </tr>
+                    <tr>
+                        <td><code>department</code></td>
+                        <td><code>"engineering"</code></td>
+                        <td>Organizational structure</td>
+                    </tr>
+                    <tr>
+                        <td><code>subscription_tier</code></td>
+                        <td><code>"premium"</code></td>
+                        <td>Feature gating</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Example Token with Custom Claims</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+  "iss": "https://auth.example.com",
+  "sub": "user_12345",
+  "aud": "https://api.example.com",
+  "exp": 1700003600,
+  "iat": 1700000000,
+  "scope": "openid profile email",
+  "email": "john.doe@example.com",
+  "name": "John Doe",
+
+  // Custom claims
+  "roles": ["admin", "editor"],
+  "organization_id": "org_abc123",
+  "organization_name": "Acme Corporation",
+  "permissions": [
+    "users:read",
+    "users:write",
+    "posts:read",
+    "posts:write",
+    "settings:admin"
+  ],
+  "subscription_tier": "enterprise",
+  "feature_flags": {
+    "beta_features": true,
+    "api_v2": true
+  }
+}</code></pre>
+            </div>
+
+            <h2 id="requesting-claims">Requesting Specific Claims</h2>
+
+            <p>
+                You can request specific claims using the <code>claims</code> parameter in the authorization request.
+                This follows the OpenID Connect claims request specification.
+            </p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>// Claims request parameter
+{
+  "id_token": {
+    "email": { "essential": true },
+    "email_verified": { "essential": true },
+    "auth_time": { "essential": true }
+  },
+  "userinfo": {
+    "name": null,
+    "picture": null,
+    "email": { "essential": true }
+  }
+}</code></pre>
+            </div>
+
+            <h3>URL-Encoded Request</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">text</span>
+                </div>
+                <pre><code>GET /connect/authorize?
+  response_type=code&
+  client_id=my-app&
+  redirect_uri=https://myapp.com/callback&
+  scope=openid&
+  claims=%7B%22id_token%22%3A%7B%22email%22%3A%7B%22essential%22%3Atrue%7D%7D%7D&
+  ...</code></pre>
+            </div>
+
+            <h2 id="code-examples">Code Examples</h2>
+
+            <h3>Parsing Claims from ID Token</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">typescript</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>import * as jose from 'jose';
+
+interface IdTokenClaims {
+  // Standard claims
+  iss: string;
+  sub: string;
+  aud: string | string[];
+  exp: number;
+  iat: number;
+  auth_time?: number;
+  nonce?: string;
+
+  // Profile claims
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  picture?: string;
+
+  // Email claims
+  email?: string;
+  email_verified?: boolean;
+
+  // Custom claims
+  roles?: string[];
+  organization_id?: string;
+}
+
+async function parseIdToken(idToken: string, issuer: string, clientId: string): Promise&lt;IdTokenClaims&gt; {
+  const jwks = jose.createRemoteJWKSet(
+    new URL(`${issuer}/.well-known/jwks`)
+  );
+
+  const { payload } = await jose.jwtVerify(idToken, jwks, {
+    issuer,
+    audience: clientId,
+  });
+
+  return payload as IdTokenClaims;
+}
+
+// Usage
+const claims = await parseIdToken(idToken, 'https://auth.example.com', 'my-app');
+
+console.log(`Welcome, ${claims.name}!`);
+console.log(`Email: ${claims.email} (verified: ${claims.email_verified})`);
+
+if (claims.roles?.includes('admin')) {
+  console.log('User has admin privileges');
+}</code></pre>
+            </div>
+
+            <h3>Fetching Claims from UserInfo</h3>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">python</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>import requests
+from dataclasses import dataclass
+from typing import Optional, List
+
+
+@dataclass
+class UserInfo:
+    sub: str
+    name: Optional[str] = None
+    given_name: Optional[str] = None
+    family_name: Optional[str] = None
+    email: Optional[str] = None
+    email_verified: Optional[bool] = None
+    picture: Optional[str] = None
+    roles: Optional[List[str]] = None
+
+
+def get_userinfo(access_token: str, userinfo_endpoint: str) -> UserInfo:
+    """Fetch user claims from the UserInfo endpoint."""
+    response = requests.get(
+        userinfo_endpoint,
+        headers={'Authorization': f'Bearer {access_token}'}
+    )
+    response.raise_for_status()
+
+    data = response.json()
+
+    return UserInfo(
+        sub=data['sub'],
+        name=data.get('name'),
+        given_name=data.get('given_name'),
+        family_name=data.get('family_name'),
+        email=data.get('email'),
+        email_verified=data.get('email_verified'),
+        picture=data.get('picture'),
+        roles=data.get('roles')
+    )
+
+
+# Usage
+user = get_userinfo(
+    access_token,
+    'https://auth.example.com/connect/userinfo'
+)
+
+print(f"User ID: {user.sub}")
+print(f"Name: {user.name}")
+print(f"Email: {user.email} (verified: {user.email_verified})")</code></pre>
+            </div>
+
+            <h2 id="claim-validation">Validating Claims</h2>
+
+            <p>
+                When processing tokens, always validate the claims before trusting them:
+            </p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">csharp</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>public class ClaimValidator
+{
+    private readonly string _expectedIssuer;
+    private readonly string _expectedAudience;
+
+    public ClaimValidator(string issuer, string audience)
+    {
+        _expectedIssuer = issuer;
+        _expectedAudience = audience;
+    }
+
+    public void ValidateClaims(ClaimsPrincipal principal)
+    {
+        // Validate issuer
+        var issuer = principal.FindFirst("iss")?.Value;
+        if (issuer != _expectedIssuer)
+        {
+            throw new SecurityException($"Invalid issuer: {issuer}");
+        }
+
+        // Validate audience
+        var audience = principal.FindFirst("aud")?.Value;
+        if (audience != _expectedAudience)
+        {
+            throw new SecurityException($"Invalid audience: {audience}");
+        }
+
+        // Validate expiration
+        var expClaim = principal.FindFirst("exp")?.Value;
+        if (expClaim != null)
+        {
+            var exp = DateTimeOffset.FromUnixTimeSeconds(long.Parse(expClaim));
+            if (exp < DateTimeOffset.UtcNow)
+            {
+                throw new SecurityException("Token has expired");
+            }
+        }
+
+        // Validate subject exists
+        var subject = principal.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(subject))
+        {
+            throw new SecurityException("Missing subject claim");
+        }
+    }
+
+    public bool HasRole(ClaimsPrincipal principal, string role)
+    {
+        var roles = principal.FindAll("roles").Select(c => c.Value);
+        return roles.Contains(role);
+    }
+
+    public bool HasPermission(ClaimsPrincipal principal, string permission)
+    {
+        var permissions = principal.FindAll("permissions").Select(c => c.Value);
+        return permissions.Contains(permission);
+    }
+}</code></pre>
+            </div>
+
+            <h2 id="best-practices">Best Practices</h2>
+
+            <ul>
+                <li><strong>Validate all claims</strong> - Always validate issuer, audience, and expiration</li>
+                <li><strong>Use sub for identity</strong> - The <code>sub</code> claim is the stable user identifier; don't use email</li>
+                <li><strong>Check email_verified</strong> - Don't trust unverified email addresses for sensitive operations</li>
+                <li><strong>Namespace custom claims</strong> - Use prefixes like <code>https://myapp.com/roles</code> for custom claims</li>
+                <li><strong>Minimize claims in tokens</strong> - Only include necessary claims; fetch others from UserInfo</li>
+                <li><strong>Handle missing claims</strong> - Claims may be absent; always check before using</li>
+            </ul>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/oauth/scopes.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Scopes</span>
+                </a>
+                <a href="/docs/api/endpoints.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">API Endpoints</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

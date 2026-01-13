@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Logs - Andy Auth Documentation</title>
+    <meta name="description" content="Learn how to monitor security events and administrative actions in Andy Auth audit logs">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Admin Dashboard <span class="badge badge-new">New</span></div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/admin/dashboard.html" class="docs-sidebar-link">Dashboard Overview</a></li>
+                    <li><a href="/docs/admin/users.html" class="docs-sidebar-link">User Management</a></li>
+                    <li><a href="/docs/admin/clients.html" class="docs-sidebar-link">OAuth Clients</a></li>
+                    <li><a href="/docs/admin/tokens.html" class="docs-sidebar-link">Token Management</a></li>
+                    <li><a href="/docs/admin/audit-logs.html" class="docs-sidebar-link active">Audit Logs</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/admin/dashboard.html">Admin Dashboard</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Audit Logs</span>
+            </nav>
+
+            <h1>Audit Logs</h1>
+            <p class="lead">
+                Monitor security events, administrative actions, and user activities through the audit logging system.
+                Access the audit logs at <code>/admin/auditlogs</code>.
+            </p>
+
+            <div class="endpoint">
+                <span class="endpoint-method get">GET</span>
+                <span class="endpoint-path">/admin/auditlogs</span>
+            </div>
+
+            <h2 id="overview">Overview</h2>
+
+            <p>The audit log system records important security and administrative events, providing:</p>
+
+            <ul>
+                <li><strong>Accountability</strong> - Track who performed what actions</li>
+                <li><strong>Security monitoring</strong> - Detect suspicious activities</li>
+                <li><strong>Compliance</strong> - Maintain records for regulatory requirements</li>
+                <li><strong>Troubleshooting</strong> - Investigate issues with detailed event history</li>
+            </ul>
+
+            <!-- Screenshot Placeholder -->
+            <div class="screenshot-placeholder">
+                <div class="screenshot-placeholder-inner">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <path d="M21 15l-5-5L5 21"/>
+                    </svg>
+                    <span>Audit Logs Screenshot</span>
+                </div>
+            </div>
+
+            <h2 id="log-entry-details">Log Entry Details</h2>
+
+            <p>Each audit log entry contains the following information:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Action</strong></td>
+                        <td>The type of action performed (color-coded by severity)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Performed By</strong></td>
+                        <td>Email and partial ID of the administrator who performed the action</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Target User</strong></td>
+                        <td>The user affected by the action (if applicable)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Details</strong></td>
+                        <td>Additional context about the action (e.g., suspension reason)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Date/Time</strong></td>
+                        <td>Precise timestamp of when the action occurred</td>
+                    </tr>
+                    <tr>
+                        <td><strong>IP Address</strong></td>
+                        <td>The IP address from which the action was performed</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="action-types">Action Types</h2>
+
+            <p>Actions are color-coded based on their severity and type:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>Color</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>UserSuspended</strong></td>
+                        <td>Warning (Yellow)</td>
+                        <td>A user account was temporarily disabled</td>
+                    </tr>
+                    <tr>
+                        <td><strong>UserUnsuspended</strong></td>
+                        <td>Success (Green)</td>
+                        <td>A suspended user account was restored</td>
+                    </tr>
+                    <tr>
+                        <td><strong>UserDeleted</strong></td>
+                        <td>Danger (Red)</td>
+                        <td>A user account was deleted</td>
+                    </tr>
+                    <tr>
+                        <td><strong>UserExpirationSet</strong></td>
+                        <td>Info (Blue)</td>
+                        <td>An expiration date was set on a user account</td>
+                    </tr>
+                    <tr>
+                        <td><strong>PasswordReset</strong></td>
+                        <td>Default (Gray)</td>
+                        <td>A user's password was reset by an administrator</td>
+                    </tr>
+                    <tr>
+                        <td><strong>UserNameUpdated</strong></td>
+                        <td>Default (Gray)</td>
+                        <td>A user's display name was changed</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ClientCreated</strong></td>
+                        <td>Default (Gray)</td>
+                        <td>A new OAuth client was created</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ClientDeleted</strong></td>
+                        <td>Danger (Red)</td>
+                        <td>An OAuth client was deleted</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TokenRevoked</strong></td>
+                        <td>Warning (Yellow)</td>
+                        <td>An OAuth token was revoked</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="searching-filtering">Searching and Filtering</h2>
+
+            <h3>Search by Text</h3>
+
+            <p>Use the search box to find logs by:</p>
+
+            <ul>
+                <li>Email address (performer or target)</li>
+                <li>Details content</li>
+            </ul>
+
+            <ol>
+                <li>Enter your search term in the search input</li>
+                <li>Click <strong>Filter</strong> or press Enter</li>
+                <li>Click <strong>Clear</strong> to reset the search</li>
+            </ol>
+
+            <h3>Filter by Action Type</h3>
+
+            <p>Use the action dropdown to filter by specific action types:</p>
+
+            <ol>
+                <li>Select an action from the dropdown menu</li>
+                <li>Click <strong>Filter</strong> to apply</li>
+            </ol>
+
+            <h2 id="sorting">Sorting</h2>
+
+            <p>Click on column headers to sort the audit log entries:</p>
+
+            <ul>
+                <li><strong>Action</strong> - Sort alphabetically by action type</li>
+                <li><strong>Performed By</strong> - Sort by administrator email</li>
+                <li><strong>Target User</strong> - Sort by affected user email</li>
+                <li><strong>Date/Time</strong> - Sort chronologically (default: newest first)</li>
+            </ul>
+
+            <p>Click a column header again to toggle between ascending and descending order.</p>
+
+            <h2 id="use-cases">Common Use Cases</h2>
+
+            <h3>Investigating a Security Incident</h3>
+
+            <p>When investigating suspicious activity:</p>
+
+            <ol>
+                <li>Filter by the time range of the incident</li>
+                <li>Search for the affected user's email</li>
+                <li>Review all actions related to that user</li>
+                <li>Check IP addresses for unusual locations</li>
+                <li>Document findings for security report</li>
+            </ol>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">Investigation Checklist</span>
+                </div>
+                <pre><code>1. Identify the affected accounts
+2. Note the timeframe of suspicious activity
+3. Filter audit logs by user and time
+4. Check for unusual IP addresses
+5. Look for patterns (multiple failed attempts, etc.)
+6. Review related token and client activities
+7. Document all findings</code></pre>
+            </div>
+
+            <h3>Compliance Auditing</h3>
+
+            <p>For compliance reviews:</p>
+
+            <ol>
+                <li>Export logs for the required time period</li>
+                <li>Filter by action types relevant to compliance</li>
+                <li>Verify that sensitive actions have proper authorization</li>
+                <li>Check that user deletions follow proper procedures</li>
+            </ol>
+
+            <h3>Reviewing Administrator Actions</h3>
+
+            <p>To review what a specific administrator has done:</p>
+
+            <ol>
+                <li>Search for the administrator's email in the search box</li>
+                <li>Review all actions they performed</li>
+                <li>Verify actions were appropriate and authorized</li>
+            </ol>
+
+            <h2 id="log-retention">Log Retention</h2>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Data Retention
+                </div>
+                <p>
+                    Audit logs are retained according to your organization's data retention policy.
+                    Contact your system administrator for details on log retention periods and archival procedures.
+                </p>
+            </div>
+
+            <h2 id="pagination">Pagination</h2>
+
+            <p>The audit log list is paginated to handle large numbers of entries efficiently. Use the pagination controls at the bottom of the page to navigate:</p>
+
+            <ul>
+                <li><strong>Previous</strong> - Go to the previous page</li>
+                <li><strong>Page X of Y</strong> - Shows current position</li>
+                <li><strong>Next</strong> - Go to the next page</li>
+            </ul>
+
+            <h2 id="best-practices">Best Practices</h2>
+
+            <ul>
+                <li><strong>Regular review</strong> - Check audit logs regularly for unusual activity</li>
+                <li><strong>Set up alerts</strong> - Configure monitoring for critical action types</li>
+                <li><strong>Protect log access</strong> - Limit who can view audit logs</li>
+                <li><strong>Document reviews</strong> - Keep records of when logs were reviewed</li>
+                <li><strong>Investigate anomalies</strong> - Follow up on any suspicious patterns</li>
+                <li><strong>Backup logs</strong> - Ensure audit logs are included in backups</li>
+            </ul>
+
+            <h2 id="security-considerations">Security Considerations</h2>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Important
+                </div>
+                <p>
+                    Audit logs contain sensitive information about user activities and administrative actions.
+                    Access to audit logs should be restricted to authorized personnel only.
+                    The audit log system itself logs access to audit logs for accountability.
+                </p>
+            </div>
+
+            <h2 id="related-features">Related Features</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/admin/users.html" class="docs-card">
+                    <div class="docs-card-title">User Management</div>
+                    <div class="docs-card-desc">Actions logged: suspensions, deletions, password resets.</div>
+                </a>
+                <a href="/docs/admin/tokens.html" class="docs-card">
+                    <div class="docs-card-title">Token Management</div>
+                    <div class="docs-card-desc">Actions logged: token revocations.</div>
+                </a>
+                <a href="/docs/admin/clients.html" class="docs-card">
+                    <div class="docs-card-title">OAuth Clients</div>
+                    <div class="docs-card-desc">Actions logged: client creation, deletion, modifications.</div>
+                </a>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/admin/tokens.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Token Management</span>
+                </a>
+                <a href="/docs/mcp/overview.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">MCP Integration Overview</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <style>
+        .screenshot-placeholder {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ed 100%);
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 3rem;
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+        .screenshot-placeholder-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            color: #6b7280;
+        }
+        .screenshot-placeholder-inner svg {
+            opacity: 0.5;
+        }
+        .screenshot-placeholder-inner span {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+    </style>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

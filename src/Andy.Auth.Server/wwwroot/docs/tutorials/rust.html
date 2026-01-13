@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rust Tutorial - Andy Auth Documentation</title>
+    <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body>
+    <header class="docs-header">
+        <div class="docs-header-content">
+            <a href="../" class="docs-logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="4" width="24" height="24" rx="6" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 16L14 18L20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Andy Auth</span>
+            </a>
+            <div class="docs-header-actions">
+                <button class="docs-search-btn" data-search-trigger>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <span>Search</span>
+                    <kbd>Ctrl+K</kbd>
+                </button>
+                <button id="theme-toggle" class="docs-theme-toggle" onclick="toggleTheme()"></button>
+                <a href="https://github.com/anthropics/andy-auth" class="docs-github-link">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="docs-layout">
+        <aside class="docs-sidebar">
+            <nav class="docs-nav">
+                <div class="docs-sidebar-group expanded">
+                    <div class="docs-sidebar-group-header">
+                        <span>Getting Started</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="docs-sidebar-group-content">
+                        <a href="../" class="docs-sidebar-link">Overview</a>
+                        <a href="../quickstart.html" class="docs-sidebar-link">Quick Start</a>
+                    </div>
+                </div>
+                <div class="docs-sidebar-group expanded">
+                    <div class="docs-sidebar-group-header">
+                        <span>Tutorials</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="docs-sidebar-group-content">
+                        <a href="python.html" class="docs-sidebar-link">Python</a>
+                        <a href="csharp.html" class="docs-sidebar-link">C# / .NET</a>
+                        <a href="javascript.html" class="docs-sidebar-link">JavaScript</a>
+                        <a href="typescript.html" class="docs-sidebar-link">TypeScript</a>
+                        <a href="java.html" class="docs-sidebar-link">Java</a>
+                        <a href="go.html" class="docs-sidebar-link">Go</a>
+                        <a href="rust.html" class="docs-sidebar-link active">Rust</a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="docs-main">
+            <article class="docs-content">
+                <div class="docs-breadcrumb">
+                    <a href="../">Docs</a>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    <a href="#">Tutorials</a>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    <span>Rust</span>
+                </div>
+
+                <h1>Rust OAuth Integration</h1>
+                <p class="docs-lead">Integrate Andy Auth into your Rust applications using the oauth2 crate and Axum web framework.</p>
+
+                <h2 id="dependencies">Cargo Dependencies</h2>
+                <p>Add the required dependencies to your <code>Cargo.toml</code>:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">TOML - Cargo.toml</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>[dependencies]
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+oauth2 = "4"
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+jsonwebtoken = "9"
+tower-sessions = "0.10"
+rand = "0.8"
+sha2 = "0.10"
+base64 = "0.21"</code></pre>
+                </div>
+
+                <h2 id="web-app">Web Application with OAuth</h2>
+                <p>Complete OAuth integration using Axum:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Rust - main.rs</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>use axum::{
+    extract::{Query, State},
+    response::{Html, Redirect},
+    routing::get,
+    Router,
+};
+use oauth2::{
+    basic::BasicClient, AuthUrl, AuthorizationCode, ClientId, ClientSecret,
+    CsrfToken, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, TokenUrl,
+    reqwest::async_http_client,
+};
+use serde::Deserialize;
+use std::sync::Arc;
+use tower_sessions::{MemoryStore, Session, SessionManagerLayer};
+
+#[derive(Clone)]
+struct AppState {
+    oauth_client: BasicClient,
+}
+
+#[tokio::main]
+async fn main() {
+    let oauth_client = BasicClient::new(
+        ClientId::new("your-client-id".to_string()),
+        Some(ClientSecret::new("your-client-secret".to_string())),
+        AuthUrl::new("https://your-andy-auth-server.com/connect/authorize".to_string()).unwrap(),
+        Some(TokenUrl::new("https://your-andy-auth-server.com/connect/token".to_string()).unwrap()),
+    )
+    .set_redirect_uri(RedirectUrl::new("http://localhost:3000/callback".to_string()).unwrap());
+
+    let state = AppState { oauth_client };
+
+    let session_store = MemoryStore::default();
+    let session_layer = SessionManagerLayer::new(session_store);
+
+    let app = Router::new()
+        .route("/", get(home))
+        .route("/login", get(login))
+        .route("/callback", get(callback))
+        .route("/logout", get(logout))
+        .with_state(Arc::new(state))
+        .layer(session_layer);
+
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    println!("Server running on http://localhost:3000");
+    axum::serve(listener, app).await.unwrap();
+}
+
+async fn home(session: Session) -> Html&lt;String&gt; {
+    let user: Option&lt;UserInfo&gt; = session.get("user").await.unwrap();
+
+    let html = match user {
+        Some(u) => format!(
+            r#"&lt;h1&gt;Welcome, {}!&lt;/h1&gt;
+            &lt;p&gt;Email: {}&lt;/p&gt;
+            &lt;a href="/logout"&gt;Logout&lt;/a&gt;"#,
+            u.name.unwrap_or_default(),
+            u.email.unwrap_or_default()
+        ),
+        None => r#"&lt;h1&gt;Andy Auth Demo&lt;/h1&gt;
+            &lt;a href="/login"&gt;Login with Andy Auth&lt;/a&gt;"#.to_string(),
+    };
+
+    Html(html)
+}
+
+async fn login(
+    State(state): State&lt;Arc&lt;AppState&gt;&gt;,
+    session: Session,
+) -> Redirect {
+    // Generate PKCE challenge
+    let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
+
+    // Generate authorization URL
+    let (auth_url, csrf_token) = state
+        .oauth_client
+        .authorize_url(CsrfToken::new_random)
+        .add_scope(oauth2::Scope::new("openid".to_string()))
+        .add_scope(oauth2::Scope::new("profile".to_string()))
+        .add_scope(oauth2::Scope::new("email".to_string()))
+        .set_pkce_challenge(pkce_challenge)
+        .url();
+
+    // Store PKCE verifier and CSRF token in session
+    session.insert("pkce_verifier", pkce_verifier.secret()).await.unwrap();
+    session.insert("csrf_token", csrf_token.secret()).await.unwrap();
+
+    Redirect::to(auth_url.as_str())
+}
+
+#[derive(Deserialize)]
+struct CallbackParams {
+    code: String,
+    state: String,
+}
+
+#[derive(Debug, Deserialize, Clone, serde::Serialize)]
+struct UserInfo {
+    sub: String,
+    name: Option&lt;String&gt;,
+    email: Option&lt;String&gt;,
+}
+
+async fn callback(
+    State(state): State&lt;Arc&lt;AppState&gt;&gt;,
+    session: Session,
+    Query(params): Query&lt;CallbackParams&gt;,
+) -> Result&lt;Redirect, String&gt; {
+    // Verify CSRF token
+    let stored_csrf: String = session
+        .get("csrf_token")
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or("Missing CSRF token")?;
+
+    if params.state != stored_csrf {
+        return Err("Invalid CSRF token".to_string());
+    }
+
+    // Get PKCE verifier
+    let verifier: String = session
+        .get("pkce_verifier")
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or("Missing PKCE verifier")?;
+
+    let pkce_verifier = PkceCodeVerifier::new(verifier);
+
+    // Exchange code for token
+    let token_result = state
+        .oauth_client
+        .exchange_code(AuthorizationCode::new(params.code))
+        .set_pkce_verifier(pkce_verifier)
+        .request_async(async_http_client)
+        .await
+        .map_err(|e| format!("Token exchange failed: {}", e))?;
+
+    // Get user info
+    let client = reqwest::Client::new();
+    let user_info: UserInfo = client
+        .get("https://your-andy-auth-server.com/connect/userinfo")
+        .bearer_auth(token_result.access_token().secret())
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .json()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Store user in session
+    session.insert("user", user_info).await.unwrap();
+    session.remove::&lt;String&gt;("csrf_token").await.unwrap();
+    session.remove::&lt;String&gt;("pkce_verifier").await.unwrap();
+
+    Ok(Redirect::to("/"))
+}
+
+async fn logout(session: Session) -> Redirect {
+    session.flush().await.unwrap();
+    Redirect::to("/")
+}</code></pre>
+                </div>
+
+                <h2 id="jwt-validation">JWT Token Validation</h2>
+                <p>Middleware for validating JWT tokens in APIs:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Rust - jwt.rs</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>use axum::{
+    extract::{Request, State},
+    http::{header, StatusCode},
+    middleware::Next,
+    response::Response,
+    Json,
+};
+use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Claims {
+    pub sub: String,
+    pub email: Option&lt;String&gt;,
+    pub name: Option&lt;String&gt;,
+    pub scope: Option&lt;String&gt;,
+    pub exp: usize,
+    pub iss: String,
+    pub aud: Vec&lt;String&gt;,
+}
+
+#[derive(Clone)]
+pub struct JwtConfig {
+    pub issuer: String,
+    pub audience: String,
+    pub jwks_url: String,
+}
+
+pub async fn jwt_middleware(
+    State(config): State&lt;Arc&lt;JwtConfig&gt;&gt;,
+    mut request: Request,
+    next: Next,
+) -> Result&lt;Response, (StatusCode, Json&lt;serde_json::Value&gt;)&gt; {
+    let auth_header = request
+        .headers()
+        .get(header::AUTHORIZATION)
+        .and_then(|h| h.to_str().ok());
+
+    let token = match auth_header {
+        Some(h) if h.starts_with("Bearer ") => &h[7..],
+        _ => {
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({"error": "missing_token"})),
+            ))
+        }
+    };
+
+    // Fetch JWKS and validate token
+    let claims = validate_token(token, &config)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({"error": "invalid_token", "message": e})),
+            )
+        })?;
+
+    // Insert claims into request extensions
+    request.extensions_mut().insert(claims);
+
+    Ok(next.run(request).await)
+}
+
+async fn validate_token(token: &str, config: &JwtConfig) -> Result&lt;Claims, String&gt; {
+    // Fetch JWKS (in production, cache this)
+    let jwks: serde_json::Value = reqwest::get(&config.jwks_url)
+        .await
+        .map_err(|e| e.to_string())?
+        .json()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Parse token header to get kid
+    let header = jsonwebtoken::decode_header(token).map_err(|e| e.to_string())?;
+    let kid = header.kid.ok_or("Missing kid in token")?;
+
+    // Find key in JWKS
+    let keys = jwks["keys"].as_array().ok_or("Invalid JWKS")?;
+    let key = keys
+        .iter()
+        .find(|k| k["kid"].as_str() == Some(&kid))
+        .ok_or("Key not found")?;
+
+    // Build decoding key from JWK
+    let n = key["n"].as_str().ok_or("Missing n")?;
+    let e = key["e"].as_str().ok_or("Missing e")?;
+
+    let decoding_key = DecodingKey::from_rsa_components(n, e)
+        .map_err(|e| e.to_string())?;
+
+    // Configure validation
+    let mut validation = Validation::new(Algorithm::RS256);
+    validation.set_issuer(&[&config.issuer]);
+    validation.set_audience(&[&config.audience]);
+
+    // Decode and validate token
+    let token_data = decode::&lt;Claims&gt;(token, &decoding_key, &validation)
+        .map_err(|e| e.to_string())?;
+
+    Ok(token_data.claims)
+}
+
+// Helper to extract claims in handlers
+pub fn get_claims(request: &Request) -> Option&lt;&Claims&gt; {
+    request.extensions().get::&lt;Claims&gt;()
+}
+
+// Scope checking
+pub fn has_scope(claims: &Claims, required: &str) -> bool {
+    claims
+        .scope
+        .as_ref()
+        .map(|s| s.split(' ').any(|scope| scope == required))
+        .unwrap_or(false)
+}</code></pre>
+                </div>
+
+                <h2 id="mcp-server">MCP Server</h2>
+                <p>Build an MCP-compatible server in Rust:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Rust - mcp.rs</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>use axum::{
+    extract::Request,
+    http::StatusCode,
+    routing::{get, post},
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize)]
+struct Tool {
+    name: &'static str,
+    description: &'static str,
+    input_schema: InputSchema,
+}
+
+#[derive(Serialize)]
+struct InputSchema {
+    r#type: &'static str,
+    properties: serde_json::Value,
+    required: Vec&lt;&'static str&gt;,
+}
+
+#[derive(Serialize)]
+struct ToolResult&lt;T&gt; {
+    tool: &'static str,
+    result: T,
+}
+
+#[derive(Serialize)]
+struct UserInfoResult {
+    user_id: String,
+    email: Option&lt;String&gt;,
+    name: Option&lt;String&gt;,
+    authenticated: bool,
+}
+
+#[derive(Deserialize)]
+struct QueryRequest {
+    query: String,
+}
+
+#[derive(Serialize)]
+struct QueryResult {
+    query: String,
+    executed_by: String,
+    data: Vec&lt;&'static str&gt;,
+}
+
+pub fn mcp_routes() -> Router {
+    Router::new()
+        .route("/mcp/tools", get(list_tools))
+        .route("/mcp/tools/get_user_info", post(get_user_info))
+        .route("/mcp/tools/query_data", post(query_data))
+}
+
+async fn list_tools(request: Request) -> Json&lt;serde_json::Value&gt; {
+    let tools = vec![
+        Tool {
+            name: "get_user_info",
+            description: "Get information about the authenticated user",
+            input_schema: InputSchema {
+                r#type: "object",
+                properties: serde_json::json!({}),
+                required: vec![],
+            },
+        },
+        Tool {
+            name: "query_data",
+            description: "Query data from the system",
+            input_schema: InputSchema {
+                r#type: "object",
+                properties: serde_json::json!({
+                    "query": {
+                        "type": "string",
+                        "description": "The query to execute"
+                    }
+                }),
+                required: vec!["query"],
+            },
+        },
+    ];
+
+    Json(serde_json::json!({ "tools": tools }))
+}
+
+async fn get_user_info(
+    request: Request,
+) -> Result&lt;Json&lt;ToolResult&lt;UserInfoResult&gt;&gt;, (StatusCode, Json&lt;serde_json::Value&gt;)&gt; {
+    let claims = get_claims(&request).ok_or((
+        StatusCode::UNAUTHORIZED,
+        Json(serde_json::json!({"error": "not_authenticated"})),
+    ))?;
+
+    Ok(Json(ToolResult {
+        tool: "get_user_info",
+        result: UserInfoResult {
+            user_id: claims.sub.clone(),
+            email: claims.email.clone(),
+            name: claims.name.clone(),
+            authenticated: true,
+        },
+    }))
+}
+
+async fn query_data(
+    request: Request,
+    Json(payload): Json&lt;QueryRequest&gt;,
+) -> Result&lt;Json&lt;ToolResult&lt;QueryResult&gt;&gt;, (StatusCode, Json&lt;serde_json::Value&gt;)&gt; {
+    let claims = get_claims(&request).ok_or((
+        StatusCode::UNAUTHORIZED,
+        Json(serde_json::json!({"error": "not_authenticated"})),
+    ))?;
+
+    // Check scope
+    if !has_scope(claims, "data:read") {
+        return Err((
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({
+                "error": "insufficient_scope",
+                "required": "data:read"
+            })),
+        ));
+    }
+
+    Ok(Json(ToolResult {
+        tool: "query_data",
+        result: QueryResult {
+            query: payload.query,
+            executed_by: claims.sub.clone(),
+            data: vec!["result1", "result2", "result3"],
+        },
+    }))
+}</code></pre>
+                </div>
+
+                <h2 id="client-credentials">Client Credentials Flow</h2>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Rust - client.rs</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>use reqwest::Client;
+use serde::Deserialize;
+use std::sync::RwLock;
+use std::time::{Duration, Instant};
+
+#[derive(Deserialize)]
+struct TokenResponse {
+    access_token: String,
+    expires_in: u64,
+}
+
+pub struct OAuth2Client {
+    client: Client,
+    token_endpoint: String,
+    client_id: String,
+    client_secret: String,
+    cached_token: RwLock&lt;Option&lt;(String, Instant)&gt;&gt;,
+}
+
+impl OAuth2Client {
+    pub fn new(authority: &str, client_id: &str, client_secret: &str) -> Self {
+        Self {
+            client: Client::new(),
+            token_endpoint: format!("{}/connect/token", authority),
+            client_id: client_id.to_string(),
+            client_secret: client_secret.to_string(),
+            cached_token: RwLock::new(None),
+        }
+    }
+
+    pub async fn get_token(&self, scopes: &[&str]) -> Result&lt;String, String&gt; {
+        // Check cache
+        {
+            let cache = self.cached_token.read().unwrap();
+            if let Some((token, expiry)) = cache.as_ref() {
+                if Instant::now() + Duration::from_secs(300) &lt; *expiry {
+                    return Ok(token.clone());
+                }
+            }
+        }
+
+        // Fetch new token
+        let response = self
+            .client
+            .post(&self.token_endpoint)
+            .form(&[
+                ("grant_type", "client_credentials"),
+                ("client_id", &self.client_id),
+                ("client_secret", &self.client_secret),
+                ("scope", &scopes.join(" ")),
+            ])
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !response.status().is_success() {
+            return Err(format!("Token request failed: {}", response.status()));
+        }
+
+        let token_response: TokenResponse = response.json().await.map_err(|e| e.to_string())?;
+
+        let expiry = Instant::now() + Duration::from_secs(token_response.expires_in);
+
+        // Cache token
+        {
+            let mut cache = self.cached_token.write().unwrap();
+            *cache = Some((token_response.access_token.clone(), expiry));
+        }
+
+        Ok(token_response.access_token)
+    }
+
+    pub async fn call_api&lt;T: serde::de::DeserializeOwned&gt;(
+        &self,
+        url: &str,
+        scopes: &[&str],
+    ) -> Result&lt;T, String&gt; {
+        let token = self.get_token(scopes).await?;
+
+        let response = self
+            .client
+            .get(url)
+            .bearer_auth(&token)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !response.status().is_success() {
+            return Err(format!("API call failed: {}", response.status()));
+        }
+
+        response.json().await.map_err(|e| e.to_string())
+    }
+}
+
+// Usage
+#[tokio::main]
+async fn main() -> Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    let client = OAuth2Client::new(
+        "https://your-andy-auth-server.com",
+        "service-client",
+        "service-secret",
+    );
+
+    let data: serde_json::Value = client
+        .call_api("https://api.example.com/data", &["api:read"])
+        .await?;
+
+    println!("Data: {:?}", data);
+    Ok(())
+}</code></pre>
+                </div>
+
+                <div class="docs-callout docs-callout-success">
+                    <div class="docs-callout-title">Next Steps</div>
+                    <ul>
+                        <li>Learn about <a href="../mcp/overview.html">MCP Integration</a></li>
+                        <li>Check out <a href="../api/endpoints.html">API Reference</a></li>
+                        <li>See <a href="../security/best-practices.html">Security Best Practices</a></li>
+                    </ul>
+                </div>
+            </article>
+
+            <aside class="docs-toc">
+                <div class="docs-toc-title">On this page</div>
+                <ul class="docs-toc-list"></ul>
+            </aside>
+        </main>
+    </div>
+
+    <div id="search-modal" class="docs-search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" id="search-modal-input" placeholder="Search documentation..." class="docs-search-modal-input">
+            <div id="search-results" class="docs-search-results"></div>
+        </div>
+    </div>
+
+    <script src="../js/docs.js"></script>
+</body>
+</html>

@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Tutorial - Andy Auth Documentation</title>
+    <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body>
+    <header class="docs-header">
+        <div class="docs-header-content">
+            <a href="../" class="docs-logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="4" width="24" height="24" rx="6" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 16L14 18L20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Andy Auth</span>
+            </a>
+            <div class="docs-header-actions">
+                <button class="docs-search-btn" data-search-trigger>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <span>Search</span>
+                    <kbd>Ctrl+K</kbd>
+                </button>
+                <button id="theme-toggle" class="docs-theme-toggle" onclick="toggleTheme()"></button>
+                <a href="https://github.com/anthropics/andy-auth" class="docs-github-link">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="docs-layout">
+        <aside class="docs-sidebar">
+            <nav class="docs-nav">
+                <div class="docs-sidebar-group expanded">
+                    <div class="docs-sidebar-group-header">
+                        <span>Getting Started</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="docs-sidebar-group-content">
+                        <a href="../" class="docs-sidebar-link">Overview</a>
+                        <a href="../quickstart.html" class="docs-sidebar-link">Quick Start</a>
+                    </div>
+                </div>
+                <div class="docs-sidebar-group expanded">
+                    <div class="docs-sidebar-group-header">
+                        <span>Tutorials</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="docs-sidebar-group-content">
+                        <a href="python.html" class="docs-sidebar-link">Python</a>
+                        <a href="csharp.html" class="docs-sidebar-link">C# / .NET</a>
+                        <a href="javascript.html" class="docs-sidebar-link">JavaScript</a>
+                        <a href="typescript.html" class="docs-sidebar-link">TypeScript</a>
+                        <a href="java.html" class="docs-sidebar-link">Java</a>
+                        <a href="go.html" class="docs-sidebar-link active">Go</a>
+                        <a href="rust.html" class="docs-sidebar-link">Rust</a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="docs-main">
+            <article class="docs-content">
+                <div class="docs-breadcrumb">
+                    <a href="../">Docs</a>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    <a href="#">Tutorials</a>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    <span>Go</span>
+                </div>
+
+                <h1>Go OAuth Integration</h1>
+                <p class="docs-lead">Integrate Andy Auth into your Go applications using the standard oauth2 package and popular web frameworks.</p>
+
+                <h2 id="dependencies">Dependencies</h2>
+                <p>Install the required packages:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Shell</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>go get golang.org/x/oauth2
+go get github.com/golang-jwt/jwt/v5
+go get github.com/gorilla/sessions</code></pre>
+                </div>
+
+                <h2 id="web-app">Web Application with OAuth</h2>
+                <p>Complete OAuth integration with the standard library:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Go - main.go</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>package main
+
+import (
+    "context"
+    "crypto/rand"
+    "crypto/sha256"
+    "encoding/base64"
+    "encoding/json"
+    "fmt"
+    "log"
+    "net/http"
+
+    "github.com/gorilla/sessions"
+    "golang.org/x/oauth2"
+)
+
+var (
+    oauthConfig = &oauth2.Config{
+        ClientID:     "your-client-id",
+        ClientSecret: "your-client-secret",
+        RedirectURL:  "http://localhost:8080/callback",
+        Scopes:       []string{"openid", "profile", "email"},
+        Endpoint: oauth2.Endpoint{
+            AuthURL:  "https://your-andy-auth-server.com/connect/authorize",
+            TokenURL: "https://your-andy-auth-server.com/connect/token",
+        },
+    }
+    store = sessions.NewCookieStore([]byte("super-secret-key"))
+)
+
+func main() {
+    http.HandleFunc("/", homeHandler)
+    http.HandleFunc("/login", loginHandler)
+    http.HandleFunc("/callback", callbackHandler)
+    http.HandleFunc("/logout", logoutHandler)
+    http.HandleFunc("/profile", profileHandler)
+
+    log.Println("Server starting on http://localhost:8080")
+    log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+    session, _ := store.Get(r, "auth-session")
+    user, ok := session.Values["user"].(map[string]interface{})
+
+    if ok {
+        fmt.Fprintf(w, "Hello, %s! &lt;a href=\"/logout\"&gt;Logout&lt;/a&gt;", user["name"])
+    } else {
+        fmt.Fprintf(w, "Welcome! &lt;a href=\"/login\"&gt;Login with Andy Auth&lt;/a&gt;")
+    }
+}
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+    session, _ := store.Get(r, "auth-session")
+
+    // Generate PKCE code verifier and challenge
+    verifier := generateCodeVerifier()
+    challenge := generateCodeChallenge(verifier)
+
+    // Generate state
+    state := generateState()
+
+    // Store in session
+    session.Values["code_verifier"] = verifier
+    session.Values["oauth_state"] = state
+    session.Save(r, w)
+
+    // Build authorization URL with PKCE
+    url := oauthConfig.AuthCodeURL(state,
+        oauth2.SetAuthURLParam("code_challenge", challenge),
+        oauth2.SetAuthURLParam("code_challenge_method", "S256"),
+    )
+
+    http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+func callbackHandler(w http.ResponseWriter, r *http.Request) {
+    session, _ := store.Get(r, "auth-session")
+
+    // Verify state
+    state := r.URL.Query().Get("state")
+    savedState, _ := session.Values["oauth_state"].(string)
+    if state != savedState {
+        http.Error(w, "Invalid state", http.StatusBadRequest)
+        return
+    }
+
+    // Get code verifier
+    verifier, _ := session.Values["code_verifier"].(string)
+
+    // Exchange code for token with PKCE verifier
+    code := r.URL.Query().Get("code")
+    token, err := oauthConfig.Exchange(context.Background(), code,
+        oauth2.SetAuthURLParam("code_verifier", verifier),
+    )
+    if err != nil {
+        http.Error(w, "Token exchange failed: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    // Get user info
+    client := oauthConfig.Client(context.Background(), token)
+    resp, err := client.Get("https://your-andy-auth-server.com/connect/userinfo")
+    if err != nil {
+        http.Error(w, "Failed to get user info", http.StatusInternalServerError)
+        return
+    }
+    defer resp.Body.Close()
+
+    var userInfo map[string]interface{}
+    json.NewDecoder(resp.Body).Decode(&userInfo)
+
+    // Store in session
+    session.Values["user"] = userInfo
+    session.Values["access_token"] = token.AccessToken
+    delete(session.Values, "code_verifier")
+    delete(session.Values, "oauth_state")
+    session.Save(r, w)
+
+    http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+}
+
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+    session, _ := store.Get(r, "auth-session")
+    session.Options.MaxAge = -1
+    session.Save(r, w)
+    http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+}
+
+func profileHandler(w http.ResponseWriter, r *http.Request) {
+    session, _ := store.Get(r, "auth-session")
+    user, ok := session.Values["user"].(map[string]interface{})
+    if !ok {
+        http.Error(w, "Not authenticated", http.StatusUnauthorized)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(user)
+}
+
+// PKCE helpers
+func generateCodeVerifier() string {
+    b := make([]byte, 32)
+    rand.Read(b)
+    return base64.RawURLEncoding.EncodeToString(b)
+}
+
+func generateCodeChallenge(verifier string) string {
+    h := sha256.Sum256([]byte(verifier))
+    return base64.RawURLEncoding.EncodeToString(h[:])
+}
+
+func generateState() string {
+    b := make([]byte, 16)
+    rand.Read(b)
+    return base64.RawURLEncoding.EncodeToString(b)
+}</code></pre>
+                </div>
+
+                <h2 id="jwt-validation">JWT Token Validation</h2>
+                <p>Middleware for validating JWT tokens in APIs:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Go - middleware.go</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>package main
+
+import (
+    "context"
+    "encoding/json"
+    "fmt"
+    "net/http"
+    "strings"
+    "time"
+
+    "github.com/golang-jwt/jwt/v5"
+)
+
+type contextKey string
+
+const userContextKey contextKey = "user"
+
+type JWTConfig struct {
+    Issuer   string
+    Audience string
+    JWKSURL  string
+}
+
+type Claims struct {
+    jwt.RegisteredClaims
+    Email string `json:"email"`
+    Name  string `json:"name"`
+    Scope string `json:"scope"`
+}
+
+// JWKS key set (simplified - use a proper JWKS client in production)
+var jwksCache map[string]interface{}
+var jwksCacheTime time.Time
+
+func JWTMiddleware(config JWTConfig) func(http.Handler) http.Handler {
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            authHeader := r.Header.Get("Authorization")
+            if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+                http.Error(w, `{"error": "missing_token"}`, http.StatusUnauthorized)
+                return
+            }
+
+            tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+            // Parse and validate token
+            token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+                // Verify signing method
+                if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+                    return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+                }
+
+                // Get key from JWKS
+                kid, ok := token.Header["kid"].(string)
+                if !ok {
+                    return nil, fmt.Errorf("missing kid in token header")
+                }
+
+                return getPublicKey(config.JWKSURL, kid)
+            })
+
+            if err != nil {
+                http.Error(w, fmt.Sprintf(`{"error": "invalid_token", "message": "%s"}`, err.Error()), http.StatusUnauthorized)
+                return
+            }
+
+            claims, ok := token.Claims.(*Claims)
+            if !ok || !token.Valid {
+                http.Error(w, `{"error": "invalid_claims"}`, http.StatusUnauthorized)
+                return
+            }
+
+            // Verify issuer and audience
+            if claims.Issuer != config.Issuer {
+                http.Error(w, `{"error": "invalid_issuer"}`, http.StatusUnauthorized)
+                return
+            }
+
+            // Add claims to context
+            ctx := context.WithValue(r.Context(), userContextKey, claims)
+            next.ServeHTTP(w, r.WithContext(ctx))
+        })
+    }
+}
+
+func getPublicKey(jwksURL, kid string) (interface{}, error) {
+    // Fetch JWKS (with caching)
+    if time.Since(jwksCacheTime) > 5*time.Minute || jwksCache == nil {
+        resp, err := http.Get(jwksURL)
+        if err != nil {
+            return nil, err
+        }
+        defer resp.Body.Close()
+
+        var jwks map[string]interface{}
+        json.NewDecoder(resp.Body).Decode(&jwks)
+        jwksCache = jwks
+        jwksCacheTime = time.Now()
+    }
+
+    // Find key by kid
+    keys, ok := jwksCache["keys"].([]interface{})
+    if !ok {
+        return nil, fmt.Errorf("invalid JWKS format")
+    }
+
+    for _, k := range keys {
+        key, ok := k.(map[string]interface{})
+        if !ok {
+            continue
+        }
+        if key["kid"] == kid {
+            // Parse RSA public key from JWK
+            return parseRSAPublicKey(key)
+        }
+    }
+
+    return nil, fmt.Errorf("key not found: %s", kid)
+}
+
+func parseRSAPublicKey(jwk map[string]interface{}) (interface{}, error) {
+    // Simplified - use a proper JWK parsing library in production
+    // like github.com/lestrrat-go/jwx
+    return nil, fmt.Errorf("implement JWK parsing")
+}
+
+// Helper to get claims from context
+func GetClaims(ctx context.Context) *Claims {
+    claims, _ := ctx.Value(userContextKey).(*Claims)
+    return claims
+}
+
+// Scope checking middleware
+func RequireScopes(scopes ...string) func(http.Handler) http.Handler {
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            claims := GetClaims(r.Context())
+            if claims == nil {
+                http.Error(w, `{"error": "not_authenticated"}`, http.StatusUnauthorized)
+                return
+            }
+
+            tokenScopes := strings.Split(claims.Scope, " ")
+            for _, required := range scopes {
+                found := false
+                for _, s := range tokenScopes {
+                    if s == required {
+                        found = true
+                        break
+                    }
+                }
+                if !found {
+                    http.Error(w, fmt.Sprintf(`{"error": "insufficient_scope", "required": "%s"}`, required), http.StatusForbidden)
+                    return
+                }
+            }
+
+            next.ServeHTTP(w, r)
+        })
+    }
+}</code></pre>
+                </div>
+
+                <h2 id="mcp-server">MCP Server</h2>
+                <p>Build an MCP-compatible server in Go:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Go - mcp_server.go</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>package main
+
+import (
+    "encoding/json"
+    "log"
+    "net/http"
+)
+
+type Tool struct {
+    Name        string                 `json:"name"`
+    Description string                 `json:"description"`
+    InputSchema map[string]interface{} `json:"input_schema"`
+}
+
+type ToolResult struct {
+    Tool   string      `json:"tool"`
+    Result interface{} `json:"result"`
+}
+
+func main() {
+    config := JWTConfig{
+        Issuer:   "https://your-andy-auth-server.com",
+        Audience: "mcp-server",
+        JWKSURL:  "https://your-andy-auth-server.com/.well-known/openid-configuration/jwks",
+    }
+
+    mux := http.NewServeMux()
+
+    // Apply JWT middleware to all MCP routes
+    mcpHandler := JWTMiddleware(config)(http.HandlerFunc(mcpRouter))
+    mux.Handle("/mcp/", mcpHandler)
+
+    log.Println("MCP Server starting on :8081")
+    log.Fatal(http.ListenAndServe(":8081", mux))
+}
+
+func mcpRouter(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json")
+
+    switch r.URL.Path {
+    case "/mcp/tools":
+        listTools(w, r)
+    case "/mcp/tools/get_user_info":
+        getUserInfo(w, r)
+    case "/mcp/tools/query_data":
+        queryData(w, r)
+    default:
+        http.NotFound(w, r)
+    }
+}
+
+func listTools(w http.ResponseWriter, r *http.Request) {
+    tools := []Tool{
+        {
+            Name:        "get_user_info",
+            Description: "Get information about the authenticated user",
+            InputSchema: map[string]interface{}{
+                "type":       "object",
+                "properties": map[string]interface{}{},
+                "required":   []string{},
+            },
+        },
+        {
+            Name:        "query_data",
+            Description: "Query data from the system",
+            InputSchema: map[string]interface{}{
+                "type": "object",
+                "properties": map[string]interface{}{
+                    "query": map[string]interface{}{
+                        "type":        "string",
+                        "description": "The query to execute",
+                    },
+                },
+                "required": []string{"query"},
+            },
+        },
+    }
+
+    json.NewEncoder(w).Encode(map[string]interface{}{"tools": tools})
+}
+
+func getUserInfo(w http.ResponseWriter, r *http.Request) {
+    claims := GetClaims(r.Context())
+    if claims == nil {
+        http.Error(w, `{"error": "not_authenticated"}`, http.StatusUnauthorized)
+        return
+    }
+
+    result := ToolResult{
+        Tool: "get_user_info",
+        Result: map[string]interface{}{
+            "userId":        claims.Subject,
+            "email":         claims.Email,
+            "name":          claims.Name,
+            "authenticated": true,
+        },
+    }
+
+    json.NewEncoder(w).Encode(result)
+}
+
+func queryData(w http.ResponseWriter, r *http.Request) {
+    claims := GetClaims(r.Context())
+    if claims == nil {
+        http.Error(w, `{"error": "not_authenticated"}`, http.StatusUnauthorized)
+        return
+    }
+
+    // Check scope
+    if !hasScope(claims.Scope, "data:read") {
+        http.Error(w, `{"error": "insufficient_scope", "required": "data:read"}`, http.StatusForbidden)
+        return
+    }
+
+    var req struct {
+        Query string `json:"query"`
+    }
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, `{"error": "invalid_request"}`, http.StatusBadRequest)
+        return
+    }
+
+    // Execute query (example)
+    result := ToolResult{
+        Tool: "query_data",
+        Result: map[string]interface{}{
+            "query":      req.Query,
+            "executedBy": claims.Subject,
+            "data":       []string{"result1", "result2", "result3"},
+        },
+    }
+
+    json.NewEncoder(w).Encode(result)
+}
+
+func hasScope(scopes, required string) bool {
+    for _, s := range strings.Split(scopes, " ") {
+        if s == required {
+            return true
+        }
+    }
+    return false
+}</code></pre>
+                </div>
+
+                <h2 id="client-credentials">Client Credentials Flow</h2>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Go - client.go</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>package main
+
+import (
+    "context"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+    "net/url"
+    "strings"
+    "sync"
+    "time"
+)
+
+type OAuth2Client struct {
+    tokenEndpoint string
+    clientID      string
+    clientSecret  string
+
+    mu          sync.RWMutex
+    accessToken string
+    expiresAt   time.Time
+}
+
+func NewOAuth2Client(authority, clientID, clientSecret string) *OAuth2Client {
+    return &OAuth2Client{
+        tokenEndpoint: authority + "/connect/token",
+        clientID:      clientID,
+        clientSecret:  clientSecret,
+    }
+}
+
+func (c *OAuth2Client) GetToken(ctx context.Context, scopes []string) (string, error) {
+    c.mu.RLock()
+    if c.accessToken != "" && time.Now().Before(c.expiresAt.Add(-5*time.Minute)) {
+        defer c.mu.RUnlock()
+        return c.accessToken, nil
+    }
+    c.mu.RUnlock()
+
+    // Fetch new token
+    c.mu.Lock()
+    defer c.mu.Unlock()
+
+    // Double-check after acquiring write lock
+    if c.accessToken != "" && time.Now().Before(c.expiresAt.Add(-5*time.Minute)) {
+        return c.accessToken, nil
+    }
+
+    data := url.Values{
+        "grant_type":    {"client_credentials"},
+        "client_id":     {c.clientID},
+        "client_secret": {c.clientSecret},
+        "scope":         {strings.Join(scopes, " ")},
+    }
+
+    req, err := http.NewRequestWithContext(ctx, "POST", c.tokenEndpoint, strings.NewReader(data.Encode()))
+    if err != nil {
+        return "", err
+    }
+    req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil {
+        return "", err
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != http.StatusOK {
+        body, _ := io.ReadAll(resp.Body)
+        return "", fmt.Errorf("token request failed: %s", body)
+    }
+
+    var tokenResp struct {
+        AccessToken string `json:"access_token"`
+        ExpiresIn   int    `json:"expires_in"`
+    }
+    if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+        return "", err
+    }
+
+    c.accessToken = tokenResp.AccessToken
+    c.expiresAt = time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
+
+    return c.accessToken, nil
+}
+
+func (c *OAuth2Client) CallAPI(ctx context.Context, url string, scopes []string, result interface{}) error {
+    token, err := c.GetToken(ctx, scopes)
+    if err != nil {
+        return err
+    }
+
+    req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+    if err != nil {
+        return err
+    }
+    req.Header.Set("Authorization", "Bearer "+token)
+
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != http.StatusOK {
+        body, _ := io.ReadAll(resp.Body)
+        return fmt.Errorf("API call failed: %s", body)
+    }
+
+    return json.NewDecoder(resp.Body).Decode(result)
+}
+
+// Usage
+func main() {
+    client := NewOAuth2Client(
+        "https://your-andy-auth-server.com",
+        "service-client",
+        "service-secret",
+    )
+
+    var data map[string]interface{}
+    err := client.CallAPI(
+        context.Background(),
+        "https://api.example.com/data",
+        []string{"api:read"},
+        &data,
+    )
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Printf("Data: %+v\n", data)
+}</code></pre>
+                </div>
+
+                <div class="docs-callout docs-callout-success">
+                    <div class="docs-callout-title">Next Steps</div>
+                    <ul>
+                        <li>Learn about <a href="../mcp/overview.html">MCP Integration</a></li>
+                        <li>Check out <a href="../api/endpoints.html">API Reference</a></li>
+                        <li>See <a href="../security/best-practices.html">Security Best Practices</a></li>
+                    </ul>
+                </div>
+            </article>
+
+            <aside class="docs-toc">
+                <div class="docs-toc-title">On this page</div>
+                <ul class="docs-toc-list"></ul>
+            </aside>
+        </main>
+    </div>
+
+    <div id="search-modal" class="docs-search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" id="search-modal-input" placeholder="Search documentation..." class="docs-search-modal-input">
+            <div id="search-results" class="docs-search-results"></div>
+        </div>
+    </div>
+
+    <script src="../js/docs.js"></script>
+</body>
+</html>

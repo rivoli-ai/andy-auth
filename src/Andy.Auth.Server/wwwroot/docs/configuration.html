@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration Reference - Andy Auth Documentation</title>
+    <meta name="description" content="Complete configuration reference for Andy Auth including appsettings.json, environment variables, and OpenIddict settings">
+    <link rel="stylesheet" href="/docs/css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="docs-mobile-toggle" id="sidebar-toggle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="/docs/" class="docs-logo">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="8" fill="currentColor"/>
+                        <path d="M8 24V8h6l4 8 4-8h6v16h-5V14l-3.5 7h-3L13 14v10H8z" fill="white"/>
+                    </svg>
+                    <span class="docs-logo-text">
+                        <span class="docs-logo-title">Andy Auth</span>
+                        <span class="docs-logo-subtitle">Documentation</span>
+                    </span>
+                    <span class="docs-version">v1.0</span>
+                </a>
+            </div>
+            <div class="docs-search">
+                <div class="docs-search-wrapper">
+                    <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="docs-search-input" placeholder="Search documentation..." data-search-trigger readonly>
+                    <span class="docs-search-shortcut">Ctrl K</span>
+                </div>
+            </div>
+            <div class="docs-header-actions">
+                <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/rivoli-ai/andy-auth" class="docs-header-btn" title="GitHub" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                </a>
+                <a href="/" class="docs-header-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link active">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Security</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/security/overview.html" class="docs-sidebar-link">Security Overview</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link">Core Concepts</a></li>
+                    <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                    <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link">PKCE</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Tutorials</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/tutorials/csharp.html" class="docs-sidebar-link">C# / .NET</a></li>
+                    <li><a href="/docs/tutorials/python.html" class="docs-sidebar-link">Python</a></li>
+                    <li><a href="/docs/tutorials/javascript.html" class="docs-sidebar-link">JavaScript</a></li>
+                    <li><a href="/docs/tutorials/typescript.html" class="docs-sidebar-link">TypeScript</a></li>
+                    <li><a href="/docs/tutorials/java.html" class="docs-sidebar-link">Java</a></li>
+                    <li><a href="/docs/tutorials/go.html" class="docs-sidebar-link">Go</a></li>
+                    <li><a href="/docs/tutorials/rust.html" class="docs-sidebar-link">Rust</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-main">
+        <article class="docs-content">
+            <nav class="docs-breadcrumb">
+                <a href="/docs/">Docs</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <a href="/docs/configuration.html">Getting Started</a>
+                <span class="docs-breadcrumb-sep">/</span>
+                <span class="docs-breadcrumb-current">Configuration</span>
+            </nav>
+
+            <h1>Configuration Reference</h1>
+            <p class="lead">
+                Complete reference for configuring Andy Auth using appsettings.json, environment variables,
+                and other configuration sources.
+            </p>
+
+            <div class="callout callout-info">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Configuration Priority
+                </div>
+                <p>
+                    Andy Auth uses the standard .NET configuration system. Settings are loaded in order of priority:
+                    Environment Variables > User Secrets > appsettings.{Environment}.json > appsettings.json
+                </p>
+            </div>
+
+            <h2 id="appsettings-structure">appsettings.json Structure</h2>
+
+            <p>The complete configuration file structure with all available options:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+    "ConnectionStrings": {
+        "DefaultConnection": "Host=localhost;Database=andyauth;Username=user;Password=pass"
+    },
+    "OpenIddict": {
+        "Issuer": "https://auth.example.com",
+        "AccessTokenLifetime": "01:00:00",
+        "RefreshTokenLifetime": "14.00:00:00",
+        "AuthorizationCodeLifetime": "00:05:00",
+        "IdentityTokenLifetime": "01:00:00",
+        "EnableTokenRevocation": true,
+        "EnableTokenIntrospection": true,
+        "RequirePkce": true
+    },
+    "Cors": {
+        "AllowedOrigins": ["https://app.example.com"],
+        "AllowedMethods": ["GET", "POST"],
+        "AllowedHeaders": ["Authorization", "Content-Type"],
+        "AllowCredentials": true
+    },
+    "RateLimiting": {
+        "EnableRateLimiting": true,
+        "PermitLimit": 100,
+        "WindowInSeconds": 60,
+        "QueueLimit": 10
+    },
+    "Logging": {
+        "LogLevel": {
+            "Default": "Information",
+            "Microsoft.AspNetCore": "Warning"
+        }
+    }
+}</code></pre>
+            </div>
+
+            <h2 id="environment-variables">Environment Variables</h2>
+
+            <p>All configuration can be set via environment variables using the double-underscore separator:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Setting</th>
+                        <th>Environment Variable</th>
+                        <th>Example Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Database Connection</td>
+                        <td><code>ConnectionStrings__DefaultConnection</code></td>
+                        <td><code>Host=localhost;Database=andyauth;...</code></td>
+                    </tr>
+                    <tr>
+                        <td>OpenIddict Issuer</td>
+                        <td><code>OpenIddict__Issuer</code></td>
+                        <td><code>https://auth.example.com</code></td>
+                    </tr>
+                    <tr>
+                        <td>Access Token Lifetime</td>
+                        <td><code>OpenIddict__AccessTokenLifetime</code></td>
+                        <td><code>01:00:00</code></td>
+                    </tr>
+                    <tr>
+                        <td>Rate Limiting Enable</td>
+                        <td><code>RateLimiting__EnableRateLimiting</code></td>
+                        <td><code>true</code></td>
+                    </tr>
+                    <tr>
+                        <td>CORS Origins</td>
+                        <td><code>Cors__AllowedOrigins__0</code></td>
+                        <td><code>https://app.example.com</code></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">bash</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code># Example: Setting environment variables
+export ConnectionStrings__DefaultConnection="Host=localhost;Database=andyauth;Username=user;Password=secret"
+export OpenIddict__Issuer="https://auth.example.com"
+export RateLimiting__EnableRateLimiting="true"
+export Cors__AllowedOrigins__0="https://app.example.com"
+export Cors__AllowedOrigins__1="https://admin.example.com"</code></pre>
+            </div>
+
+            <h2 id="database-connection">Database Connection Strings</h2>
+
+            <p>Andy Auth uses PostgreSQL. Configure the connection string with these options:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+    "ConnectionStrings": {
+        "DefaultConnection": "Host=localhost;Port=5432;Database=andyauth;Username=andyauth_user;Password=your_password;SSL Mode=Prefer;Trust Server Certificate=true"
+    }
+}</code></pre>
+            </div>
+
+            <h3>Connection String Parameters</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Description</th>
+                        <th>Default</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>Host</code></td>
+                        <td>PostgreSQL server hostname</td>
+                        <td>localhost</td>
+                    </tr>
+                    <tr>
+                        <td><code>Port</code></td>
+                        <td>PostgreSQL server port</td>
+                        <td>5432</td>
+                    </tr>
+                    <tr>
+                        <td><code>Database</code></td>
+                        <td>Database name</td>
+                        <td>Required</td>
+                    </tr>
+                    <tr>
+                        <td><code>Username</code></td>
+                        <td>Database user</td>
+                        <td>Required</td>
+                    </tr>
+                    <tr>
+                        <td><code>Password</code></td>
+                        <td>Database password</td>
+                        <td>Required</td>
+                    </tr>
+                    <tr>
+                        <td><code>SSL Mode</code></td>
+                        <td>SSL connection mode</td>
+                        <td>Prefer</td>
+                    </tr>
+                    <tr>
+                        <td><code>Pooling</code></td>
+                        <td>Enable connection pooling</td>
+                        <td>true</td>
+                    </tr>
+                    <tr>
+                        <td><code>Minimum Pool Size</code></td>
+                        <td>Minimum connections in pool</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td><code>Maximum Pool Size</code></td>
+                        <td>Maximum connections in pool</td>
+                        <td>100</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Production SSL
+                </div>
+                <p>
+                    In production, always use <code>SSL Mode=Require</code> or <code>SSL Mode=VerifyFull</code> to encrypt
+                    database connections.
+                </p>
+            </div>
+
+            <h2 id="openiddict">OpenIddict Settings</h2>
+
+            <p>Configure the OpenIddict OAuth/OpenID Connect server:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+    "OpenIddict": {
+        // The issuer URI - must match your public URL
+        "Issuer": "https://auth.example.com",
+
+        // Token lifetimes (TimeSpan format: "days.hours:minutes:seconds")
+        "AccessTokenLifetime": "01:00:00",      // 1 hour
+        "RefreshTokenLifetime": "14.00:00:00",  // 14 days
+        "AuthorizationCodeLifetime": "00:05:00", // 5 minutes
+        "IdentityTokenLifetime": "01:00:00",    // 1 hour
+
+        // Security features
+        "RequirePkce": true,
+        "EnableTokenRevocation": true,
+        "EnableTokenIntrospection": true,
+
+        // Token format
+        "UseReferenceAccessTokens": false,
+        "UseReferenceRefreshTokens": true,
+
+        // Encryption and signing
+        "EncryptionCertificatePath": "/path/to/encryption.pfx",
+        "EncryptionCertificatePassword": "cert_password",
+        "SigningCertificatePath": "/path/to/signing.pfx",
+        "SigningCertificatePassword": "cert_password"
+    }
+}</code></pre>
+            </div>
+
+            <h3>Token Lifetime Settings</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Setting</th>
+                        <th>Description</th>
+                        <th>Default</th>
+                        <th>Recommended</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>AccessTokenLifetime</code></td>
+                        <td>Duration access tokens are valid</td>
+                        <td>1 hour</td>
+                        <td>15 min - 1 hour</td>
+                    </tr>
+                    <tr>
+                        <td><code>RefreshTokenLifetime</code></td>
+                        <td>Duration refresh tokens are valid</td>
+                        <td>14 days</td>
+                        <td>7-30 days</td>
+                    </tr>
+                    <tr>
+                        <td><code>AuthorizationCodeLifetime</code></td>
+                        <td>Duration authorization codes are valid</td>
+                        <td>5 minutes</td>
+                        <td>5 minutes (fixed)</td>
+                    </tr>
+                    <tr>
+                        <td><code>IdentityTokenLifetime</code></td>
+                        <td>Duration ID tokens are valid</td>
+                        <td>1 hour</td>
+                        <td>5 min - 1 hour</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Reference Tokens</h3>
+
+            <p>Reference tokens store the actual token data in the database and return only a reference ID to the client:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+    "OpenIddict": {
+        // Use reference tokens for immediate revocation support
+        "UseReferenceAccessTokens": true,
+        "UseReferenceRefreshTokens": true
+    }
+}</code></pre>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Token Type</th>
+                        <th>Self-Contained (JWT)</th>
+                        <th>Reference Token</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Validation</strong></td>
+                        <td>Offline (signature check)</td>
+                        <td>Online (database lookup)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Revocation</strong></td>
+                        <td>At expiration only</td>
+                        <td>Immediate</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Size</strong></td>
+                        <td>Larger (contains claims)</td>
+                        <td>Small (reference ID only)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Performance</strong></td>
+                        <td>Better (no DB call)</td>
+                        <td>Requires introspection</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="cors">CORS Configuration</h2>
+
+            <p>Configure Cross-Origin Resource Sharing to control which domains can access the API:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+    "Cors": {
+        // Allowed origins (REQUIRED in production)
+        "AllowedOrigins": [
+            "https://app.example.com",
+            "https://admin.example.com",
+            "https://localhost:3000"
+        ],
+
+        // Allowed HTTP methods
+        "AllowedMethods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "OPTIONS"
+        ],
+
+        // Allowed headers
+        "AllowedHeaders": [
+            "Authorization",
+            "Content-Type",
+            "X-Requested-With"
+        ],
+
+        // Exposed headers (accessible to JavaScript)
+        "ExposedHeaders": [
+            "X-Total-Count",
+            "X-Page-Count"
+        ],
+
+        // Allow credentials (cookies, authorization headers)
+        "AllowCredentials": true,
+
+        // Preflight cache duration in seconds
+        "MaxAge": 86400
+    }
+}</code></pre>
+            </div>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    No Wildcards in Production
+                </div>
+                <p>
+                    Never use <code>"*"</code> for <code>AllowedOrigins</code> in production. This opens your API to
+                    requests from any website, creating security vulnerabilities.
+                </p>
+            </div>
+
+            <h2 id="rate-limiting">Rate Limiting Configuration</h2>
+
+            <p>Configure rate limiting to protect against abuse:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+    "RateLimiting": {
+        // Master switch for rate limiting
+        "EnableRateLimiting": true,
+
+        // Global rate limit (all endpoints)
+        "PermitLimit": 100,           // Requests allowed
+        "WindowInSeconds": 60,        // Time window
+        "QueueLimit": 10,             // Queued requests before rejection
+
+        // Token endpoint (stricter)
+        "TokenEndpointPermitLimit": 20,
+        "TokenEndpointWindowInSeconds": 60,
+
+        // Login endpoint (strictest - prevent brute force)
+        "LoginPermitLimit": 5,
+        "LoginWindowInSeconds": 300,   // 5 minutes
+
+        // Registration endpoint
+        "RegistrationPermitLimit": 3,
+        "RegistrationWindowInSeconds": 3600,  // 1 hour
+
+        // IP whitelist (bypasses rate limiting)
+        "WhitelistedIPs": [
+            "10.0.0.0/8",
+            "172.16.0.0/12"
+        ]
+    }
+}</code></pre>
+            </div>
+
+            <h3>Rate Limit Response</h3>
+
+            <p>When rate limited, clients receive a <code>429 Too Many Requests</code> response:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">http</span>
+                </div>
+                <pre><code>HTTP/1.1 429 Too Many Requests
+Retry-After: 30
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 0
+X-RateLimit-Reset: 1699500000
+
+{
+    "error": "rate_limit_exceeded",
+    "error_description": "Too many requests. Please try again in 30 seconds."
+}</code></pre>
+            </div>
+
+            <h2 id="logging">Logging Configuration</h2>
+
+            <p>Configure logging levels and outputs:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+    "Logging": {
+        "LogLevel": {
+            "Default": "Information",
+            "Microsoft": "Warning",
+            "Microsoft.Hosting.Lifetime": "Information",
+            "Microsoft.AspNetCore": "Warning",
+            "Microsoft.EntityFrameworkCore": "Warning",
+            "OpenIddict": "Information",
+            "Andy.Auth": "Debug"
+        },
+        "Console": {
+            "FormatterName": "json",
+            "FormatterOptions": {
+                "SingleLine": true,
+                "IncludeScopes": true,
+                "TimestampFormat": "yyyy-MM-dd HH:mm:ss "
+            }
+        }
+    },
+    "Serilog": {
+        "MinimumLevel": "Information",
+        "WriteTo": [
+            { "Name": "Console" },
+            {
+                "Name": "File",
+                "Args": {
+                    "path": "logs/andy-auth-.log",
+                    "rollingInterval": "Day"
+                }
+            }
+        ]
+    }
+}</code></pre>
+            </div>
+
+            <h3>Log Levels</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Level</th>
+                        <th>Description</th>
+                        <th>Use Case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>Trace</code></td>
+                        <td>Most detailed logs</td>
+                        <td>Debugging specific issues</td>
+                    </tr>
+                    <tr>
+                        <td><code>Debug</code></td>
+                        <td>Detailed development logs</td>
+                        <td>Development environment</td>
+                    </tr>
+                    <tr>
+                        <td><code>Information</code></td>
+                        <td>General operational logs</td>
+                        <td>Production (recommended)</td>
+                    </tr>
+                    <tr>
+                        <td><code>Warning</code></td>
+                        <td>Potential issues</td>
+                        <td>High-traffic production</td>
+                    </tr>
+                    <tr>
+                        <td><code>Error</code></td>
+                        <td>Errors and exceptions</td>
+                        <td>Error tracking only</td>
+                    </tr>
+                    <tr>
+                        <td><code>Critical</code></td>
+                        <td>Critical failures</td>
+                        <td>Alerting systems</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="production-settings">Production Configuration</h2>
+
+            <p>Recommended production settings in <code>appsettings.Production.json</code>:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code>{
+    "ConnectionStrings": {
+        "DefaultConnection": "Host=db.example.com;Database=andyauth;Username=andyauth;Password=SECURE_PASSWORD;SSL Mode=Require"
+    },
+    "OpenIddict": {
+        "Issuer": "https://auth.example.com",
+        "AccessTokenLifetime": "00:15:00",
+        "RefreshTokenLifetime": "7.00:00:00",
+        "RequirePkce": true,
+        "UseReferenceRefreshTokens": true
+    },
+    "Cors": {
+        "AllowedOrigins": [
+            "https://app.example.com",
+            "https://admin.example.com"
+        ]
+    },
+    "RateLimiting": {
+        "EnableRateLimiting": true,
+        "LoginPermitLimit": 3,
+        "LoginWindowInSeconds": 600
+    },
+    "Logging": {
+        "LogLevel": {
+            "Default": "Warning",
+            "Andy.Auth": "Information"
+        }
+    }
+}</code></pre>
+            </div>
+
+            <h2 id="next-steps">Next Steps</h2>
+
+            <div class="docs-cards">
+                <a href="/docs/security/overview.html" class="docs-card">
+                    <div class="docs-card-title">Security Overview</div>
+                    <div class="docs-card-desc">Learn about security features and best practices.</div>
+                </a>
+                <a href="/docs/mcp/overview.html" class="docs-card">
+                    <div class="docs-card-title">MCP Integration</div>
+                    <div class="docs-card-desc">Configure authentication for AI assistants.</div>
+                </a>
+                <a href="/docs/api/endpoints.html" class="docs-card">
+                    <div class="docs-card-title">API Reference</div>
+                    <div class="docs-card-desc">Explore the complete API documentation.</div>
+                </a>
+            </div>
+
+            <nav class="docs-page-nav">
+                <a href="/docs/installation.html" class="docs-page-nav-link prev">
+                    <span class="docs-page-nav-label">Previous</span>
+                    <span class="docs-page-nav-title">Installation</span>
+                </a>
+                <a href="/docs/security/overview.html" class="docs-page-nav-link next">
+                    <span class="docs-page-nav-label">Next</span>
+                    <span class="docs-page-nav-title">Security Overview</span>
+                </a>
+            </nav>
+        </article>
+
+        <aside class="docs-toc">
+            <div class="docs-toc-title">On this page</div>
+            <ul class="docs-toc-list"></ul>
+        </aside>
+    </main>
+
+    <div class="docs-search-modal" id="search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
+            <div class="docs-search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <script src="/docs/js/docs.js"></script>
+</body>
+</html>

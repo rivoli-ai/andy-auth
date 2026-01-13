@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C# / .NET Tutorial - Andy Auth Documentation</title>
+    <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body>
+    <header class="docs-header">
+        <div class="docs-header-content">
+            <a href="../" class="docs-logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="4" width="24" height="24" rx="6" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 16L14 18L20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Andy Auth</span>
+            </a>
+            <div class="docs-header-actions">
+                <button class="docs-search-btn" data-search-trigger>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <span>Search</span>
+                    <kbd>Ctrl+K</kbd>
+                </button>
+                <button id="theme-toggle" class="docs-theme-toggle" onclick="toggleTheme()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+                <a href="https://github.com/anthropics/andy-auth" class="docs-github-link">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="docs-layout">
+        <aside class="docs-sidebar">
+            <nav class="docs-nav">
+                <div class="docs-sidebar-group expanded">
+                    <div class="docs-sidebar-group-header">
+                        <span>Getting Started</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="docs-sidebar-group-content">
+                        <a href="../" class="docs-sidebar-link">Overview</a>
+                        <a href="../quickstart.html" class="docs-sidebar-link">Quick Start</a>
+                    </div>
+                </div>
+                <div class="docs-sidebar-group">
+                    <div class="docs-sidebar-group-header">
+                        <span>MCP Integration</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="docs-sidebar-group-content">
+                        <a href="../mcp/overview.html" class="docs-sidebar-link">Overview</a>
+                        <a href="../mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a>
+                        <a href="../mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a>
+                        <a href="../mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a>
+                        <a href="../mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a>
+                        <a href="../mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a>
+                    </div>
+                </div>
+                <div class="docs-sidebar-group expanded">
+                    <div class="docs-sidebar-group-header">
+                        <span>Tutorials</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="docs-sidebar-group-content">
+                        <a href="python.html" class="docs-sidebar-link">Python</a>
+                        <a href="csharp.html" class="docs-sidebar-link active">C# / .NET</a>
+                        <a href="javascript.html" class="docs-sidebar-link">JavaScript</a>
+                        <a href="typescript.html" class="docs-sidebar-link">TypeScript</a>
+                        <a href="java.html" class="docs-sidebar-link">Java</a>
+                        <a href="go.html" class="docs-sidebar-link">Go</a>
+                        <a href="rust.html" class="docs-sidebar-link">Rust</a>
+                    </div>
+                </div>
+                <div class="docs-sidebar-group">
+                    <div class="docs-sidebar-group-header">
+                        <span>API Reference</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="docs-sidebar-group-content">
+                        <a href="../api/endpoints.html" class="docs-sidebar-link">Endpoints</a>
+                        <a href="../api/authorize.html" class="docs-sidebar-link">Authorization</a>
+                        <a href="../api/token.html" class="docs-sidebar-link">Token</a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="docs-main">
+            <article class="docs-content">
+                <div class="docs-breadcrumb">
+                    <a href="../">Docs</a>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    <a href="#">Tutorials</a>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    <span>C# / .NET</span>
+                </div>
+
+                <h1>C# / .NET OAuth Integration</h1>
+                <p class="docs-lead">Integrate Andy Auth into your .NET applications using ASP.NET Core, minimal APIs, or console applications.</p>
+
+                <div class="docs-callout docs-callout-info">
+                    <div class="docs-callout-title">Prerequisites</div>
+                    <p>This tutorial assumes you have .NET 8+ installed and are familiar with ASP.NET Core basics.</p>
+                </div>
+
+                <h2 id="packages">Required NuGet Packages</h2>
+                <p>Install the required packages for OAuth integration:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">Shell</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code># For ASP.NET Core web applications
+dotnet add package Microsoft.AspNetCore.Authentication.OpenIdConnect
+
+# For token validation in APIs
+dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer
+
+# Optional: For HTTP client operations
+dotnet add package Microsoft.Extensions.Http</code></pre>
+                </div>
+
+                <h2 id="aspnet-core">ASP.NET Core Web Application</h2>
+                <p>Configure OpenID Connect authentication in your ASP.NET Core application:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">C# - Program.cs</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add authentication services
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+})
+.AddCookie(options =>
+{
+    options.Cookie.Name = "MyApp.Auth";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+})
+.AddOpenIdConnect(options =>
+{
+    // Andy Auth server configuration
+    options.Authority = "https://your-andy-auth-server.com";
+    options.ClientId = "your-client-id";
+    options.ClientSecret = "your-client-secret";
+
+    // OAuth settings
+    options.ResponseType = OpenIdConnectResponseType.Code;
+    options.SaveTokens = true;
+    options.GetClaimsFromUserInfoEndpoint = true;
+
+    // PKCE is automatically enabled for authorization code flow
+    options.UsePkce = true;
+
+    // Scopes
+    options.Scope.Clear();
+    options.Scope.Add("openid");
+    options.Scope.Add("profile");
+    options.Scope.Add("email");
+
+    // Token validation
+    options.TokenValidationParameters = new()
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true
+    };
+
+    // Events for customization
+    options.Events = new OpenIdConnectEvents
+    {
+        OnTokenValidated = context =>
+        {
+            // Custom logic after token validation
+            var claims = context.Principal?.Claims;
+            // Log or process claims
+            return Task.CompletedTask;
+        },
+        OnRemoteFailure = context =>
+        {
+            context.Response.Redirect("/error?message=" +
+                Uri.EscapeDataString(context.Failure?.Message ?? "Unknown error"));
+            context.HandleResponse();
+            return Task.CompletedTask;
+        }
+    };
+});
+
+builder.Services.AddAuthorization();
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.Run();</code></pre>
+                </div>
+
+                <h2 id="controller">Authentication Controller</h2>
+                <p>Create a controller to handle login, logout, and callback:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">C# - AccountController.cs</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+[Route("[controller]")]
+public class AccountController : Controller
+{
+    [HttpGet("login")]
+    public IActionResult Login(string? returnUrl = null)
+    {
+        var redirectUrl = Url.Action("Index", "Home");
+        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            redirectUrl = returnUrl;
+        }
+
+        return Challenge(new AuthenticationProperties
+        {
+            RedirectUri = redirectUrl
+        }, OpenIdConnectDefaults.AuthenticationScheme);
+    }
+
+    [HttpGet("logout")]
+    [Authorize]
+    public async Task&lt;IActionResult&gt; Logout()
+    {
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        await HttpContext.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme);
+
+        return RedirectToAction("Index", "Home");
+    }
+
+    [HttpGet("profile")]
+    [Authorize]
+    public IActionResult Profile()
+    {
+        var claims = User.Claims.Select(c => new { c.Type, c.Value });
+        return Json(claims);
+    }
+
+    [HttpGet("tokens")]
+    [Authorize]
+    public async Task&lt;IActionResult&gt; Tokens()
+    {
+        var accessToken = await HttpContext.GetTokenAsync("access_token");
+        var idToken = await HttpContext.GetTokenAsync("id_token");
+        var refreshToken = await HttpContext.GetTokenAsync("refresh_token");
+
+        return Json(new
+        {
+            AccessToken = accessToken?[..Math.Min(50, accessToken.Length)] + "...",
+            IdToken = idToken?[..Math.Min(50, idToken.Length)] + "...",
+            HasRefreshToken = !string.IsNullOrEmpty(refreshToken)
+        });
+    }
+}</code></pre>
+                </div>
+
+                <h2 id="api-protection">Protecting an API with JWT Bearer</h2>
+                <p>For APIs that receive tokens from clients, use JWT Bearer authentication:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">C# - API Program.cs</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = "https://your-andy-auth-server.com";
+        options.Audience = "your-api-audience";
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ClockSkew = TimeSpan.FromMinutes(5)
+        };
+
+        // Optional: Handle token validation events
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                if (context.Exception is SecurityTokenExpiredException)
+                {
+                    context.Response.Headers.Append(
+                        "Token-Expired", "true");
+                }
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = context =>
+            {
+                // Log successful authentication
+                var userId = context.Principal?.FindFirst("sub")?.Value;
+                Console.WriteLine($"User {userId} authenticated");
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("ReadAccess", policy =>
+        policy.RequireClaim("scope", "read"));
+    options.AddPolicy("WriteAccess", policy =>
+        policy.RequireClaim("scope", "write"));
+});
+
+var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Protected API endpoints
+app.MapGet("/api/data", [Authorize] (HttpContext context) =>
+{
+    var userId = context.User.FindFirst("sub")?.Value;
+    return Results.Ok(new { Message = "Protected data", UserId = userId });
+});
+
+app.MapGet("/api/admin", [Authorize(Policy = "WriteAccess")] () =>
+{
+    return Results.Ok(new { Message = "Admin only data" });
+});
+
+app.Run();</code></pre>
+                </div>
+
+                <h2 id="mcp-server">MCP Server Implementation</h2>
+                <p>Build an MCP server in .NET that validates tokens from AI assistants:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">C# - MCPServer.cs</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>using System.Net.Http.Headers;
+using System.Text.Json;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Configure JWT authentication for MCP
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = "https://your-andy-auth-server.com";
+        options.TokenValidationParameters = new()
+        {
+            ValidateAudience = true,
+            ValidAudiences = new[] { "mcp-server", "your-api" },
+            ValidateIssuer = true,
+            ValidateLifetime = true
+        };
+    });
+
+builder.Services.AddHttpClient("TokenIntrospection", client =>
+{
+    client.BaseAddress = new Uri("https://your-andy-auth-server.com");
+});
+
+var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+// MCP Tool: Get user information
+app.MapPost("/mcp/tools/get_user_info", [Authorize] async (
+    HttpContext context,
+    IHttpClientFactory httpClientFactory) =>
+{
+    var userId = context.User.FindFirst("sub")?.Value;
+    var email = context.User.FindFirst("email")?.Value;
+    var name = context.User.FindFirst("name")?.Value;
+
+    return Results.Ok(new
+    {
+        tool = "get_user_info",
+        result = new
+        {
+            userId,
+            email,
+            name,
+            authenticated = true
+        }
+    });
+});
+
+// MCP Tool: Execute a query (example)
+app.MapPost("/mcp/tools/query_database", [Authorize] async (
+    HttpContext context,
+    QueryRequest request) =>
+{
+    var userId = context.User.FindFirst("sub")?.Value;
+
+    // Verify user has permission for this query
+    var scopes = context.User.FindFirst("scope")?.Value?.Split(' ') ?? [];
+    if (!scopes.Contains("database:read"))
+    {
+        return Results.Forbid();
+    }
+
+    // Execute query (simplified example)
+    var result = await ExecuteQuery(request.Query, userId);
+
+    return Results.Ok(new
+    {
+        tool = "query_database",
+        result
+    });
+});
+
+// Token introspection endpoint for debugging
+app.MapPost("/mcp/introspect", async (
+    HttpContext context,
+    IHttpClientFactory httpClientFactory) =>
+{
+    var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
+    if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+    {
+        return Results.Unauthorized();
+    }
+
+    var token = authHeader["Bearer ".Length..];
+    var client = httpClientFactory.CreateClient("TokenIntrospection");
+
+    var response = await client.PostAsync("/connect/introspect",
+        new FormUrlEncodedContent(new Dictionary&lt;string, string&gt;
+        {
+            ["token"] = token,
+            ["client_id"] = "mcp-server",
+            ["client_secret"] = "server-secret"
+        }));
+
+    var result = await response.Content.ReadFromJsonAsync&lt;JsonElement&gt;();
+    return Results.Ok(result);
+});
+
+app.Run();
+
+record QueryRequest(string Query);
+
+static Task&lt;object&gt; ExecuteQuery(string query, string? userId)
+{
+    // Implement your query logic here
+    return Task.FromResult&lt;object&gt;(new { rows = new[] { "example" } });
+}</code></pre>
+                </div>
+
+                <h2 id="client-credentials">Client Credentials Flow</h2>
+                <p>For service-to-service authentication without user interaction:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">C# - ServiceClient.cs</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>using System.Net.Http.Headers;
+using System.Text.Json;
+
+public class AndyAuthServiceClient
+{
+    private readonly HttpClient _httpClient;
+    private readonly string _clientId;
+    private readonly string _clientSecret;
+    private readonly string _tokenEndpoint;
+
+    private string? _accessToken;
+    private DateTime _tokenExpiry = DateTime.MinValue;
+
+    public AndyAuthServiceClient(
+        HttpClient httpClient,
+        string authority,
+        string clientId,
+        string clientSecret)
+    {
+        _httpClient = httpClient;
+        _clientId = clientId;
+        _clientSecret = clientSecret;
+        _tokenEndpoint = $"{authority.TrimEnd('/')}/connect/token";
+    }
+
+    public async Task&lt;string&gt; GetAccessTokenAsync(
+        string[] scopes,
+        CancellationToken cancellationToken = default)
+    {
+        // Return cached token if still valid
+        if (_accessToken != null && DateTime.UtcNow < _tokenExpiry.AddMinutes(-5))
+        {
+            return _accessToken;
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Post, _tokenEndpoint)
+        {
+            Content = new FormUrlEncodedContent(new Dictionary&lt;string, string&gt;
+            {
+                ["grant_type"] = "client_credentials",
+                ["client_id"] = _clientId,
+                ["client_secret"] = _clientSecret,
+                ["scope"] = string.Join(" ", scopes)
+            })
+        };
+
+        var response = await _httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadFromJsonAsync&lt;JsonElement&gt;(
+            cancellationToken: cancellationToken);
+
+        _accessToken = json.GetProperty("access_token").GetString()
+            ?? throw new InvalidOperationException("No access token in response");
+
+        var expiresIn = json.GetProperty("expires_in").GetInt32();
+        _tokenExpiry = DateTime.UtcNow.AddSeconds(expiresIn);
+
+        return _accessToken;
+    }
+
+    public async Task&lt;T&gt; CallApiAsync&lt;T&gt;(
+        string url,
+        string[] scopes,
+        CancellationToken cancellationToken = default)
+    {
+        var token = await GetAccessTokenAsync(scopes, cancellationToken);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync&lt;T&gt;(
+            cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException("Empty response");
+    }
+}
+
+// Usage in Program.cs or Startup.cs
+builder.Services.AddSingleton(sp =>
+{
+    var httpClient = sp.GetRequiredService&lt;IHttpClientFactory&gt;()
+        .CreateClient("AndyAuth");
+
+    return new AndyAuthServiceClient(
+        httpClient,
+        authority: "https://your-andy-auth-server.com",
+        clientId: "service-client",
+        clientSecret: "service-secret");
+});</code></pre>
+                </div>
+
+                <h2 id="dcr">Dynamic Client Registration</h2>
+                <p>Register OAuth clients programmatically:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">C# - DynamicRegistration.cs</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>using System.Text.Json;
+using System.Text.Json.Serialization;
+
+public class DynamicClientRegistration
+{
+    private readonly HttpClient _httpClient;
+    private readonly string _registrationEndpoint;
+
+    public DynamicClientRegistration(HttpClient httpClient, string authority)
+    {
+        _httpClient = httpClient;
+        _registrationEndpoint = $"{authority.TrimEnd('/')}/connect/register";
+    }
+
+    public async Task&lt;ClientRegistrationResponse&gt; RegisterClientAsync(
+        ClientRegistrationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var json = JsonSerializer.Serialize(request, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        });
+
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, _registrationEndpoint)
+        {
+            Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+        };
+
+        var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException($"Registration failed: {error}");
+        }
+
+        return await response.Content.ReadFromJsonAsync&lt;ClientRegistrationResponse&gt;(
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower },
+            cancellationToken)
+            ?? throw new InvalidOperationException("Empty response");
+    }
+}
+
+public record ClientRegistrationRequest
+{
+    public required string[] RedirectUris { get; init; }
+    public string? ClientName { get; init; }
+    public string? ClientUri { get; init; }
+    public string? LogoUri { get; init; }
+    public string[]? GrantTypes { get; init; }
+    public string[]? ResponseTypes { get; init; }
+    public string? Scope { get; init; }
+    public string? TokenEndpointAuthMethod { get; init; }
+}
+
+public record ClientRegistrationResponse
+{
+    public required string ClientId { get; init; }
+    public string? ClientSecret { get; init; }
+    public DateTime? ClientSecretExpiresAt { get; init; }
+    public required string[] RedirectUris { get; init; }
+    public string? ClientName { get; init; }
+    public string? RegistrationAccessToken { get; init; }
+    public string? RegistrationClientUri { get; init; }
+}
+
+// Usage example
+var registration = new DynamicClientRegistration(
+    httpClient,
+    "https://your-andy-auth-server.com");
+
+var client = await registration.RegisterClientAsync(new ClientRegistrationRequest
+{
+    RedirectUris = new[] { "https://myapp.com/callback" },
+    ClientName = "My MCP Application",
+    GrantTypes = new[] { "authorization_code", "refresh_token" },
+    ResponseTypes = new[] { "code" },
+    Scope = "openid profile email mcp:tools",
+    TokenEndpointAuthMethod = "client_secret_post"
+});
+
+Console.WriteLine($"Client ID: {client.ClientId}");
+Console.WriteLine($"Client Secret: {client.ClientSecret}");</code></pre>
+                </div>
+
+                <h2 id="testing">Testing Authentication</h2>
+                <p>Unit testing your authentication setup:</p>
+
+                <div class="code-block">
+                    <div class="code-block-header">
+                        <span class="code-block-lang">C# - AuthTests.cs</span>
+                        <button class="code-block-copy">Copy</button>
+                    </div>
+                    <pre><code>using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using System.Security.Claims;
+
+public class AuthenticationTests : IClassFixture&lt;WebApplicationFactory&lt;Program&gt;&gt;
+{
+    private readonly WebApplicationFactory&lt;Program&gt; _factory;
+
+    public AuthenticationTests(WebApplicationFactory&lt;Program&gt; factory)
+    {
+        _factory = factory;
+    }
+
+    [Fact]
+    public async Task ProtectedEndpoint_WithoutToken_ReturnsUnauthorized()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/api/data");
+
+        Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ProtectedEndpoint_WithValidToken_ReturnsOk()
+    {
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.AddAuthentication("Test")
+                    .AddScheme&lt;AuthenticationSchemeOptions, TestAuthHandler&gt;(
+                        "Test", options => { });
+            });
+        }).CreateClient();
+
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Test");
+
+        var response = await client.GetAsync("/api/data");
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+    }
+}
+
+// Test authentication handler
+public class TestAuthHandler : AuthenticationHandler&lt;AuthenticationSchemeOptions&gt;
+{
+    public TestAuthHandler(
+        IOptionsMonitor&lt;AuthenticationSchemeOptions&gt; options,
+        ILoggerFactory logger,
+        UrlEncoder encoder)
+        : base(options, logger, encoder)
+    {
+    }
+
+    protected override Task&lt;AuthenticateResult&gt; HandleAuthenticateAsync()
+    {
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "test-user-id"),
+            new Claim(ClaimTypes.Name, "Test User"),
+            new Claim("scope", "read write")
+        };
+
+        var identity = new ClaimsIdentity(claims, "Test");
+        var principal = new ClaimsPrincipal(identity);
+        var ticket = new AuthenticationTicket(principal, "Test");
+
+        return Task.FromResult(AuthenticateResult.Success(ticket));
+    }
+}</code></pre>
+                </div>
+
+                <div class="docs-callout docs-callout-success">
+                    <div class="docs-callout-title">Next Steps</div>
+                    <ul>
+                        <li>Explore <a href="../mcp/overview.html">MCP Integration</a> for AI assistant authentication</li>
+                        <li>Review <a href="../api/endpoints.html">API Reference</a> for all available endpoints</li>
+                        <li>Check <a href="../security/best-practices.html">Security Best Practices</a></li>
+                    </ul>
+                </div>
+            </article>
+
+            <aside class="docs-toc">
+                <div class="docs-toc-title">On this page</div>
+                <ul class="docs-toc-list">
+                    <!-- Populated by JavaScript -->
+                </ul>
+            </aside>
+        </main>
+    </div>
+
+    <div id="search-modal" class="docs-search-modal">
+        <div class="docs-search-modal-content">
+            <input type="text" id="search-modal-input" placeholder="Search documentation..." class="docs-search-modal-input">
+            <div id="search-results" class="docs-search-results"></div>
+        </div>
+    </div>
+
+    <script src="../js/docs.js"></script>
+</body>
+</html>
