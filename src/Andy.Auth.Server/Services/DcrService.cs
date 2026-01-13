@@ -210,7 +210,16 @@ public class DcrService
         // Check for localhost
         var isLocalhost = parsedUri.Host == "localhost" || parsedUri.Host == "127.0.0.1" || parsedUri.Host == "::1";
 
-        if (isLocalhost)
+        // Check for custom URI schemes (native app callbacks like vscode://, cursor://, etc.)
+        var isCustomScheme = parsedUri.Scheme != "http" && parsedUri.Scheme != "https";
+
+        if (isCustomScheme)
+        {
+            // Custom URI schemes are allowed for native applications (VS Code extensions, desktop apps, etc.)
+            // These are used by MCP clients like Cline, Roo, Continue.dev, etc.
+            // Examples: vscode://saoudrizwan.claude-dev/callback, cursor://callback
+        }
+        else if (isLocalhost)
         {
             if (!_settings.AllowLocalhostRedirectUris)
             {
@@ -234,7 +243,7 @@ public class DcrService
         }
         else
         {
-            // Non-localhost must be HTTPS
+            // Non-localhost HTTP/HTTPS URIs must use HTTPS
             if (parsedUri.Scheme != "https")
             {
                 return (false, new ClientRegistrationError
