@@ -11,10 +11,10 @@ using OpenIddict.Validation.AspNetCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure Railway PORT environment variable
-// In Development, use HTTPS on port 7088. In production (Railway), use HTTP with the PORT env variable.
+// In Development, use HTTPS on port 5001. In production (Railway), use HTTP with the PORT env variable.
 if (builder.Environment.IsDevelopment())
 {
-    builder.WebHost.UseUrls("https://localhost:7088");
+    builder.WebHost.UseUrls("https://localhost:5001");
 }
 else
 {
@@ -287,14 +287,35 @@ else
 }
 
 app.UseHttpsRedirection();
+app.UseDefaultFiles();
 app.UseStaticFiles();
 
-// Security headers temporarily disabled for Safari debugging
-// TODO: Re-enable after fixing Safari issue
+// Security headers
+// Note: CSP can be toggled via configuration in case of browser-specific issues.
+var enableCsp = app.Configuration.GetValue("SecurityHeaders:EnableCsp", false);
 app.Use(async (context, next) =>
 {
-    // Minimal headers only
+    context.Response.Headers["X-Frame-Options"] = "DENY";
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    context.Response.Headers["X-Permitted-Cross-Domain-Policies"] = "none";
+    context.Response.Headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()";
+
+    if (enableCsp)
+    {
+        // Keep this conservative but compatible with inline styles used in Razor views.
+        // If you want a strict CSP, move inline styles/scripts to static files and use nonces/hashes.
+        context.Response.Headers["Content-Security-Policy"] =
+            "default-src 'self'; " +
+            "base-uri 'self'; " +
+            "object-src 'none'; " +
+            "frame-ancestors 'none'; " +
+            "form-action 'self'; " +
+            "img-src 'self' data:; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "script-src 'self'";
+    }
+
     await next();
 });
 
@@ -309,10 +330,13 @@ app.UseAuthentication();
 app.UseSessionTracking();
 app.UseAuthorization();
 
-// Static test endpoint to debug Safari crash - bypasses all middleware
-app.MapGet("/safari-test", () => Results.Content(
-    "<!DOCTYPE html><html><head><title>Test</title></head><body><h1>Hello Safari</h1><p>If you see this, the page works.</p></body></html>",
-    "text/html"));
+// Static test endpoint to debug Safari crash (dev only)
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/safari-test", () => Results.Content(
+        "<!DOCTYPE html><html><head><title>Test</title></head><body><h1>Hello Safari</h1><p>If you see this, the page works.</p></body></html>",
+        "text/html"));
+}
 
 app.MapControllerRoute(
     name: "default",

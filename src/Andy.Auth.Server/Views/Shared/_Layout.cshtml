@@ -4,7 +4,6 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Andy Auth</title>
-    <!-- Using system fonts to avoid external font loading issues -->
     <style>
         :root {
             --primary: #0066CC;
@@ -21,6 +20,9 @@
             --surface: #FFFFFF;
             --surface-2: #F1F3F5;
             --background: #F8F9FA;
+            --sidebar-width: 260px;
+            --sidebar-collapsed-width: 70px;
+            --header-height: 60px;
         }
 
         * {
@@ -39,8 +41,6 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: var(--background);
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
             color: var(--text);
             font-size: 16px;
             line-height: 1.6;
@@ -48,119 +48,317 @@
             letter-spacing: -0.01em;
         }
 
-        .app-header {
-            position: sticky;
-            top: 0;
-            z-index: 50;
-            background: var(--surface);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .navbar {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 1rem 2rem;
+        /* Layout structure */
+        .app-layout {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 2rem;
+            min-height: 100vh;
         }
 
-        .nav-brand {
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            transition: transform 0.3s ease, width 0.3s ease;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            min-height: var(--header-height);
+        }
+
+        .sidebar-brand {
             display: flex;
             align-items: center;
             gap: 0.75rem;
+            text-decoration: none;
         }
 
-        .nav-brand h1 {
-            font-size: 1.5rem;
+        .sidebar-brand h1 {
+            font-size: 1.25rem;
             font-weight: 600;
             color: var(--primary);
             letter-spacing: -0.02em;
+            white-space: nowrap;
         }
 
-        .nav-brand svg {
+        .sidebar-brand svg {
             color: var(--primary);
+            flex-shrink: 0;
         }
 
-        .nav-menu {
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-            flex: 1;
-            justify-content: center;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .nav-link {
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 6px;
             color: var(--text-muted);
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.625rem 1rem;
-            border-radius: 8px;
             transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .sidebar-toggle:hover {
+            background: var(--surface-2);
+            color: var(--text);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem 0.75rem;
+        }
+
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-section-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            padding: 0 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.625rem 0.75rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            transition: all 0.2s;
+            margin-bottom: 0.25rem;
         }
 
         .nav-link:hover {
             color: var(--text);
             background-color: var(--surface-2);
-            text-decoration: none;
         }
 
         .nav-link.active {
             color: var(--primary);
-            background-color: var(--surface-2);
+            background-color: rgba(0, 102, 204, 0.1);
         }
 
-        .user-menu {
+        .nav-link svg {
+            flex-shrink: 0;
+        }
+
+        .nav-link span {
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .sidebar-footer {
+            padding: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .user-info {
             display: flex;
             align-items: center;
-            gap: 1rem;
-            padding-left: 2rem;
-            border-left: 1px solid var(--border);
+            gap: 0.75rem;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .user-details {
+            overflow: hidden;
         }
 
         .user-email {
-            color: var(--text-muted);
-            font-size: 0.9rem;
+            font-size: 0.8rem;
+            color: var(--text);
             font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-size: 0.7rem;
+            color: var(--text-muted);
         }
 
         .btn-logout {
+            width: 100%;
             background: var(--surface-2);
             color: var(--text);
             border: 1px solid var(--border);
             padding: 0.5rem 1rem;
             border-radius: 6px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 0.5rem;
         }
 
         .btn-logout:hover {
             background: var(--background);
-            border-color: var(--primary);
-            color: var(--primary);
+            border-color: var(--danger);
+            color: var(--danger);
         }
 
-        .container {
+        /* Main content area */
+        .main-wrapper {
             flex: 1;
-            max-width: 1400px;
-            margin: 0 auto;
+            margin-left: var(--sidebar-width);
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 6px;
+            color: var(--text);
+        }
+
+        .mobile-menu-btn:hover {
+            background: var(--surface-2);
+        }
+
+        .main-content {
             padding: 2rem;
+            max-width: 1400px;
+        }
+
+        /* Overlay for mobile */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 99;
+        }
+
+        /* Collapsed sidebar state */
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+
+        .sidebar.collapsed .sidebar-brand h1,
+        .sidebar.collapsed .nav-section-title,
+        .sidebar.collapsed .nav-link span,
+        .sidebar.collapsed .user-details {
+            display: none;
+        }
+
+        .sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding: 0.75rem;
+        }
+
+        .sidebar.collapsed .user-info {
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .btn-logout span {
+            display: none;
+        }
+
+        .sidebar.collapsed + .main-wrapper {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+
+        /* Mobile styles */
+        @@media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: var(--sidebar-width);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .sidebar.collapsed {
+                width: var(--sidebar-width);
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+            }
+
+            .main-wrapper {
+                margin-left: 0;
+            }
+
+            .sidebar.collapsed + .main-wrapper {
+                margin-left: 0;
+            }
+
+            .mobile-menu-btn {
+                display: flex;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .sidebar-toggle {
+                display: none;
+            }
+        }
+
+        /* Page content styles */
+        .container {
             width: 100%;
         }
 
@@ -168,8 +366,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            min-height: calc(100vh - var(--header-height));
         }
 
+        /* Card styles */
         .card {
             background: var(--surface);
             border-radius: 12px;
@@ -187,6 +387,7 @@
             font-weight: 700;
         }
 
+        /* Form styles */
         .form-group {
             margin-bottom: 1rem;
         }
@@ -219,6 +420,7 @@
             margin-right: 0.5rem;
         }
 
+        /* Button styles */
         .btn {
             padding: 0.75rem 1.5rem;
             border: none;
@@ -274,6 +476,7 @@
             background: #c82333;
         }
 
+        /* Text and validation styles */
         .text-danger {
             color: var(--danger);
             font-size: 0.875rem;
@@ -298,13 +501,8 @@
             color: var(--danger);
         }
 
-        .text-center {
-            text-align: center;
-        }
-
-        .mt-3 {
-            margin-top: 1rem;
-        }
+        .text-center { text-align: center; }
+        .mt-3 { margin-top: 1rem; }
 
         a {
             color: var(--accent);
@@ -316,50 +514,21 @@
             color: var(--accent-secondary);
         }
 
-        .home-card {
-            text-align: center;
-        }
-
-        .home-card h2 {
-            margin-bottom: 1rem;
-            color: var(--primary);
-        }
-
-        .home-card p {
-            color: var(--text-muted);
-            margin-bottom: 2rem;
-            line-height: 1.8;
-        }
-
+        /* Typography */
         h1, h2, h3, h4, h5, h6 {
             margin: 0;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+            font-family: inherit;
             font-weight: 600;
             color: var(--primary);
             letter-spacing: -0.02em;
         }
 
-        h1 {
-            font-size: 2rem;
-            line-height: 1.2;
-            font-weight: 700;
-        }
+        h1 { font-size: 2rem; line-height: 1.2; font-weight: 700; }
+        h2 { font-size: 1.75rem; line-height: 1.2; font-weight: 700; }
+        h3 { font-size: 1.5rem; line-height: 1.3; font-weight: 600; }
 
-        h2 {
-            font-size: 1.75rem;
-            line-height: 1.2;
-            font-weight: 700;
-        }
-
-        h3 {
-            font-size: 1.5rem;
-            line-height: 1.3;
-            font-weight: 600;
-        }
-
-        .admin-page {
-            max-width: 100%;
-        }
+        /* Admin page styles */
+        .admin-page { max-width: 100%; }
 
         .page-header {
             display: flex;
@@ -367,15 +536,14 @@
             align-items: center;
             margin-bottom: 2rem;
             gap: 2rem;
+            flex-wrap: wrap;
         }
 
-        .page-header h1 {
-            margin: 0;
-        }
+        .page-header h1 { margin: 0; }
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
@@ -412,109 +580,205 @@
             padding: 4rem 2rem;
             color: var(--text-muted);
         }
+
+        .home-card {
+            text-align: center;
+        }
+
+        .home-card h2 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .home-card p {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            line-height: 1.8;
+        }
     </style>
 </head>
 <body>
     @if (User.Identity?.IsAuthenticated == true)
     {
-        <header class="app-header">
-            <nav class="navbar">
-                <div class="nav-brand">
-                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="4" y="4" width="24" height="24" rx="6" stroke="currentColor" stroke-width="2"/>
-                        <path d="M12 16L14 18L20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <h1>Andy Auth</h1>
+        <div class="app-layout">
+            <!-- Overlay for mobile -->
+            <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+            <!-- Sidebar -->
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <a href="/" class="sidebar-brand">
+                        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="4" y="4" width="24" height="24" rx="6" stroke="currentColor" stroke-width="2"/>
+                            <path d="M12 16L14 18L20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <h1>Andy Auth</h1>
+                    </a>
+                    <button class="sidebar-toggle" onclick="toggleCollapse()" title="Toggle sidebar">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 6H16M4 10H16M4 14H16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </button>
                 </div>
 
-                <div class="nav-menu">
-                    <div class="nav-links">
-                        <a asp-controller="Admin" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active" : "")">
+                <nav class="sidebar-nav">
+                    <div class="nav-section">
+                        <div class="nav-section-title">Overview</div>
+                        <a asp-controller="Admin" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Admin" ? "active" : "")">
                             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <rect x="2" y="2" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
                                 <rect x="10" y="2" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
                                 <rect x="2" y="10" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
                                 <rect x="10" y="10" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
                             </svg>
-                            Dashboard
+                            <span>Dashboard</span>
                         </a>
+                    </div>
+
+                    <div class="nav-section">
+                        <div class="nav-section-title">Administration</div>
                         <a asp-controller="Admin" asp-action="Clients" class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Clients" ? "active" : "")">
                             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <rect x="2" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
                                 <path d="M2 7H16" stroke="currentColor" stroke-width="1.5"/>
-                                <circle cx="5" cy="5" r="0.5" fill="currentColor"/>
-                                <circle cx="7" cy="5" r="0.5" fill="currentColor"/>
                             </svg>
-                            OAuth Clients
+                            <span>OAuth Clients</span>
                         </a>
                         <a asp-controller="Admin" asp-action="Users" class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Users" ? "active" : "")">
                             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <circle cx="9" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/>
                                 <path d="M3 16C3 12.6863 5.68629 10 9 10C12.3137 10 15 12.6863 15 16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                             </svg>
-                            Users
-                        </a>
-                        <a asp-controller="Admin" asp-action="AuditLogs" class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "AuditLogs" ? "active" : "")">
-                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="3" y="2" width="12" height="14" rx="1" stroke="currentColor" stroke-width="1.5"/>
-                                <path d="M6 6H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                <path d="M6 9H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                <path d="M6 12H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                            </svg>
-                            Audit Logs
+                            <span>Users</span>
                         </a>
                         <a asp-controller="Admin" asp-action="Tokens" class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Tokens" ? "active" : "")">
                             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.5"/>
                                 <path d="M9 6V9L11 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            Tokens
+                            <span>Tokens</span>
                         </a>
-                        <a asp-controller="Consent" asp-action="MyConsents" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Consent" && ViewContext.RouteData.Values["Action"]?.ToString() == "MyConsents" ? "active" : "")">
+                        <a asp-controller="Admin" asp-action="AuditLogs" class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "AuditLogs" ? "active" : "")">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="3" y="2" width="12" height="14" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M6 6H12M6 9H12M6 12H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                            <span>Audit Logs</span>
+                        </a>
+                    </div>
+
+                    <div class="nav-section">
+                        <div class="nav-section-title">Account</div>
+                        <a asp-controller="Consent" asp-action="MyConsents" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Consent" ? "active" : "")">
                             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M9 2L16 5V9C16 12.866 12.866 16 9 16C5.13401 16 2 12.866 2 9V5L9 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
                                 <path d="M6 9L8 11L12 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            App Permissions
+                            <span>App Permissions</span>
                         </a>
                         <a asp-controller="Session" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Session" ? "active" : "")">
                             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <rect x="2" y="4" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
-                                <path d="M5 8H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                <path d="M5 11H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                <path d="M5 8H10M5 11H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                             </svg>
-                            Sessions
+                            <span>Sessions</span>
                         </a>
                         <a asp-controller="TwoFactor" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "TwoFactor" ? "active" : "")">
                             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M9 2L16 5V9C16 12.866 12.866 16 9 16C5.13401 16 2 12.866 2 9V5L9 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                                <path d="M9 7V10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                <circle cx="9" cy="12" r="1" fill="currentColor"/>
+                                <rect x="5" y="8" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M7 8V5C7 3.89543 7.89543 3 9 3C10.1046 3 11 3.89543 11 5V8" stroke="currentColor" stroke-width="1.5"/>
                             </svg>
-                            Two-Factor
+                            <span>Two-Factor</span>
                         </a>
                     </div>
-                </div>
 
-                <div class="user-menu">
-                    <span class="user-email">@User.Identity.Name</span>
-                    <form asp-controller="Account" asp-action="Logout" method="post" style="display: inline;">
+                    <div class="nav-section">
+                        <div class="nav-section-title">Resources</div>
+                        <a href="/docs/" class="nav-link" target="_blank">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 2H11L15 6V15C15 15.5523 14.5523 16 14 16H3C2.44772 16 2 15.5523 2 15V3C2 2.44772 2.44772 2 3 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                                <path d="M11 2V6H15" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                                <path d="M5 9H12M5 12H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                            <span>Documentation</span>
+                        </a>
+                    </div>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <div class="user-info">
+                        <div class="user-avatar">@(User.Identity?.Name?.Substring(0, 1).ToUpper() ?? "U")</div>
+                        <div class="user-details">
+                            <div class="user-email">@User.Identity?.Name</div>
+                            <div class="user-role">Administrator</div>
+                        </div>
+                    </div>
+                    <form asp-controller="Account" asp-action="Logout" method="post">
                         <button type="submit" class="btn-logout">
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M6 14H3C2.44772 14 2 13.5523 2 13V3C2 2.44772 2.44772 2 3 2H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                                 <path d="M11 11L14 8L11 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                                 <path d="M14 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                             </svg>
-                            Logout
+                            <span>Logout</span>
                         </button>
                     </form>
                 </div>
-            </nav>
-        </header>
-    }
+            </aside>
 
-    <div class="container @(User.Identity?.IsAuthenticated != true ? "container-center" : "")">
-        @RenderBody()
-    </div>
+            <!-- Main content -->
+            <div class="main-wrapper">
+                <header class="main-header">
+                    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 6H21M3 12H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div></div>
+                </header>
+                <main class="main-content">
+                    @RenderBody()
+                </main>
+            </div>
+        </div>
+
+        <script>
+            function toggleSidebar() {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.querySelector('.sidebar-overlay');
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('active');
+            }
+
+            function toggleCollapse() {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.toggle('collapsed');
+                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+            }
+
+            // Restore collapsed state from localStorage
+            document.addEventListener('DOMContentLoaded', function() {
+                const sidebar = document.getElementById('sidebar');
+                if (localStorage.getItem('sidebarCollapsed') === 'true' && window.innerWidth > 768) {
+                    sidebar.classList.add('collapsed');
+                }
+            });
+
+            // Close sidebar on mobile when clicking a link
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth <= 768) {
+                        toggleSidebar();
+                    }
+                });
+            });
+        </script>
+    }
+    else
+    {
+        <div class="container container-center">
+            @RenderBody()
+        </div>
+    }
 </body>
 </html>

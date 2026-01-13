@@ -1,5 +1,6 @@
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Services;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -91,7 +92,7 @@ public class SessionTrackingMiddleware
                     }
 
                     // Update session activity (throttled to avoid too many DB writes)
-                    if (ShouldUpdateActivity(context))
+                    if (ShouldUpdateActivity(context, sessionId))
                     {
                         await sessionService.UpdateActivityAsync(sessionId);
                     }
@@ -133,16 +134,28 @@ public class SessionTrackingMiddleware
             context.Request.Path.StartsWithSegments("/connect");
     }
 
-    private static bool ShouldUpdateActivity(HttpContext context)
+    private static bool ShouldUpdateActivity(HttpContext context, string sessionId)
     {
-        // Only update activity every 5 minutes to reduce DB load
-        // Check if we have a marker in items
-        const string LastActivityKey = "SessionLastActivityUpdate";
+        // Only update activity every 5 minutes to reduce DB load.
+        // Use IMemoryCache so throttling works across requests (HttpContext.Items is per-request).
+        var cache = context.RequestServices.GetService<IMemoryCache>();
+        if (cache == null)
+        {
+            // If cache isn't available for some reason, fall back to updating to preserve correctness.
+            return true;
+        }
 
-        if (context.Items.ContainsKey(LastActivityKey))
+        var key = $"session:last-activity:{sessionId}";
+        if (cache.TryGetValue(key, out _))
+        {
             return false;
+        }
 
-        context.Items[LastActivityKey] = DateTime.UtcNow;
+        cache.Set(key, true, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+        });
+
         return true;
     }
 }

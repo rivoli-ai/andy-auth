@@ -221,6 +221,7 @@ public class DynamicClientRegistrationController : ControllerBase
         // Create DCR metadata record
         await _dcrService.CreateDynamicClientRegistrationAsync(
             clientId,
+            ratEntity.Id,
             initialAccessToken?.Id,
             _settings.RequireAdminApproval,
             HttpContext.Connection.RemoteIpAddress?.ToString(),

@@ -529,6 +529,7 @@ public class DcrService
     /// </summary>
     public async Task<DynamicClientRegistration> CreateDynamicClientRegistrationAsync(
         string clientId,
+        int registrationAccessTokenId,
         int? initialAccessTokenId,
         bool requiresApproval,
         string? ipAddress,
@@ -547,6 +548,9 @@ public class DcrService
             RegisteredFromIp = ipAddress,
             RegisteredUserAgent = userAgent
         };
+
+        // Persist FK relationship so RFC7592 reads/updates can be correlated and admin UI can display the token state.
+        _context.Entry(registration).Property("RegistrationAccessTokenId").CurrentValue = registrationAccessTokenId;
 
         _context.DynamicClientRegistrations.Add(registration);
         await _context.SaveChangesAsync();

@@ -50,6 +50,20 @@ public class AuthorizationController : ControllerBase
         var request = HttpContext.GetOpenIddictServerRequest() ??
             throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
 
+        // If this client was dynamically registered and later disabled/unapproved by an admin,
+        // block authorization requests early.
+        if (!string.IsNullOrEmpty(request.ClientId) && !await IsDcrClientActiveAsync(request.ClientId))
+        {
+            return Forbid(
+                authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                properties: new AuthenticationProperties(new Dictionary<string, string?>
+                {
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidClient,
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                        "The client application is disabled or pending approval."
+                }));
+        }
+
         // Retrieve the user principal stored in the authentication cookie
         var result = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
 
@@ -201,6 +215,20 @@ public class AuthorizationController : ControllerBase
 
         var request = HttpContext.GetOpenIddictServerRequest() ??
             throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+
+        // If this client was dynamically registered and later disabled/unapproved by an admin,
+        // block token requests early.
+        if (!string.IsNullOrEmpty(request.ClientId) && !await IsDcrClientActiveAsync(request.ClientId))
+        {
+            return Forbid(
+                authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                properties: new AuthenticationProperties(new Dictionary<string, string?>
+                {
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidClient,
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                        "The client application is disabled or pending approval."
+                }));
+        }
 
         _logger.LogInformation("Token request parsed. IsAuthCode: {IsAuthCode}, IsRefresh: {IsRefresh}, IsClientCreds: {IsClientCreds}",
             request.IsAuthorizationCodeGrantType(),
@@ -412,28 +440,37 @@ public class AuthorizationController : ControllerBase
         }
         principal.SetResources(resources);
 
-        // Automatically create a permanent authorization to avoid requiring explicit consent
-        // for future authorization or token requests containing the same scopes
-        object? authorization = null;
-        await foreach (var auth in _authorizationManager.FindBySubjectAsync(user.Id))
+        // Automatically create/reuse a permanent authorization for this (user, client, scopes).
+        // Note: authorizations are per client+scopes; selecting "any authorization for the user"
+        // can incorrectly bind tokens issued for one client to a different client.
+        var request = HttpContext.GetOpenIddictServerRequest();
+        if (!string.IsNullOrEmpty(request?.ClientId))
         {
-            authorization = auth;
-            break;
-        }
-        if (authorization == null)
-        {
-            var request = HttpContext.GetOpenIddictServerRequest();
-            var application = await _applicationManager.FindByClientIdAsync(request!.ClientId!);
+            var application = await _applicationManager.FindByClientIdAsync(request.ClientId);
+            if (application != null)
+            {
+                object? authorization = null;
+                await foreach (var auth in _authorizationManager.FindAsync(
+                    subject: user.Id,
+                    client: await _applicationManager.GetIdAsync(application)!,
+                    status: Statuses.Valid,
+                    type: AuthorizationTypes.Permanent,
+                    scopes: principal.GetScopes()))
+                {
+                    authorization = auth;
+                    break;
+                }
 
-            authorization = await _authorizationManager.CreateAsync(
-                principal: principal,
-                subject: user.Id,
-                client: await _applicationManager.GetIdAsync(application!)!,
-                type: AuthorizationTypes.Permanent,
-                scopes: principal.GetScopes());
-        }
+                authorization ??= await _authorizationManager.CreateAsync(
+                    principal: principal,
+                    subject: user.Id,
+                    client: await _applicationManager.GetIdAsync(application)!,
+                    type: AuthorizationTypes.Permanent,
+                    scopes: principal.GetScopes());
 
-        principal.SetAuthorizationId(await _authorizationManager.GetIdAsync(authorization));
+                principal.SetAuthorizationId(await _authorizationManager.GetIdAsync(authorization));
+            }
+        }
 
         foreach (var claim in principal.Claims)
         {
@@ -477,5 +514,20 @@ public class AuthorizationController : ControllerBase
                 yield return Destinations.AccessToken;
                 yield break;
         }
+    }
+
+    private async Task<bool> IsDcrClientActiveAsync(string clientId)
+    {
+        var dcr = await _dbContext.DynamicClientRegistrations
+            .AsNoTracking()
+            .Where(d => d.ClientId == clientId)
+            .Select(d => new { d.IsApproved, d.IsDisabled })
+            .FirstOrDefaultAsync();
+
+        // Not a DCR client => no DCR-based restrictions.
+        if (dcr == null)
+            return true;
+
+        return dcr.IsApproved && !dcr.IsDisabled;
     }
 }
