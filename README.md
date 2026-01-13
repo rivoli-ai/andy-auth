@@ -2,6 +2,20 @@
 
 Self-hosted OAuth 2.0 / OpenID Connect server built with ASP.NET Core and OpenIddict.
 
+> **ALPHA RELEASE WARNING**
+>
+> This software is in ALPHA stage. **NO GUARANTEES** are made about its functionality, stability, or safety.
+>
+> **CRITICAL WARNINGS:**
+> - This tool performs **DESTRUCTIVE OPERATIONS** on files and directories
+> - Permission management is **NOT FULLY TESTED** and may have security vulnerabilities
+> - **DO NOT USE** in production environments
+> - **DO NOT USE** on systems with critical or irreplaceable data
+> - **DO NOT USE** on systems without complete, verified backups
+> - The authors assume **NO RESPONSIBILITY** for data loss, system damage, or security breaches
+>
+> **USE AT YOUR OWN RISK**
+
 ## Features
 
 - **OAuth 2.0 & OpenID Connect** - Standards-compliant authentication server
@@ -130,7 +144,28 @@ docker build -t andy-auth .
 docker run -p 8080:8080 andy-auth
 ```
 
+## Examples
+
+Working example applications for integrating with Andy Auth:
+
+| Example | Language/Framework | Description |
+|---------|-------------------|-------------|
+| [csharp-web](./examples/csharp-web/) | C# / ASP.NET Core | .NET 8 with OpenID Connect |
+| [python-flask](./examples/python-flask/) | Python / Flask | OAuth 2.0 + PKCE |
+| [javascript-express](./examples/javascript-express/) | JavaScript / Express | OAuth 2.0 + PKCE |
+| [typescript-express](./examples/typescript-express/) | TypeScript / Express | Type-safe OAuth 2.0 |
+| [java-spring](./examples/java-spring/) | Java / Spring Boot | Spring Security OAuth |
+| [go-oauth](./examples/go-oauth/) | Go | Standard library + oauth2 |
+| [rust-oauth](./examples/rust-oauth/) | Rust / Axum | Axum + oauth2 crate |
+
+Run all examples tests:
+```bash
+./examples/test-examples.sh
+```
+
 ## Documentation
+
+**Interactive docs:** Run the server and visit **/docs/** for full documentation with tutorials.
 
 | Document | Description |
 |----------|-------------|
@@ -171,6 +206,6 @@ Apache 2.0
 
 ---
 
-**Status:** Production (UAT deployed)
-**Version:** 1.0.0
-**Last Updated:** 2025-12-16
+**Status:** Alpha (UAT deployed for testing)
+**Version:** 0.1.0-alpha
+**Last Updated:** 2026-01-13
