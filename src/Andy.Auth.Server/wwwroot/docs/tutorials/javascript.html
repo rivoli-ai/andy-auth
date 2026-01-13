@@ -35,49 +35,93 @@
     </header>
 
     <div class="docs-layout">
-        <aside class="docs-sidebar">
-            <nav class="docs-nav">
-                <div class="docs-sidebar-group expanded">
-                    <div class="docs-sidebar-group-header">
-                        <span>Getting Started</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                    <div class="docs-sidebar-group-content">
-                        <a href="../" class="docs-sidebar-link">Overview</a>
-                        <a href="../quickstart.html" class="docs-sidebar-link">Quick Start</a>
-                    </div>
-                </div>
-                <div class="docs-sidebar-group">
-                    <div class="docs-sidebar-group-header">
-                        <span>MCP Integration</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                    <div class="docs-sidebar-group-content">
-                        <a href="../mcp/overview.html" class="docs-sidebar-link">Overview</a>
-                        <a href="../mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a>
-                        <a href="../mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a>
-                        <a href="../mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a>
-                        <a href="../mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a>
-                        <a href="../mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a>
-                    </div>
-                </div>
-                <div class="docs-sidebar-group expanded">
-                    <div class="docs-sidebar-group-header">
-                        <span>Tutorials</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                    <div class="docs-sidebar-group-content">
-                        <a href="python.html" class="docs-sidebar-link">Python</a>
-                        <a href="csharp.html" class="docs-sidebar-link">C# / .NET</a>
-                        <a href="javascript.html" class="docs-sidebar-link active">JavaScript</a>
-                        <a href="typescript.html" class="docs-sidebar-link">TypeScript</a>
-                        <a href="java.html" class="docs-sidebar-link">Java</a>
-                        <a href="go.html" class="docs-sidebar-link">Go</a>
-                        <a href="rust.html" class="docs-sidebar-link">Rust</a>
-                    </div>
-                </div>
-            </nav>
-        </aside>
+            <aside class="docs-sidebar">
+        <nav>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Getting Started</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/" class="docs-sidebar-link">Overview</a></li>
+                    <li><a href="/docs/quickstart.html" class="docs-sidebar-link">Quick Start</a></li>
+                    <li><a href="/docs/installation.html" class="docs-sidebar-link">Installation</a></li>
+                    <li><a href="/docs/configuration.html" class="docs-sidebar-link">Configuration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">MCP Integration <span class="badge badge-new">Important</span></div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/mcp/overview.html" class="docs-sidebar-link">MCP Overview</a></li>
+                    <li><a href="/docs/mcp/oauth-flow.html" class="docs-sidebar-link">OAuth 2.1 Flow</a></li>
+                    <li><a href="/docs/mcp/claude-desktop.html" class="docs-sidebar-link">Claude Desktop</a></li>
+                    <li><a href="/docs/mcp/chatgpt.html" class="docs-sidebar-link">ChatGPT</a></li>
+                    <li><a href="/docs/mcp/vscode-extensions.html" class="docs-sidebar-link">VS Code Extensions</a></li>
+                    <li><a href="/docs/mcp/dcr.html" class="docs-sidebar-link">Dynamic Client Registration</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">OAuth & OpenID Connect</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/oauth/concepts.html" class="docs-sidebar-link">Core Concepts</a></li>
+                    <li><a href="/docs/oauth/authorization-code.html" class="docs-sidebar-link">Authorization Code Flow</a></li>
+                    <li><a href="/docs/oauth/pkce.html" class="docs-sidebar-link">PKCE</a></li>
+                    <li><a href="/docs/oauth/client-credentials.html" class="docs-sidebar-link">Client Credentials</a></li>
+                    <li><a href="/docs/oauth/access-tokens.html" class="docs-sidebar-link">Access Tokens</a></li>
+                    <li><a href="/docs/oauth/refresh-tokens.html" class="docs-sidebar-link">Refresh Tokens</a></li>
+                    <li><a href="/docs/oauth/scopes.html" class="docs-sidebar-link">Scopes</a></li>
+                    <li><a href="/docs/oauth/claims.html" class="docs-sidebar-link">Claims</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Tutorials</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/tutorials/python.html" class="docs-sidebar-link">Python</a></li>
+                    <li><a href="/docs/tutorials/csharp.html" class="docs-sidebar-link">C# / .NET</a></li>
+                    <li><a href="/docs/tutorials/javascript.html" class="docs-sidebar-link active">JavaScript</a></li>
+                    <li><a href="/docs/tutorials/typescript.html" class="docs-sidebar-link">TypeScript</a></li>
+                    <li><a href="/docs/tutorials/java.html" class="docs-sidebar-link">Java</a></li>
+                    <li><a href="/docs/tutorials/go.html" class="docs-sidebar-link">Go</a></li>
+                    <li><a href="/docs/tutorials/rust.html" class="docs-sidebar-link">Rust</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">API Reference</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/api/endpoints.html" class="docs-sidebar-link">Endpoints Overview</a></li>
+                    <li><a href="/docs/api/authorize.html" class="docs-sidebar-link">Authorization</a></li>
+                    <li><a href="/docs/api/token.html" class="docs-sidebar-link">Token</a></li>
+                    <li><a href="/docs/api/userinfo.html" class="docs-sidebar-link">UserInfo</a></li>
+                    <li><a href="/docs/api/introspect.html" class="docs-sidebar-link">Introspection</a></li>
+                    <li><a href="/docs/api/revoke.html" class="docs-sidebar-link">Revocation</a></li>
+                    <li><a href="/docs/api/register.html" class="docs-sidebar-link">Client Registration</a></li>
+                    <li><a href="/docs/api/discovery.html" class="docs-sidebar-link">Discovery</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Admin Dashboard <span class="badge badge-new">New</span></div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/admin/dashboard.html" class="docs-sidebar-link">Dashboard</a></li>
+                    <li><a href="/docs/admin/users.html" class="docs-sidebar-link">Users</a></li>
+                    <li><a href="/docs/admin/clients.html" class="docs-sidebar-link">Clients</a></li>
+                    <li><a href="/docs/admin/tokens.html" class="docs-sidebar-link">Tokens</a></li>
+                    <li><a href="/docs/admin/audit-logs.html" class="docs-sidebar-link">Audit Logs</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Deployment</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/deployment/railway.html" class="docs-sidebar-link">Railway</a></li>
+                    <li><a href="/docs/deployment/docker.html" class="docs-sidebar-link">Docker</a></li>
+                    <li><a href="/docs/deployment/production.html" class="docs-sidebar-link">Production</a></li>
+                    <li><a href="/docs/deployment/azure.html" class="docs-sidebar-link">Azure</a></li>
+                </ul>
+            </div>
+            <div class="docs-sidebar-section">
+                <div class="docs-sidebar-title">Security</div>
+                <ul class="docs-sidebar-nav">
+                    <li><a href="/docs/security/overview.html" class="docs-sidebar-link">Security Overview</a></li>
+                </ul>
+            </div>
+        </nav>
+    </aside>
 
         <main class="docs-main">
             <article class="docs-content">
