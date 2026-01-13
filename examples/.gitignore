@@ -1,0 +1,28 @@
+# Node.js
+node_modules/
+dist/
+
+# Rust
+target/
+
+# .NET
+bin/
+obj/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Java
+target/
+*.class
+
+# Go
+# (go.sum should be committed)
+
+# IDE
+.idea/
+.vscode/
+*.swp
