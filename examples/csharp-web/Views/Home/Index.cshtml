@@ -1,0 +1,21 @@
+@{
+    ViewData["Title"] = "Home";
+}
+
+<h1>Andy Auth C# Example</h1>
+
+@if (User.Identity?.IsAuthenticated == true)
+{
+    <p>Welcome, @User.Identity.Name!</p>
+    <ul>
+        <li><a href="/Account/profile">View Profile</a></li>
+        <li><a href="/Account/tokens">View Tokens</a></li>
+        <li><a href="/Home/Secure">Secure Page</a></li>
+        <li><a href="/Account/logout">Logout</a></li>
+    </ul>
+}
+else
+{
+    <p>You are not logged in.</p>
+    <a href="/Account/login">Login with Andy Auth</a>
+}

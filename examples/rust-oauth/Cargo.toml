@@ -1,0 +1,17 @@
+[package]
+name = "andy-auth-rust-example"
+version = "1.0.0"
+edition = "2021"
+description = "Rust OAuth 2.0 example with Andy Auth"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+oauth2 = "4"
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tower-sessions = "0.10"
+rand = "0.8"
+sha2 = "0.10"
+base64 = "0.21"

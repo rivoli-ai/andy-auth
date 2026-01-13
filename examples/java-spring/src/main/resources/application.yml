@@ -1,0 +1,22 @@
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          andy-auth:
+            client-id: ${CLIENT_ID:my-java-app}
+            client-secret: ${CLIENT_SECRET:}
+            scope: openid, profile, email
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-authentication-method: client_secret_basic
+        provider:
+          andy-auth:
+            issuer-uri: ${ANDY_AUTH_SERVER:https://localhost:7088}
+
+server:
+  port: ${PORT:8080}
+
+logging:
+  level:
+    org.springframework.security: DEBUG
