@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Revocation Endpoint - Andy Auth Documentation</title>
-    <meta name="description" content="Complete reference for the /connect/revoke OAuth 2.0 Token Revocation endpoint (RFC 7009)">
+    <meta name="description" content="Token revocation endpoint reference">
     <link rel="stylesheet" href="/docs/css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/docs/images/favicon.png">
 </head>
 <body>
     <!-- Header -->
-    <header class="docs-header">
+        <header class="docs-header">
         <div class="docs-header-inner">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <button class="docs-mobile-toggle" id="sidebar-toggle">
@@ -34,6 +35,7 @@
                     <span class="docs-version">v1.0</span>
                 </a>
             </div>
+
             <div class="docs-search">
                 <div class="docs-search-wrapper">
                     <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,6 +46,7 @@
                     <span class="docs-search-shortcut">Ctrl K</span>
                 </div>
             </div>
+
             <div class="docs-header-actions">
                 <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -233,7 +236,7 @@
                         Copy
                     </button>
                 </div>
-                <pre><code>POST /connect/revoke HTTP/1.1
+                <pre><code class="language-http">POST /connect/revoke HTTP/1.1
 Host: auth.example.com
 Content-Type: application/x-www-form-urlencoded
 
@@ -252,7 +255,7 @@ client_id=my-client</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>POST /connect/revoke HTTP/1.1
+                <pre><code class="language-http">POST /connect/revoke HTTP/1.1
 Host: auth.example.com
 Content-Type: application/x-www-form-urlencoded
 Authorization: Basic bXktY2xpZW50Om15LXNlY3JldA==
@@ -276,7 +279,7 @@ token_type_hint=access_token</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>HTTP/1.1 200 OK
+                <pre><code class="language-http">HTTP/1.1 200 OK
 Cache-Control: no-store
 Pragma: no-cache</code></pre>
             </div>
@@ -339,7 +342,7 @@ Pragma: no-cache</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>async function logout() {
+                <pre><code class="language-javascript">async function logout() {
   const refreshToken = localStorage.getItem('refresh_token');
 
   if (refreshToken) {
@@ -392,7 +395,7 @@ async function revokeAccessToken(accessToken) {
                         Copy
                     </button>
                 </div>
-                <pre><code>import requests
+                <pre><code class="language-python">import requests
 
 def revoke_token(token: str, token_type: str = 'refresh_token') -> bool:
     """Revoke an OAuth token.
@@ -435,7 +438,7 @@ logout(user_refresh_token)</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code># Revoke a refresh token (public client)
+                <pre><code class="language-bash"># Revoke a refresh token (public client)
 curl -X POST https://auth.example.com/connect/revoke \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "token=8xLOxBtZp8" \
@@ -464,7 +467,7 @@ curl -X POST https://auth.example.com/connect/revoke \
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "error": "invalid_client",
   "error_description": "Client authentication failed"
 }</code></pre>
@@ -480,7 +483,7 @@ curl -X POST https://auth.example.com/connect/revoke \
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "error": "invalid_request",
   "error_description": "The 'token' parameter is required"
 }</code></pre>
@@ -523,8 +526,20 @@ curl -X POST https://auth.example.com/connect/revoke \
             <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
             <div class="docs-search-results" id="search-results"></div>
         </div>
-    </div>
-
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-http.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
     <script src="/docs/js/docs.js"></script>
 </body>
 </html>

@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Production Deployment Checklist - Andy Auth Documentation</title>
-    <meta name="description" content="Production deployment checklist and security best practices for Andy Auth OAuth 2.1 server">
+    <meta name="description" content="Production deployment checklist">
     <link rel="stylesheet" href="/docs/css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/docs/images/favicon.png">
 </head>
 <body>
     <!-- Header -->
-    <header class="docs-header">
+        <header class="docs-header">
         <div class="docs-header-inner">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <button class="docs-mobile-toggle" id="sidebar-toggle">
@@ -34,6 +35,7 @@
                     <span class="docs-version">v1.0</span>
                 </a>
             </div>
+
             <div class="docs-search">
                 <div class="docs-search-wrapper">
                     <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,6 +46,7 @@
                     <span class="docs-search-shortcut">Ctrl K</span>
                 </div>
             </div>
+
             <div class="docs-header-actions">
                 <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -259,7 +262,7 @@
                         Copy
                     </button>
                 </div>
-                <pre><code># Core settings
+                <pre><code class="language-bash"># Core settings
 ASPNETCORE_ENVIRONMENT=Production
 
 # Database - use strong password
@@ -404,7 +407,7 @@ Logging__LogLevel__Microsoft.EntityFrameworkCore=Warning</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code># Generate random 32-byte (256-bit) keys
+                <pre><code class="language-bash"># Generate random 32-byte (256-bit) keys
 openssl rand -base64 32  # For SigningKey
 openssl rand -base64 32  # For EncryptionKey
 
@@ -431,7 +434,7 @@ dotnet run --project KeyGenerator -- generate-keys</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>-- Create dedicated user with minimal permissions
+                <pre><code class="language-none">-- Create dedicated user with minimal permissions
 CREATE USER andy_auth_user WITH PASSWORD 'STRONG_PASSWORD';
 GRANT CONNECT ON DATABASE andy_auth TO andy_auth_user;
 GRANT USAGE ON SCHEMA public TO andy_auth_user;
@@ -449,7 +452,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO andy_auth_user;</code><
                         Copy
                     </button>
                 </div>
-                <pre><code># Daily backup script
+                <pre><code class="language-bash"># Daily backup script
 #!/bin/bash
 BACKUP_DIR="/backups/andy-auth"
 DATE=$(date +%Y%m%d_%H%M%S)
@@ -471,7 +474,7 @@ find $BACKUP_DIR -name "backup_*.sql.gz" -mtime +30 -delete</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "DynamicClientRegistration": {
     "Enabled": true,
     "RequireInitialAccessToken": true,
@@ -506,7 +509,7 @@ find $BACKUP_DIR -name "backup_*.sql.gz" -mtime +30 -delete</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "IpRateLimiting": {
     "EnableEndpointRateLimiting": true,
     "GeneralRules": [
@@ -624,7 +627,7 @@ find $BACKUP_DIR -name "backup_*.sql.gz" -mtime +30 -delete</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "Logging": {
     "LogLevel": {
       "Default": "Warning",
@@ -712,8 +715,20 @@ find $BACKUP_DIR -name "backup_*.sql.gz" -mtime +30 -delete</code></pre>
             <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
             <div class="docs-search-results" id="search-results"></div>
         </div>
-    </div>
-
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-http.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
     <script src="/docs/js/docs.js"></script>
 </body>
 </html>

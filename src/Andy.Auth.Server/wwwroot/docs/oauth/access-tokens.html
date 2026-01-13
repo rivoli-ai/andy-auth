@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Access Tokens - Andy Auth Documentation</title>
-    <meta name="description" content="Understand how access tokens work in OAuth 2.0, including JWT structure, validation, and token introspection with Andy Auth">
+    <meta name="description" content="Working with access tokens">
     <link rel="stylesheet" href="/docs/css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/docs/images/favicon.png">
 </head>
 <body>
     <!-- Header -->
-    <header class="docs-header">
+        <header class="docs-header">
         <div class="docs-header-inner">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <button class="docs-mobile-toggle" id="sidebar-toggle">
@@ -34,6 +35,7 @@
                     <span class="docs-version">v1.0</span>
                 </a>
             </div>
+
             <div class="docs-search">
                 <div class="docs-search-wrapper">
                     <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,6 +46,7 @@
                     <span class="docs-search-shortcut">Ctrl K</span>
                 </div>
             </div>
+
             <div class="docs-header-actions">
                 <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -194,7 +197,7 @@
                 <div class="code-block-header">
                     <span class="code-block-lang">text</span>
                 </div>
-                <pre><code>eyJhbGciOiJSUzI1NiIsInR5cCI6ImF0K2p3dCIsImtpZCI6IjEyMzQ1Njc4OTAifQ.
+                <pre><code class="language-none">eyJhbGciOiJSUzI1NiIsInR5cCI6ImF0K2p3dCIsImtpZCI6IjEyMzQ1Njc4OTAifQ.
 eyJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20iLCJzdWIiOiJ1c2VyXzEyMzQ1
 Iiwi YXVkIjoiaHR0cHM6Ly9hcGkuZXhhbXBsZS5jb20iLCJleHAiOjE3MDAwMDM2MDAs
 ImlhdCI6MTcwMDAwMDAwMCwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBlbWFpbCIsImNs
@@ -214,7 +217,7 @@ signature_bytes_here</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "alg": "RS256",
   "typ": "at+jwt",
   "kid": "key-id-12345"
@@ -256,7 +259,7 @@ signature_bytes_here</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "iss": "https://auth.example.com",
   "sub": "user_12345",
   "aud": "https://api.example.com",
@@ -342,7 +345,7 @@ signature_bytes_here</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>curl -X GET https://api.example.com/users/me \
+                <pre><code class="language-bash">curl -X GET https://api.example.com/users/me \
   -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIs..."</code></pre>
             </div>
 
@@ -379,7 +382,7 @@ signature_bytes_here</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>import jwt
+                <pre><code class="language-python">import jwt
 import requests
 from jwt import PyJWKClient
 
@@ -469,7 +472,7 @@ if result["valid"]:
                         Copy
                     </button>
                 </div>
-                <pre><code>curl -X POST https://auth.example.com/connect/introspect \
+                <pre><code class="language-bash">curl -X POST https://auth.example.com/connect/introspect \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -u "my-client-id:my-client-secret" \
   -d "token=eyJhbGciOiJSUzI1NiIs..." \
@@ -486,7 +489,7 @@ if result["valid"]:
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "active": true,
   "sub": "user_12345",
   "client_id": "my-app",
@@ -511,7 +514,7 @@ if result["valid"]:
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "active": false
 }</code></pre>
             </div>
@@ -574,7 +577,7 @@ if result["valid"]:
                         Copy
                     </button>
                 </div>
-                <pre><code>using Microsoft.IdentityModel.Tokens;
+                <pre><code class="language-csharp">using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 
 public class JwtValidator
@@ -636,7 +639,7 @@ public class JwtValidator
                         Copy
                     </button>
                 </div>
-                <pre><code>import * as jose from 'jose';
+                <pre><code class="language-typescript">import * as jose from 'jose';
 
 interface TokenPayload {
   sub: string;
@@ -718,8 +721,20 @@ try {
             <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
             <div class="docs-search-results" id="search-results"></div>
         </div>
-    </div>
-
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-http.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
     <script src="/docs/js/docs.js"></script>
 </body>
 </html>

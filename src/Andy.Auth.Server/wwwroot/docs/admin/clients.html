@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OAuth Client Management - Andy Auth Documentation</title>
-    <meta name="description" content="Learn how to create, edit, and manage OAuth 2.0 client applications in Andy Auth">
+    <meta name="description" content="Client management">
     <link rel="stylesheet" href="/docs/css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/docs/images/favicon.png">
 </head>
 <body>
     <!-- Header -->
-    <header class="docs-header">
+        <header class="docs-header">
         <div class="docs-header-inner">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <button class="docs-mobile-toggle" id="sidebar-toggle">
@@ -34,6 +35,7 @@
                     <span class="docs-version">v1.0</span>
                 </a>
             </div>
+
             <div class="docs-search">
                 <div class="docs-search-wrapper">
                     <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,6 +46,7 @@
                     <span class="docs-search-shortcut">Ctrl K</span>
                 </div>
             </div>
+
             <div class="docs-header-actions">
                 <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -317,7 +320,7 @@
                 <div class="code-block-header">
                     <span class="code-block-lang">Client Secret Example</span>
                 </div>
-                <pre><code>Client Secret: abc123def456ghi789jkl012mno345pqr678stu901vwx234</code></pre>
+                <pre><code class="language-none">Client Secret: abc123def456ghi789jkl012mno345pqr678stu901vwx234</code></pre>
             </div>
 
             <h3>Regenerating a Client Secret</h3>
@@ -533,6 +536,20 @@
         }
     </style>
 
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-http.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
     <script src="/docs/js/docs.js"></script>
 </body>
 </html>

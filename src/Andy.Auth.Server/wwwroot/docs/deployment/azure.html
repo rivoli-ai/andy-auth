@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Azure App Service Deployment - Andy Auth Documentation</title>
-    <meta name="description" content="Deploy Andy Auth to Azure App Service with Azure Database for PostgreSQL and Azure Key Vault">
+    <meta name="description" content="Deploy Andy Auth to Azure">
     <link rel="stylesheet" href="/docs/css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/docs/images/favicon.png">
 </head>
 <body>
     <!-- Header -->
-    <header class="docs-header">
+        <header class="docs-header">
         <div class="docs-header-inner">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <button class="docs-mobile-toggle" id="sidebar-toggle">
@@ -34,6 +35,7 @@
                     <span class="docs-version">v1.0</span>
                 </a>
             </div>
+
             <div class="docs-search">
                 <div class="docs-search-wrapper">
                     <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,6 +46,7 @@
                     <span class="docs-search-shortcut">Ctrl K</span>
                 </div>
             </div>
+
             <div class="docs-header-actions">
                 <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -198,7 +201,7 @@
                 <div class="code-block-header">
                     <span class="code-block-lang">text</span>
                 </div>
-                <pre><code>┌─────────────────────────────────────────────────────────────────┐
+                <pre><code class="language-none">┌─────────────────────────────────────────────────────────────────┐
 │                        Azure Cloud                               │
 │                                                                  │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
@@ -225,7 +228,7 @@
                         <div class="code-block-header">
                             <span class="code-block-lang">bash</span>
                         </div>
-                        <pre><code>az group create --name andy-auth-rg --location eastus</code></pre>
+                        <pre><code class="language-bash">az group create --name andy-auth-rg --location eastus</code></pre>
                     </div>
                 </div>
                 <div class="docs-step">
@@ -234,7 +237,7 @@
                         <div class="code-block-header">
                             <span class="code-block-lang">bash</span>
                         </div>
-                        <pre><code>az appservice plan create \
+                        <pre><code class="language-bash">az appservice plan create \
   --name andy-auth-plan \
   --resource-group andy-auth-rg \
   --sku B1 \
@@ -247,7 +250,7 @@
                         <div class="code-block-header">
                             <span class="code-block-lang">bash</span>
                         </div>
-                        <pre><code>az webapp create \
+                        <pre><code class="language-bash">az webapp create \
   --name andy-auth-app \
   --resource-group andy-auth-rg \
   --plan andy-auth-plan \
@@ -260,7 +263,7 @@
                         <div class="code-block-header">
                             <span class="code-block-lang">bash</span>
                         </div>
-                        <pre><code>az postgres flexible-server create \
+                        <pre><code class="language-bash">az postgres flexible-server create \
   --name andy-auth-db \
   --resource-group andy-auth-rg \
   --admin-user andyadmin \
@@ -290,7 +293,7 @@ az postgres flexible-server db create \
                         Copy
                     </button>
                 </div>
-                <pre><code>az webapp config appsettings set \
+                <pre><code class="language-bash">az webapp config appsettings set \
   --name andy-auth-app \
   --resource-group andy-auth-rg \
   --settings \
@@ -365,7 +368,7 @@ az postgres flexible-server db create \
                         Copy
                     </button>
                 </div>
-                <pre><code>name: Deploy to Azure App Service
+                <pre><code class="language-yaml">name: Deploy to Azure App Service
 
 on:
   push:
@@ -414,7 +417,7 @@ jobs:
                         Copy
                     </button>
                 </div>
-                <pre><code># Build and publish
+                <pre><code class="language-bash"># Build and publish
 dotnet publish src/Andy.Auth.Server/Andy.Auth.Server.csproj -c Release -o ./publish
 
 # Create zip package
@@ -437,7 +440,7 @@ az webapp deployment source config-zip \
                         Copy
                     </button>
                 </div>
-                <pre><code># Create Azure Container Registry
+                <pre><code class="language-bash"># Create Azure Container Registry
 az acr create --name andyauthregistry --resource-group andy-auth-rg --sku Basic
 
 # Build and push image
@@ -463,7 +466,7 @@ az webapp config container set \
                         Copy
                     </button>
                 </div>
-                <pre><code># Create Key Vault
+                <pre><code class="language-bash"># Create Key Vault
 az keyvault create \
   --name andy-auth-kv \
   --resource-group andy-auth-rg \
@@ -503,7 +506,7 @@ az keyvault set-policy \
                         Copy
                     </button>
                 </div>
-                <pre><code>az webapp config appsettings set \
+                <pre><code class="language-bash">az webapp config appsettings set \
   --name andy-auth-app \
   --resource-group andy-auth-rg \
   --settings \
@@ -534,7 +537,7 @@ az keyvault set-policy \
                         <div class="code-block-header">
                             <span class="code-block-lang">bash</span>
                         </div>
-                        <pre><code>az webapp config appsettings set \
+                        <pre><code class="language-bash">az webapp config appsettings set \
   --name andy-auth-app \
   --resource-group andy-auth-rg \
   --settings \
@@ -557,7 +560,7 @@ az keyvault set-policy \
                         Copy
                     </button>
                 </div>
-                <pre><code># Add custom domain
+                <pre><code class="language-bash"># Add custom domain
 az webapp config hostname add \
   --webapp-name andy-auth-app \
   --resource-group andy-auth-rg \
@@ -587,7 +590,7 @@ az webapp config ssl bind \
                         Copy
                     </button>
                 </div>
-                <pre><code>az webapp update \
+                <pre><code class="language-bash">az webapp update \
   --name andy-auth-app \
   --resource-group andy-auth-rg \
   --https-only true</code></pre>
@@ -605,7 +608,7 @@ az webapp config ssl bind \
                         Copy
                     </button>
                 </div>
-                <pre><code>az webapp config set \
+                <pre><code class="language-bash">az webapp config set \
   --name andy-auth-app \
   --resource-group andy-auth-rg \
   --generic-configurations '{"healthCheckPath": "/.well-known/openid-configuration"}'</code></pre>
@@ -647,7 +650,7 @@ az webapp config ssl bind \
                         Copy
                     </button>
                 </div>
-                <pre><code>az appservice plan update \
+                <pre><code class="language-bash">az appservice plan update \
   --name andy-auth-plan \
   --resource-group andy-auth-rg \
   --number-of-workers 3</code></pre>
@@ -663,7 +666,7 @@ az webapp config ssl bind \
                         Copy
                     </button>
                 </div>
-                <pre><code>az monitor autoscale create \
+                <pre><code class="language-bash">az monitor autoscale create \
   --resource-group andy-auth-rg \
   --resource andy-auth-plan \
   --resource-type Microsoft.Web/serverfarms \
@@ -701,7 +704,7 @@ az monitor autoscale rule create \
                         Copy
                     </button>
                 </div>
-                <pre><code># Create Application Insights
+                <pre><code class="language-bash"># Create Application Insights
 az monitor app-insights component create \
   --app andy-auth-insights \
   --location eastus \
@@ -732,7 +735,7 @@ az webapp config appsettings set \
                         Copy
                     </button>
                 </div>
-                <pre><code># Stream logs
+                <pre><code class="language-bash"># Stream logs
 az webapp log tail --name andy-auth-app --resource-group andy-auth-rg
 
 # Enable detailed logging
@@ -793,8 +796,20 @@ az webapp log config \
             <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
             <div class="docs-search-results" id="search-results"></div>
         </div>
-    </div>
-
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-http.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
     <script src="/docs/js/docs.js"></script>
 </body>
 </html>

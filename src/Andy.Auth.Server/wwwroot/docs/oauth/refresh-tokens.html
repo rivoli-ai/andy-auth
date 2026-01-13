@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Refresh Tokens - Andy Auth Documentation</title>
-    <meta name="description" content="Learn about refresh tokens in OAuth 2.0, including token rotation, offline_access scope, and best practices for long-lived sessions">
+    <meta name="description" content="Token refresh and rotation">
     <link rel="stylesheet" href="/docs/css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/docs/images/favicon.png">
 </head>
 <body>
     <!-- Header -->
-    <header class="docs-header">
+        <header class="docs-header">
         <div class="docs-header-inner">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <button class="docs-mobile-toggle" id="sidebar-toggle">
@@ -34,6 +35,7 @@
                     <span class="docs-version">v1.0</span>
                 </a>
             </div>
+
             <div class="docs-search">
                 <div class="docs-search-wrapper">
                     <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,6 +46,7 @@
                     <span class="docs-search-shortcut">Ctrl K</span>
                 </div>
             </div>
+
             <div class="docs-header-actions">
                 <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -195,7 +198,7 @@
                 <div class="code-block-header">
                     <span class="code-block-lang">text</span>
                 </div>
-                <pre><code>GET /connect/authorize?
+                <pre><code class="language-none">GET /connect/authorize?
   response_type=code&
   client_id=my-app&
   redirect_uri=https://myapp.com/callback&
@@ -232,7 +235,7 @@
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "access_token": "eyJhbGciOiJSUzI1NiIs...",
   "token_type": "Bearer",
   "expires_in": 3600,
@@ -302,7 +305,7 @@
                         Copy
                     </button>
                 </div>
-                <pre><code>curl -X POST https://auth.example.com/connect/token \
+                <pre><code class="language-bash">curl -X POST https://auth.example.com/connect/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=refresh_token" \
   -d "refresh_token=rt_a1b2c3d4e5f6g7h8i9j0..." \
@@ -320,7 +323,7 @@
                 <div class="code-block-header">
                     <span class="code-block-lang">text</span>
                 </div>
-                <pre><code>┌────────────────────────────────────────────────────────────────────┐
+                <pre><code class="language-none">┌────────────────────────────────────────────────────────────────────┐
 │                    Refresh Token Rotation Flow                      │
 ├────────────────────────────────────────────────────────────────────┤
 │                                                                     │
@@ -398,7 +401,7 @@
                 <div class="code-block-header">
                     <span class="code-block-lang">text</span>
                 </div>
-                <pre><code>Day 0:  User logs in, receives RT1
+                <pre><code class="language-none">Day 0:  User logs in, receives RT1
         └── Absolute expiry: Day 14
         └── Sliding expiry: Day 1
 
@@ -425,7 +428,7 @@ Day 14: Absolute expiry reached - user must re-authenticate</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>interface TokenResponse {
+                <pre><code class="language-typescript">interface TokenResponse {
   access_token: string;
   token_type: string;
   expires_in: number;
@@ -542,7 +545,7 @@ class TokenManager {
                         Copy
                     </button>
                 </div>
-                <pre><code>import requests
+                <pre><code class="language-python">import requests
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 from typing import Optional
@@ -683,7 +686,7 @@ response = session.authorized_request('GET', 'https://api.example.com/me')</code
                         Copy
                     </button>
                 </div>
-                <pre><code>curl -X POST https://auth.example.com/connect/revoke \
+                <pre><code class="language-bash">curl -X POST https://auth.example.com/connect/revoke \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "token=rt_a1b2c3d4e5f6g7h8i9j0..." \
   -d "token_type_hint=refresh_token" \
@@ -754,8 +757,20 @@ response = session.authorized_request('GET', 'https://api.example.com/me')</code
             <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
             <div class="docs-search-results" id="search-results"></div>
         </div>
-    </div>
-
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-http.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
     <script src="/docs/js/docs.js"></script>
 </body>
 </html>

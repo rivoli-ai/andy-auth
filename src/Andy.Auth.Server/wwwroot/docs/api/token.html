@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Token Endpoint - Andy Auth Documentation</title>
-    <meta name="description" content="Complete reference for the /connect/token OAuth 2.0 token endpoint supporting all grant types">
+    <meta name="description" content="Token endpoint reference">
     <link rel="stylesheet" href="/docs/css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/docs/images/favicon.png">
 </head>
 <body>
     <!-- Header -->
-    <header class="docs-header">
+        <header class="docs-header">
         <div class="docs-header-inner">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <button class="docs-mobile-toggle" id="sidebar-toggle">
@@ -34,6 +35,7 @@
                     <span class="docs-version">v1.0</span>
                 </a>
             </div>
+
             <div class="docs-search">
                 <div class="docs-search-wrapper">
                     <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,6 +46,7 @@
                     <span class="docs-search-shortcut">Ctrl K</span>
                 </div>
             </div>
+
             <div class="docs-header-actions">
                 <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -263,7 +266,7 @@
                         Copy
                     </button>
                 </div>
-                <pre><code>POST /connect/token HTTP/1.1
+                <pre><code class="language-http">POST /connect/token HTTP/1.1
 Host: auth.example.com
 Content-Type: application/x-www-form-urlencoded
 
@@ -282,7 +285,7 @@ code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>const response = await fetch('https://auth.example.com/connect/token', {
+                <pre><code class="language-javascript">const response = await fetch('https://auth.example.com/connect/token', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
@@ -309,7 +312,7 @@ const tokens = await response.json();</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
   "token_type": "Bearer",
   "expires_in": 3600,
@@ -372,7 +375,7 @@ const tokens = await response.json();</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>POST /connect/token HTTP/1.1
+                <pre><code class="language-http">POST /connect/token HTTP/1.1
 Host: auth.example.com
 Content-Type: application/x-www-form-urlencoded
 
@@ -389,7 +392,7 @@ client_id=my-client</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>const response = await fetch('https://auth.example.com/connect/token', {
+                <pre><code class="language-javascript">const response = await fetch('https://auth.example.com/connect/token', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
@@ -415,7 +418,7 @@ const newTokens = await response.json();
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
   "token_type": "Bearer",
   "expires_in": 3600,
@@ -484,7 +487,7 @@ const newTokens = await response.json();
                         Copy
                     </button>
                 </div>
-                <pre><code>POST /connect/token HTTP/1.1
+                <pre><code class="language-http">POST /connect/token HTTP/1.1
 Host: auth.example.com
 Content-Type: application/x-www-form-urlencoded
 Authorization: Basic bXktY2xpZW50Om15LXNlY3JldA==
@@ -501,7 +504,7 @@ scope=api:read api:write</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>const credentials = btoa('my-client:my-secret');
+                <pre><code class="language-javascript">const credentials = btoa('my-client:my-secret');
 
 const response = await fetch('https://auth.example.com/connect/token', {
   method: 'POST',
@@ -528,7 +531,7 @@ const tokens = await response.json();</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
   "token_type": "Bearer",
   "expires_in": 3600,
@@ -590,7 +593,7 @@ const tokens = await response.json();</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "error": "invalid_grant",
   "error_description": "The authorization code has expired."
 }</code></pre>
@@ -656,8 +659,20 @@ const tokens = await response.json();</code></pre>
             <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
             <div class="docs-search-results" id="search-results"></div>
         </div>
-    </div>
-
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-http.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
     <script src="/docs/js/docs.js"></script>
 </body>
 </html>

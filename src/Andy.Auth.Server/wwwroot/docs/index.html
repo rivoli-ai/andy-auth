@@ -231,7 +231,7 @@
                                 Copy
                             </button>
                         </div>
-                        <pre><code>docker-compose up -d</code></pre>
+                        <pre><code class="language-bash">docker-compose up -d</code></pre>
                     </div>
                 </div>
                 <div class="docs-step">
@@ -244,7 +244,7 @@
                                 Copy
                             </button>
                         </div>
-                        <pre><code>cd src/Andy.Auth.Server
+                        <pre><code class="language-bash">cd src/Andy.Auth.Server
 dotnet run</code></pre>
                     </div>
                 </div>
@@ -344,7 +344,7 @@ dotnet run</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>dotnet add package Andy.Auth</code></pre>
+                <pre><code class="language-bash">dotnet add package Andy.Auth</code></pre>
             </div>
 
             <div class="code-block">
@@ -355,7 +355,7 @@ dotnet run</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>// Program.cs
+                <pre><code class="language-csharp">// Program.cs
 builder.Services.AddAndyAuth(builder.Configuration);</code></pre>
             </div>
 
@@ -384,8 +384,20 @@ builder.Services.AddAndyAuth(builder.Configuration);</code></pre>
             <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
             <div class="docs-search-results" id="search-results"></div>
         </div>
-    </div>
-
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-http.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
     <script src="/docs/js/docs.js"></script>
 </body>
 </html>

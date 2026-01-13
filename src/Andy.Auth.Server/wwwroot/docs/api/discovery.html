@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OpenID Connect Discovery - Andy Auth Documentation</title>
-    <meta name="description" content="Complete reference for the /.well-known/openid-configuration and /.well-known/jwks discovery endpoints">
+    <meta name="description" content="OpenID Connect discovery endpoints">
     <link rel="stylesheet" href="/docs/css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/docs/images/favicon.png">
 </head>
 <body>
     <!-- Header -->
-    <header class="docs-header">
+        <header class="docs-header">
         <div class="docs-header-inner">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <button class="docs-mobile-toggle" id="sidebar-toggle">
@@ -34,6 +35,7 @@
                     <span class="docs-version">v1.0</span>
                 </a>
             </div>
+
             <div class="docs-search">
                 <div class="docs-search-wrapper">
                     <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,6 +46,7 @@
                     <span class="docs-search-shortcut">Ctrl K</span>
                 </div>
             </div>
+
             <div class="docs-header-actions">
                 <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -205,7 +208,7 @@
                         Copy
                     </button>
                 </div>
-                <pre><code>GET /.well-known/openid-configuration HTTP/1.1
+                <pre><code class="language-http">GET /.well-known/openid-configuration HTTP/1.1
 Host: auth.example.com</code></pre>
             </div>
 
@@ -219,7 +222,7 @@ Host: auth.example.com</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "issuer": "https://auth.example.com/",
   "authorization_endpoint": "https://auth.example.com/connect/authorize",
   "token_endpoint": "https://auth.example.com/connect/token",
@@ -366,7 +369,7 @@ Host: auth.example.com</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>GET /.well-known/jwks HTTP/1.1
+                <pre><code class="language-http">GET /.well-known/jwks HTTP/1.1
 Host: auth.example.com</code></pre>
             </div>
 
@@ -380,7 +383,7 @@ Host: auth.example.com</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>{
+                <pre><code class="language-json">{
   "keys": [
     {
       "kty": "RSA",
@@ -443,7 +446,7 @@ Host: auth.example.com</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>class OAuthClient {
+                <pre><code class="language-javascript">class OAuthClient {
   constructor(issuerUrl) {
     this.issuerUrl = issuerUrl;
     this.config = null;
@@ -523,7 +526,7 @@ console.log('Supports PKCE:', client.config.code_challenge_methods_supported.inc
                         Copy
                     </button>
                 </div>
-                <pre><code>import requests
+                <pre><code class="language-python">import requests
 
 class OAuthDiscovery:
     def __init__(self, issuer_url: str):
@@ -593,7 +596,7 @@ print(f"Number of signing keys: {len(jwks['keys'])}")</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code># Fetch discovery document
+                <pre><code class="language-bash"># Fetch discovery document
 curl https://auth.example.com/.well-known/openid-configuration | jq .
 
 # Fetch JWKS
@@ -619,7 +622,7 @@ curl -s https://auth.example.com/.well-known/openid-configuration | \
                         Copy
                     </button>
                 </div>
-                <pre><code>import jwt from 'jsonwebtoken';
+                <pre><code class="language-javascript">import jwt from 'jsonwebtoken';
 import jwksClient from 'jwks-rsa';
 
 // Create a JWKS client with caching
@@ -702,8 +705,20 @@ try {
             <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
             <div class="docs-search-results" id="search-results"></div>
         </div>
-    </div>
-
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-http.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
     <script src="/docs/js/docs.js"></script>
 </body>
 </html>

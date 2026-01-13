@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scopes - Andy Auth Documentation</title>
-    <meta name="description" content="Learn about OAuth 2.0 and OpenID Connect scopes including openid, profile, email, and offline_access in Andy Auth">
+    <meta name="description" content="OAuth scopes and permissions">
     <link rel="stylesheet" href="/docs/css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/docs/images/favicon.png">
 </head>
 <body>
     <!-- Header -->
-    <header class="docs-header">
+        <header class="docs-header">
         <div class="docs-header-inner">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <button class="docs-mobile-toggle" id="sidebar-toggle">
@@ -34,6 +35,7 @@
                     <span class="docs-version">v1.0</span>
                 </a>
             </div>
+
             <div class="docs-search">
                 <div class="docs-search-wrapper">
                     <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,6 +46,7 @@
                     <span class="docs-search-shortcut">Ctrl K</span>
                 </div>
             </div>
+
             <div class="docs-header-actions">
                 <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -240,7 +243,7 @@
                 <div class="code-block-header">
                     <span class="code-block-lang">text</span>
                 </div>
-                <pre><code># This is an OAuth 2.0 request (authorization only)
+                <pre><code class="language-none"># This is an OAuth 2.0 request (authorization only)
 scope=api.read api.write
 
 # This is an OpenID Connect request (authentication + authorization)
@@ -355,7 +358,7 @@ scope=openid profile email</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>// UserInfo response with profile scope
+                <pre><code class="language-json">// UserInfo response with profile scope
 {
   "sub": "user_12345",
   "name": "John Doe",
@@ -404,7 +407,7 @@ scope=openid profile email</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>// UserInfo response with email scope
+                <pre><code class="language-json">// UserInfo response with email scope
 {
   "sub": "user_12345",
   "email": "john.doe@example.com",
@@ -426,7 +429,7 @@ scope=openid profile email</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>// UserInfo response with address scope
+                <pre><code class="language-json">// UserInfo response with address scope
 {
   "sub": "user_12345",
   "address": {
@@ -476,7 +479,7 @@ scope=openid profile email</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>// UserInfo response with phone scope
+                <pre><code class="language-json">// UserInfo response with phone scope
 {
   "sub": "user_12345",
   "phone_number": "+1-555-555-5555",
@@ -495,7 +498,7 @@ scope=openid profile email</code></pre>
                 <div class="code-block-header">
                     <span class="code-block-lang">text</span>
                 </div>
-                <pre><code># Without offline_access - no refresh token
+                <pre><code class="language-none"># Without offline_access - no refresh token
 scope=openid profile email
 Response: access_token, id_token
 
@@ -528,7 +531,7 @@ Response: access_token, id_token, refresh_token</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code># Authorization request with multiple scopes
+                <pre><code class="language-bash"># Authorization request with multiple scopes
 GET /connect/authorize?
   response_type=code&
   client_id=my-app&
@@ -549,7 +552,7 @@ GET /connect/authorize?
                         Copy
                     </button>
                 </div>
-                <pre><code>// Define the scopes your application needs
+                <pre><code class="language-javascript">// Define the scopes your application needs
 const scopes = ['openid', 'profile', 'email', 'offline_access'];
 
 // Build the authorization URL
@@ -623,7 +626,7 @@ window.location.href = authUrl.toString();</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>// Error response for invalid scope
+                <pre><code class="language-json">// Error response for invalid scope
 {
   "error": "invalid_scope",
   "error_description": "The requested scope 'admin' is not valid or not allowed for this client"
@@ -641,7 +644,7 @@ window.location.href = authUrl.toString();</code></pre>
                 <div class="code-block-header">
                     <span class="code-block-lang">text</span>
                 </div>
-                <pre><code># Custom API scopes
+                <pre><code class="language-none"># Custom API scopes
 scope=openid api.read api.write api.delete
 
 # Resource-specific scopes
@@ -676,7 +679,7 @@ scope=openid documents.read documents.write users.manage</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>interface TokenResponse {
+                <pre><code class="language-typescript">interface TokenResponse {
   access_token: string;
   token_type: string;
   expires_in: number;
@@ -724,8 +727,20 @@ if (!hasScope(response, 'offline_access')) {
             <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
             <div class="docs-search-results" id="search-results"></div>
         </div>
-    </div>
-
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-http.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
     <script src="/docs/js/docs.js"></script>
 </body>
 </html>

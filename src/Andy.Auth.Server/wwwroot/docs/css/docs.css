@@ -1000,24 +1000,134 @@ body {
     }
 }
 
-/* Syntax Highlighting (Basic) */
-.token.comment { color: #6a737d; }
-.token.string { color: #22863a; }
-.token.keyword { color: #d73a49; }
-.token.function { color: #6f42c1; }
-.token.number { color: #005cc5; }
-.token.operator { color: #d73a49; }
-.token.class-name { color: #6f42c1; }
-.token.property { color: #005cc5; }
+/* Syntax Highlighting - Light Theme (GitHub-inspired) */
+:root code[class*="language-"],
+:root pre[class*="language-"] {
+    color: #24292e;
+    background: none;
+    text-shadow: none;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    text-align: left;
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    word-wrap: normal;
+    line-height: 1.6;
+    -moz-tab-size: 4;
+    -o-tab-size: 4;
+    tab-size: 4;
+    -webkit-hyphens: none;
+    -moz-hyphens: none;
+    -ms-hyphens: none;
+    hyphens: none;
+}
 
-[data-theme="dark"] .token.comment { color: #8b949e; }
-[data-theme="dark"] .token.string { color: #a5d6ff; }
-[data-theme="dark"] .token.keyword { color: #ff7b72; }
-[data-theme="dark"] .token.function { color: #d2a8ff; }
-[data-theme="dark"] .token.number { color: #79c0ff; }
-[data-theme="dark"] .token.operator { color: #ff7b72; }
-[data-theme="dark"] .token.class-name { color: #f0883e; }
-[data-theme="dark"] .token.property { color: #79c0ff; }
+:root pre[class*="language-"] {
+    padding: 1rem 1.25rem;
+    margin: 0;
+    overflow: auto;
+    background: var(--color-code-bg);
+    border-radius: 0 0 8px 8px;
+}
+
+/* Light theme token colors */
+:root .token.comment,
+:root .token.prolog,
+:root .token.doctype,
+:root .token.cdata { color: #6a737d; font-style: italic; }
+
+:root .token.punctuation { color: #24292e; }
+:root .token.namespace { opacity: 0.7; }
+
+:root .token.property,
+:root .token.tag,
+:root .token.boolean,
+:root .token.number,
+:root .token.constant,
+:root .token.symbol,
+:root .token.deleted { color: #005cc5; }
+
+:root .token.selector,
+:root .token.attr-name,
+:root .token.string,
+:root .token.char,
+:root .token.builtin,
+:root .token.inserted { color: #22863a; }
+
+:root .token.operator,
+:root .token.entity,
+:root .token.url,
+:root .language-css .token.string,
+:root .style .token.string { color: #d73a49; }
+
+:root .token.atrule,
+:root .token.attr-value,
+:root .token.keyword { color: #d73a49; font-weight: 500; }
+
+:root .token.function,
+:root .token.class-name { color: #6f42c1; }
+
+:root .token.regex,
+:root .token.important,
+:root .token.variable { color: #e36209; }
+
+:root .token.important,
+:root .token.bold { font-weight: bold; }
+
+:root .token.italic { font-style: italic; }
+
+:root .token.entity { cursor: help; }
+
+/* Dark Theme Syntax Highlighting (Tomorrow Night) */
+[data-theme="dark"] code[class*="language-"],
+[data-theme="dark"] pre[class*="language-"] {
+    color: #c9d1d9;
+    background: none;
+}
+
+[data-theme="dark"] pre[class*="language-"] {
+    background: var(--color-code-bg);
+}
+
+[data-theme="dark"] .token.comment,
+[data-theme="dark"] .token.prolog,
+[data-theme="dark"] .token.doctype,
+[data-theme="dark"] .token.cdata { color: #8b949e; font-style: italic; }
+
+[data-theme="dark"] .token.punctuation { color: #c9d1d9; }
+
+[data-theme="dark"] .token.property,
+[data-theme="dark"] .token.tag,
+[data-theme="dark"] .token.boolean,
+[data-theme="dark"] .token.number,
+[data-theme="dark"] .token.constant,
+[data-theme="dark"] .token.symbol,
+[data-theme="dark"] .token.deleted { color: #79c0ff; }
+
+[data-theme="dark"] .token.selector,
+[data-theme="dark"] .token.attr-name,
+[data-theme="dark"] .token.string,
+[data-theme="dark"] .token.char,
+[data-theme="dark"] .token.builtin,
+[data-theme="dark"] .token.inserted { color: #a5d6ff; }
+
+[data-theme="dark"] .token.operator,
+[data-theme="dark"] .token.entity,
+[data-theme="dark"] .token.url,
+[data-theme="dark"] .language-css .token.string,
+[data-theme="dark"] .style .token.string { color: #ff7b72; }
+
+[data-theme="dark"] .token.atrule,
+[data-theme="dark"] .token.attr-value,
+[data-theme="dark"] .token.keyword { color: #ff7b72; font-weight: 500; }
+
+[data-theme="dark"] .token.function,
+[data-theme="dark"] .token.class-name { color: #d2a8ff; }
+
+[data-theme="dark"] .token.regex,
+[data-theme="dark"] .token.important,
+[data-theme="dark"] .token.variable { color: #f0883e; }
 
 /* Endpoint badges */
 .endpoint {

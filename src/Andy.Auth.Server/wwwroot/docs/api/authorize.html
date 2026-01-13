@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Authorization Endpoint - Andy Auth Documentation</title>
-    <meta name="description" content="Complete reference for the /connect/authorize OAuth 2.0 authorization endpoint">
+    <meta name="description" content="Authorization endpoint reference">
     <link rel="stylesheet" href="/docs/css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/docs/images/favicon.png">
 </head>
 <body>
     <!-- Header -->
-    <header class="docs-header">
+        <header class="docs-header">
         <div class="docs-header-inner">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <button class="docs-mobile-toggle" id="sidebar-toggle">
@@ -34,6 +35,7 @@
                     <span class="docs-version">v1.0</span>
                 </a>
             </div>
+
             <div class="docs-search">
                 <div class="docs-search-wrapper">
                     <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,6 +46,7 @@
                     <span class="docs-search-shortcut">Ctrl K</span>
                 </div>
             </div>
+
             <div class="docs-header-actions">
                 <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -293,7 +296,7 @@
                         Copy
                     </button>
                 </div>
-                <pre><code>GET /connect/authorize?
+                <pre><code class="language-http">GET /connect/authorize?
   client_id=my-client&
   response_type=code&
   redirect_uri=https://app.example.com/callback&
@@ -315,7 +318,7 @@ Host: auth.example.com</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>// Generate a random code verifier (43-128 characters)
+                <pre><code class="language-javascript">// Generate a random code verifier (43-128 characters)
 function generateCodeVerifier() {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
@@ -374,7 +377,7 @@ const codeChallenge = await generateCodeChallenge(codeVerifier);
                         Copy
                     </button>
                 </div>
-                <pre><code>HTTP/1.1 302 Found
+                <pre><code class="language-http">HTTP/1.1 302 Found
 Location: https://app.example.com/callback?
   code=SplxlOBeZQQYbYS6WxSbIA&
   state=abc123xyz</code></pre>
@@ -415,7 +418,7 @@ Location: https://app.example.com/callback?
                         Copy
                     </button>
                 </div>
-                <pre><code>HTTP/1.1 302 Found
+                <pre><code class="language-http">HTTP/1.1 302 Found
 Location: https://app.example.com/callback?
   error=access_denied&
   error_description=The+user+denied+the+authorization+request&
@@ -481,7 +484,7 @@ Location: https://app.example.com/callback?
                         Copy
                     </button>
                 </div>
-                <pre><code>// Step 1: Generate PKCE values and state
+                <pre><code class="language-javascript">// Step 1: Generate PKCE values and state
 const codeVerifier = generateCodeVerifier();
 const codeChallenge = await generateCodeChallenge(codeVerifier);
 const state = generateRandomString(32);
@@ -554,8 +557,20 @@ const tokens = await tokenResponse.json();
             <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
             <div class="docs-search-results" id="search-results"></div>
         </div>
-    </div>
-
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-http.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
     <script src="/docs/js/docs.js"></script>
 </body>
 </html>

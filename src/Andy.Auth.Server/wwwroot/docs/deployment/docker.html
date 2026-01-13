@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Docker Deployment - Andy Auth Documentation</title>
-    <meta name="description" content="Deploy Andy Auth using Docker and docker-compose for containerized deployments with full control over your infrastructure">
+    <meta name="description" content="Deploy Andy Auth with Docker">
     <link rel="stylesheet" href="/docs/css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/docs/images/favicon.png">
 </head>
 <body>
     <!-- Header -->
-    <header class="docs-header">
+        <header class="docs-header">
         <div class="docs-header-inner">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <button class="docs-mobile-toggle" id="sidebar-toggle">
@@ -34,6 +35,7 @@
                     <span class="docs-version">v1.0</span>
                 </a>
             </div>
+
             <div class="docs-search">
                 <div class="docs-search-wrapper">
                     <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,6 +46,7 @@
                     <span class="docs-search-shortcut">Ctrl K</span>
                 </div>
             </div>
+
             <div class="docs-header-actions">
                 <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -203,7 +206,7 @@
                         Copy
                     </button>
                 </div>
-                <pre><code># Build stage
+                <pre><code class="language-docker"># Build stage
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
@@ -235,7 +238,7 @@ ENTRYPOINT ["dotnet", "Andy.Auth.Server.dll"]</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>version: '3.8'
+                <pre><code class="language-yaml">version: '3.8'
 
 services:
   andy-auth:
@@ -298,7 +301,7 @@ networks:
                         Copy
                     </button>
                 </div>
-                <pre><code># Database
+                <pre><code class="language-bash"># Database
 POSTGRES_PASSWORD=your-secure-password-here
 
 # Optional: Azure AD for external authentication
@@ -330,7 +333,7 @@ AZUREAD_TENANT_ID=common</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code># Build all services
+                <pre><code class="language-bash"># Build all services
 docker-compose build
 
 # Or build only andy-auth
@@ -347,7 +350,7 @@ docker-compose build andy-auth</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code># Start in detached mode
+                <pre><code class="language-bash"># Start in detached mode
 docker-compose up -d
 
 # View logs
@@ -374,7 +377,7 @@ docker-compose down -v</code></pre>
                         Copy
                     </button>
                 </div>
-                <pre><code>server {
+                <pre><code class="language-none">server {
     listen 443 ssl http2;
     server_name auth.example.com;
 
@@ -421,7 +424,7 @@ server {
                         Copy
                     </button>
                 </div>
-                <pre><code>version: '3.8'
+                <pre><code class="language-yaml">version: '3.8'
 
 services:
   traefik:
@@ -492,7 +495,7 @@ networks:
                         Copy
                     </button>
                 </div>
-                <pre><code>andy-auth:
+                <pre><code class="language-yaml">andy-auth:
   # ... other configuration ...
   healthcheck:
     test: ["CMD", "curl", "-f", "http://localhost:5000/.well-known/openid-configuration"]
@@ -561,7 +564,7 @@ networks:
                         Copy
                     </button>
                 </div>
-                <pre><code># Backup database
+                <pre><code class="language-bash"># Backup database
 docker-compose exec postgres pg_dump -U postgres andy_auth > backup_$(date +%Y%m%d_%H%M%S).sql
 
 # Restore database
@@ -580,7 +583,7 @@ docker-compose exec -T postgres psql -U postgres andy_auth < backup_20240115_120
                         Copy
                     </button>
                 </div>
-                <pre><code># Check container logs
+                <pre><code class="language-bash"># Check container logs
 docker-compose logs andy-auth
 
 # Check if postgres is healthy
@@ -638,8 +641,20 @@ docker inspect andy-auth</code></pre>
             <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
             <div class="docs-search-results" id="search-results"></div>
         </div>
-    </div>
-
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-http.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
     <script src="/docs/js/docs.js"></script>
 </body>
 </html>

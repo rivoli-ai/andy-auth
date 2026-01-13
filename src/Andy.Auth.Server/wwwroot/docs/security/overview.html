@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Security Overview - Andy Auth Documentation</title>
-    <meta name="description" content="Learn about Andy Auth's comprehensive security features including OAuth 2.1 compliance, PKCE, rate limiting, and audit logging">
+    <meta name="description" content="Security features and best practices">
     <link rel="stylesheet" href="/docs/css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/docs/images/favicon.png">
 </head>
 <body>
     <!-- Header -->
-    <header class="docs-header">
+        <header class="docs-header">
         <div class="docs-header-inner">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <button class="docs-mobile-toggle" id="sidebar-toggle">
@@ -34,6 +35,7 @@
                     <span class="docs-version">v1.0</span>
                 </a>
             </div>
+
             <div class="docs-search">
                 <div class="docs-search-wrapper">
                     <svg class="docs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,6 +46,7 @@
                     <span class="docs-search-shortcut">Ctrl K</span>
                 </div>
             </div>
+
             <div class="docs-header-actions">
                 <button class="docs-header-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -198,7 +201,7 @@
                 <div class="code-block-header">
                     <span class="code-block-lang">text</span>
                 </div>
-                <pre><code>OAuth 2.1 Security Improvements:
+                <pre><code class="language-none">OAuth 2.1 Security Improvements:
 +----------------------------------+-------------------+
 | Feature                          | OAuth 2.1         |
 +----------------------------------+-------------------+
@@ -222,7 +225,7 @@
                         Copy
                     </button>
                 </div>
-                <pre><code>// PKCE flow - required for public clients
+                <pre><code class="language-javascript">// PKCE flow - required for public clients
 const codeVerifier = generateCryptographicallySecureString(64);
 const codeChallenge = base64UrlEncode(sha256(codeVerifier));
 
@@ -265,7 +268,7 @@ const tokenRequest = {
                         Copy
                     </button>
                 </div>
-                <pre><code>// Token refresh response with rotation
+                <pre><code class="language-json">// Token refresh response with rotation
 {
     "access_token": "new_access_token_xyz",
     "token_type": "Bearer",
@@ -330,7 +333,7 @@ const tokenRequest = {
                         Copy
                     </button>
                 </div>
-                <pre><code>// Rate limiting configuration in appsettings.json
+                <pre><code class="language-json">// Rate limiting configuration in appsettings.json
 {
     "RateLimiting": {
         "EnableRateLimiting": true,
@@ -392,7 +395,7 @@ const tokenRequest = {
                 <div class="code-block-header">
                     <span class="code-block-lang">text</span>
                 </div>
-                <pre><code>2FA Authentication Flow:
+                <pre><code class="language-none">2FA Authentication Flow:
 +---------------+     +---------------+     +---------------+
 |    Login      | --> |  Password OK  | --> |  Enter 2FA    |
 |   (Email/PW)  |     |               |     |    Code       |
@@ -461,7 +464,7 @@ const tokenRequest = {
                         Copy
                     </button>
                 </div>
-                <pre><code>// CORS configuration in appsettings.json
+                <pre><code class="language-json">// CORS configuration in appsettings.json
 {
     "Cors": {
         "AllowedOrigins": [
@@ -588,8 +591,20 @@ const tokenRequest = {
             <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
             <div class="docs-search-results" id="search-results"></div>
         </div>
-    </div>
-
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-http.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
     <script src="/docs/js/docs.js"></script>
 </body>
 </html>
