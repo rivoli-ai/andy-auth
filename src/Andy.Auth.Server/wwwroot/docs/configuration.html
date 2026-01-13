@@ -199,29 +199,31 @@
                 </div>
                 <pre><code class="language-json">{
     "ConnectionStrings": {
-        "DefaultConnection": "Host=localhost;Database=andyauth;Username=user;Password=pass"
+        "DefaultConnection": "Host=localhost;Database=andy_auth;Username=postgres;Password=postgres"
     },
     "OpenIddict": {
-        "Issuer": "https://auth.example.com",
-        "AccessTokenLifetime": "01:00:00",
-        "RefreshTokenLifetime": "14.00:00:00",
-        "AuthorizationCodeLifetime": "00:05:00",
-        "IdentityTokenLifetime": "01:00:00",
-        "EnableTokenRevocation": true,
-        "EnableTokenIntrospection": true,
-        "RequirePkce": true
+        "Server": {
+            "EncryptionKey": "YOUR-32-CHARACTER-ENCRYPTION-KEY",
+            "SigningKey": "YOUR-32-CHARACTER-SIGNING-KEY"
+        }
     },
-    "Cors": {
-        "AllowedOrigins": ["https://app.example.com"],
-        "AllowedMethods": ["GET", "POST"],
-        "AllowedHeaders": ["Authorization", "Content-Type"],
-        "AllowCredentials": true
+    "CorsOrigins": {
+        "AllowedOrigins": ["https://app.example.com"]
     },
-    "RateLimiting": {
-        "EnableRateLimiting": true,
-        "PermitLimit": 100,
-        "WindowInSeconds": 60,
-        "QueueLimit": 10
+    "DynamicClientRegistration": {
+        "Enabled": true,
+        "RequireInitialAccessToken": false,
+        "RequireAdminApproval": false,
+        "AllowedGrantTypes": ["authorization_code", "refresh_token", "client_credentials"],
+        "AllowedScopes": ["openid", "profile", "email", "offline_access"],
+        "DefaultAccessTokenLifetime": "01:00:00",
+        "DefaultRefreshTokenLifetime": "14.00:00:00"
+    },
+    "IpRateLimiting": {
+        "EnableEndpointRateLimiting": true,
+        "GeneralRules": [
+            { "Endpoint": "*/connect/token", "Period": "1m", "Limit": 30 }
+        ]
     },
     "Logging": {
         "LogLevel": {
@@ -248,26 +250,26 @@
                     <tr>
                         <td>Database Connection</td>
                         <td><code>ConnectionStrings__DefaultConnection</code></td>
-                        <td><code>Host=localhost;Database=andyauth;...</code></td>
+                        <td><code>Host=localhost;Database=andy_auth;...</code></td>
                     </tr>
                     <tr>
-                        <td>OpenIddict Issuer</td>
-                        <td><code>OpenIddict__Issuer</code></td>
-                        <td><code>https://auth.example.com</code></td>
+                        <td>OpenIddict Encryption Key</td>
+                        <td><code>OpenIddict__Server__EncryptionKey</code></td>
+                        <td><code>YOUR-32-CHARACTER-ENCRYPTION-KEY</code></td>
                     </tr>
                     <tr>
-                        <td>Access Token Lifetime</td>
-                        <td><code>OpenIddict__AccessTokenLifetime</code></td>
-                        <td><code>01:00:00</code></td>
+                        <td>OpenIddict Signing Key</td>
+                        <td><code>OpenIddict__Server__SigningKey</code></td>
+                        <td><code>YOUR-32-CHARACTER-SIGNING-KEY</code></td>
                     </tr>
                     <tr>
-                        <td>Rate Limiting Enable</td>
-                        <td><code>RateLimiting__EnableRateLimiting</code></td>
+                        <td>DCR Enabled</td>
+                        <td><code>DynamicClientRegistration__Enabled</code></td>
                         <td><code>true</code></td>
                     </tr>
                     <tr>
                         <td>CORS Origins</td>
-                        <td><code>Cors__AllowedOrigins__0</code></td>
+                        <td><code>CorsOrigins__AllowedOrigins__0</code></td>
                         <td><code>https://app.example.com</code></td>
                     </tr>
                 </tbody>
@@ -282,11 +284,12 @@
                     </button>
                 </div>
                 <pre><code class="language-bash"># Example: Setting environment variables
-export ConnectionStrings__DefaultConnection="Host=localhost;Database=andyauth;Username=user;Password=secret"
-export OpenIddict__Issuer="https://auth.example.com"
-export RateLimiting__EnableRateLimiting="true"
-export Cors__AllowedOrigins__0="https://app.example.com"
-export Cors__AllowedOrigins__1="https://admin.example.com"</code></pre>
+export ConnectionStrings__DefaultConnection="Host=localhost;Database=andy_auth;Username=postgres;Password=secret"
+export OpenIddict__Server__EncryptionKey="your-32-char-encryption-key-here"
+export OpenIddict__Server__SigningKey="your-32-char-signing-key-here"
+export DynamicClientRegistration__Enabled="true"
+export CorsOrigins__AllowedOrigins__0="https://app.example.com"
+export CorsOrigins__AllowedOrigins__1="https://admin.example.com"</code></pre>
             </div>
 
             <h2 id="database-connection">Database Connection Strings</h2>
@@ -392,75 +395,29 @@ export Cors__AllowedOrigins__1="https://admin.example.com"</code></pre>
                 </div>
                 <pre><code class="language-json">{
     "OpenIddict": {
-        // The issuer URI - must match your public URL
-        "Issuer": "https://auth.example.com",
-
-        // Token lifetimes (TimeSpan format: "days.hours:minutes:seconds")
-        "AccessTokenLifetime": "01:00:00",      // 1 hour
-        "RefreshTokenLifetime": "14.00:00:00",  // 14 days
-        "AuthorizationCodeLifetime": "00:05:00", // 5 minutes
-        "IdentityTokenLifetime": "01:00:00",    // 1 hour
-
-        // Security features
-        "RequirePkce": true,
-        "EnableTokenRevocation": true,
-        "EnableTokenIntrospection": true,
-
-        // Token format
-        "UseReferenceAccessTokens": false,
-        "UseReferenceRefreshTokens": true,
-
-        // Encryption and signing
-        "EncryptionCertificatePath": "/path/to/encryption.pfx",
-        "EncryptionCertificatePassword": "cert_password",
-        "SigningCertificatePath": "/path/to/signing.pfx",
-        "SigningCertificatePassword": "cert_password"
+        "Server": {
+            // 32-character keys for token encryption and signing
+            "EncryptionKey": "CHANGE-THIS-32-CHAR-ENCRYPTION-KEY",
+            "SigningKey": "CHANGE-THIS-32-CHAR-SIGNING-KEY"
+        }
     }
 }</code></pre>
             </div>
 
-            <h3>Token Lifetime Settings</h3>
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Change Keys in Production
+                </div>
+                <p>
+                    The encryption and signing keys must be exactly 32 characters and must be changed from the defaults
+                    before deploying to production. Keep these keys secret and never commit them to source control.
+                </p>
+            </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Setting</th>
-                        <th>Description</th>
-                        <th>Default</th>
-                        <th>Recommended</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><code>AccessTokenLifetime</code></td>
-                        <td>Duration access tokens are valid</td>
-                        <td>1 hour</td>
-                        <td>15 min - 1 hour</td>
-                    </tr>
-                    <tr>
-                        <td><code>RefreshTokenLifetime</code></td>
-                        <td>Duration refresh tokens are valid</td>
-                        <td>14 days</td>
-                        <td>7-30 days</td>
-                    </tr>
-                    <tr>
-                        <td><code>AuthorizationCodeLifetime</code></td>
-                        <td>Duration authorization codes are valid</td>
-                        <td>5 minutes</td>
-                        <td>5 minutes (fixed)</td>
-                    </tr>
-                    <tr>
-                        <td><code>IdentityTokenLifetime</code></td>
-                        <td>Duration ID tokens are valid</td>
-                        <td>1 hour</td>
-                        <td>5 min - 1 hour</td>
-                    </tr>
-                </tbody>
-            </table>
+            <h2 id="dcr">Dynamic Client Registration</h2>
 
-            <h3>Reference Tokens</h3>
-
-            <p>Reference tokens store the actual token data in the database and return only a reference ID to the client:</p>
+            <p>Andy Auth supports OAuth 2.0 Dynamic Client Registration (RFC 7591/7592). Configure DCR settings:</p>
 
             <div class="code-block">
                 <div class="code-block-header">
@@ -471,42 +428,95 @@ export Cors__AllowedOrigins__1="https://admin.example.com"</code></pre>
                     </button>
                 </div>
                 <pre><code class="language-json">{
-    "OpenIddict": {
-        // Use reference tokens for immediate revocation support
-        "UseReferenceAccessTokens": true,
-        "UseReferenceRefreshTokens": true
+    "DynamicClientRegistration": {
+        // Enable or disable DCR endpoint
+        "Enabled": true,
+
+        // Require an initial access token for registration
+        "RequireInitialAccessToken": false,
+
+        // Require admin approval for new clients
+        "RequireAdminApproval": false,
+
+        // Allowed grant types for registered clients
+        "AllowedGrantTypes": [
+            "authorization_code",
+            "refresh_token",
+            "client_credentials"
+        ],
+
+        // Allowed scopes for registered clients
+        "AllowedScopes": [
+            "openid",
+            "profile",
+            "email",
+            "offline_access"
+        ],
+
+        // Default token lifetimes
+        "DefaultAccessTokenLifetime": "01:00:00",
+        "DefaultRefreshTokenLifetime": "14.00:00:00",
+
+        // Registration access token lifetime (null = never expires)
+        "RegistrationAccessTokenLifetime": null,
+
+        // Localhost redirect URI settings
+        "AllowLocalhostRedirectUris": true,
+        "AllowHttpLocalhostRedirectUris": true,
+
+        // URI restrictions
+        "AllowedRedirectUriPatterns": [],
+        "BlockedRedirectUriPatterns": [],
+        "MaxRedirectUrisPerClient": 10,
+
+        // Client constraints
+        "MaxClientNameLength": 200,
+        "ClientSecretsNeverExpire": true,
+        "ClientSecretLifetime": "365.00:00:00"
     }
 }</code></pre>
             </div>
 
+            <h3>DCR Settings Reference</h3>
+
             <table>
                 <thead>
                     <tr>
-                        <th>Token Type</th>
-                        <th>Self-Contained (JWT)</th>
-                        <th>Reference Token</th>
+                        <th>Setting</th>
+                        <th>Description</th>
+                        <th>Default</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><strong>Validation</strong></td>
-                        <td>Offline (signature check)</td>
-                        <td>Online (database lookup)</td>
+                        <td><code>Enabled</code></td>
+                        <td>Enable the DCR endpoint</td>
+                        <td><code>true</code></td>
                     </tr>
                     <tr>
-                        <td><strong>Revocation</strong></td>
-                        <td>At expiration only</td>
-                        <td>Immediate</td>
+                        <td><code>RequireInitialAccessToken</code></td>
+                        <td>Require a pre-issued token to register</td>
+                        <td><code>false</code></td>
                     </tr>
                     <tr>
-                        <td><strong>Size</strong></td>
-                        <td>Larger (contains claims)</td>
-                        <td>Small (reference ID only)</td>
+                        <td><code>RequireAdminApproval</code></td>
+                        <td>Newly registered clients need admin approval</td>
+                        <td><code>false</code></td>
                     </tr>
                     <tr>
-                        <td><strong>Performance</strong></td>
-                        <td>Better (no DB call)</td>
-                        <td>Requires introspection</td>
+                        <td><code>AllowLocalhostRedirectUris</code></td>
+                        <td>Allow localhost in redirect URIs</td>
+                        <td><code>true</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>AllowHttpLocalhostRedirectUris</code></td>
+                        <td>Allow HTTP (not HTTPS) for localhost</td>
+                        <td><code>true</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>MaxRedirectUrisPerClient</code></td>
+                        <td>Maximum redirect URIs per client</td>
+                        <td><code>10</code></td>
                     </tr>
                 </tbody>
             </table>
@@ -524,41 +534,13 @@ export Cors__AllowedOrigins__1="https://admin.example.com"</code></pre>
                     </button>
                 </div>
                 <pre><code class="language-json">{
-    "Cors": {
+    "CorsOrigins": {
         // Allowed origins (REQUIRED in production)
         "AllowedOrigins": [
             "https://app.example.com",
             "https://admin.example.com",
             "https://localhost:3000"
-        ],
-
-        // Allowed HTTP methods
-        "AllowedMethods": [
-            "GET",
-            "POST",
-            "PUT",
-            "DELETE",
-            "OPTIONS"
-        ],
-
-        // Allowed headers
-        "AllowedHeaders": [
-            "Authorization",
-            "Content-Type",
-            "X-Requested-With"
-        ],
-
-        // Exposed headers (accessible to JavaScript)
-        "ExposedHeaders": [
-            "X-Total-Count",
-            "X-Page-Count"
-        ],
-
-        // Allow credentials (cookies, authorization headers)
-        "AllowCredentials": true,
-
-        // Preflight cache duration in seconds
-        "MaxAge": 86400
+        ]
     }
 }</code></pre>
             </div>
@@ -576,7 +558,7 @@ export Cors__AllowedOrigins__1="https://admin.example.com"</code></pre>
 
             <h2 id="rate-limiting">Rate Limiting Configuration</h2>
 
-            <p>Configure rate limiting to protect against abuse:</p>
+            <p>Andy Auth uses AspNetCoreRateLimit for IP-based rate limiting. Configure rate limits per endpoint:</p>
 
             <div class="code-block">
                 <div class="code-block-header">
@@ -587,35 +569,97 @@ export Cors__AllowedOrigins__1="https://admin.example.com"</code></pre>
                     </button>
                 </div>
                 <pre><code class="language-json">{
-    "RateLimiting": {
-        // Master switch for rate limiting
-        "EnableRateLimiting": true,
-
-        // Global rate limit (all endpoints)
-        "PermitLimit": 100,           // Requests allowed
-        "WindowInSeconds": 60,        // Time window
-        "QueueLimit": 10,             // Queued requests before rejection
-
-        // Token endpoint (stricter)
-        "TokenEndpointPermitLimit": 20,
-        "TokenEndpointWindowInSeconds": 60,
-
-        // Login endpoint (strictest - prevent brute force)
-        "LoginPermitLimit": 5,
-        "LoginWindowInSeconds": 300,   // 5 minutes
-
-        // Registration endpoint
-        "RegistrationPermitLimit": 3,
-        "RegistrationWindowInSeconds": 3600,  // 1 hour
-
-        // IP whitelist (bypasses rate limiting)
-        "WhitelistedIPs": [
-            "10.0.0.0/8",
-            "172.16.0.0/12"
+    "IpRateLimiting": {
+        "EnableEndpointRateLimiting": true,
+        "StackBlockedRequests": false,
+        "RealIpHeader": "X-Real-IP",
+        "ClientIdHeader": "X-ClientId",
+        "HttpStatusCode": 429,
+        "GeneralRules": [
+            {
+                "Endpoint": "*/Account/Login",
+                "Period": "1m",
+                "Limit": 10
+            },
+            {
+                "Endpoint": "*/Account/Register",
+                "Period": "1h",
+                "Limit": 10
+            },
+            {
+                "Endpoint": "*/connect/token",
+                "Period": "1m",
+                "Limit": 30
+            },
+            {
+                "Endpoint": "*/connect/authorize",
+                "Period": "1m",
+                "Limit": 30
+            },
+            {
+                "Endpoint": "POST:*/connect/register",
+                "Period": "1h",
+                "Limit": 20
+            },
+            {
+                "Endpoint": "*/.well-known/*",
+                "Period": "1m",
+                "Limit": 60
+            },
+            {
+                "Endpoint": "*",
+                "Period": "1m",
+                "Limit": 120
+            }
         ]
     }
 }</code></pre>
             </div>
+
+            <h3>Rate Limit Rules</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Period</th>
+                        <th>Limit</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>*/Account/Login</code></td>
+                        <td>1 minute</td>
+                        <td>10</td>
+                        <td>Prevent brute force login attempts</td>
+                    </tr>
+                    <tr>
+                        <td><code>*/Account/Register</code></td>
+                        <td>1 hour</td>
+                        <td>10</td>
+                        <td>Prevent account spam</td>
+                    </tr>
+                    <tr>
+                        <td><code>*/connect/token</code></td>
+                        <td>1 minute</td>
+                        <td>30</td>
+                        <td>Token endpoint protection</td>
+                    </tr>
+                    <tr>
+                        <td><code>POST:*/connect/register</code></td>
+                        <td>1 hour</td>
+                        <td>20</td>
+                        <td>DCR endpoint protection</td>
+                    </tr>
+                    <tr>
+                        <td><code>*</code></td>
+                        <td>1 minute</td>
+                        <td>120</td>
+                        <td>Global fallback limit</td>
+                    </tr>
+                </tbody>
+            </table>
 
             <h3>Rate Limit Response</h3>
 
@@ -627,13 +671,10 @@ export Cors__AllowedOrigins__1="https://admin.example.com"</code></pre>
                 </div>
                 <pre><code class="language-http">HTTP/1.1 429 Too Many Requests
 Retry-After: 30
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 0
-X-RateLimit-Reset: 1699500000
 
 {
     "error": "rate_limit_exceeded",
-    "error_description": "Too many requests. Please try again in 30 seconds."
+    "error_description": "Too many requests. Please try again later."
 }</code></pre>
             </div>
 
@@ -746,22 +787,31 @@ X-RateLimit-Reset: 1699500000
         "DefaultConnection": "Host=db.example.com;Database=andyauth;Username=andyauth;Password=SECURE_PASSWORD;SSL Mode=Require"
     },
     "OpenIddict": {
-        "Issuer": "https://auth.example.com",
-        "AccessTokenLifetime": "00:15:00",
-        "RefreshTokenLifetime": "7.00:00:00",
-        "RequirePkce": true,
-        "UseReferenceRefreshTokens": true
+        "Server": {
+            "EncryptionKey": "YOUR-SECURE-32-CHAR-ENCRYPTION-KEY",
+            "SigningKey": "YOUR-SECURE-32-CHAR-SIGNING-KEY"
+        }
     },
-    "Cors": {
+    "CorsOrigins": {
         "AllowedOrigins": [
             "https://app.example.com",
             "https://admin.example.com"
         ]
     },
-    "RateLimiting": {
-        "EnableRateLimiting": true,
-        "LoginPermitLimit": 3,
-        "LoginWindowInSeconds": 600
+    "DynamicClientRegistration": {
+        "Enabled": true,
+        "RequireInitialAccessToken": true,
+        "RequireAdminApproval": false,
+        "AllowLocalhostRedirectUris": false,
+        "AllowHttpLocalhostRedirectUris": false
+    },
+    "IpRateLimiting": {
+        "EnableEndpointRateLimiting": true,
+        "GeneralRules": [
+            { "Endpoint": "*/Account/Login", "Period": "1m", "Limit": 5 },
+            { "Endpoint": "*/Account/Register", "Period": "1h", "Limit": 5 },
+            { "Endpoint": "*", "Period": "1m", "Limit": 60 }
+        ]
     },
     "Logging": {
         "LogLevel": {
@@ -812,7 +862,9 @@ X-RateLimit-Reset: 1699500000
             <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
             <div class="docs-search-results" id="search-results"></div>
         </div>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>

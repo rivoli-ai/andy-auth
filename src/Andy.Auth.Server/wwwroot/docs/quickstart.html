@@ -175,8 +175,8 @@
                     Prerequisites
                 </div>
                 <ul>
-                    <li><a href="https://dotnet.microsoft.com/download/dotnet/8.0">.NET 8 SDK</a></li>
-                    <li><a href="https://www.docker.com/products/docker-desktop">Docker Desktop</a> (for PostgreSQL)</li>
+                    <li><a href="https://dotnet.microsoft.com/download/dotnet/8.0" target="_blank">.NET 8 SDK</a></li>
+                    <li><a href="https://www.docker.com/products/docker-desktop" target="_blank">Docker Desktop</a> (for PostgreSQL)</li>
                     <li>Git</li>
                 </ul>
             </div>
@@ -235,7 +235,7 @@ dotnet run</code></pre>
             <ol>
                 <li>Apply database migrations automatically</li>
                 <li>Seed default OAuth clients for AI assistants</li>
-                <li>Start listening on <code>https://localhost:5001</code></li>
+                <li>Start listening on <code>https://localhost:7088</code></li>
             </ol>
 
             <div class="callout callout-success">
@@ -243,7 +243,7 @@ dotnet run</code></pre>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                     Server Running!
                 </div>
-                <p>You should see: <code>Now listening on: https://localhost:5001</code></p>
+                <p>You should see: <code>Now listening on: https://localhost:7088</code></p>
             </div>
 
             <h2 id="step-4">Step 4: Verify Installation</h2>
@@ -259,19 +259,19 @@ dotnet run</code></pre>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><a href="https://localhost:5001" target="_blank">https://localhost:5001</a></td>
+                        <td><a href="https://localhost:7088" target="_blank">https://localhost:7088</a></td>
                         <td>Home page</td>
                     </tr>
                     <tr>
-                        <td><a href="https://localhost:5001/.well-known/openid-configuration" target="_blank">/.well-known/openid-configuration</a></td>
+                        <td><a href="https://localhost:7088/.well-known/openid-configuration" target="_blank">/.well-known/openid-configuration</a></td>
                         <td>OpenID Discovery</td>
                     </tr>
                     <tr>
-                        <td><a href="https://localhost:5001/docs/" target="_blank">/docs/</a></td>
+                        <td><a href="https://localhost:7088/docs/" target="_blank">/docs/</a></td>
                         <td>Documentation</td>
                     </tr>
                     <tr>
-                        <td><a href="https://localhost:5001/admin" target="_blank">/admin</a></td>
+                        <td><a href="https://localhost:7088/admin" target="_blank">/admin</a></td>
                         <td>Admin Dashboard</td>
                     </tr>
                 </tbody>
@@ -282,7 +282,7 @@ dotnet run</code></pre>
             <p>Register a new account:</p>
 
             <ol>
-                <li>Go to <a href="https://localhost:5001/Account/Register">https://localhost:5001/Account/Register</a></li>
+                <li>Go to <a href="https://localhost:7088/Account/Register">https://localhost:7088/Account/Register</a></li>
                 <li>Enter your email and password</li>
                 <li>Click <strong>Register</strong></li>
             </ol>
@@ -316,7 +316,7 @@ WHERE "Email" = 'your-email@example.com';</code></pre>
                             </button>
                 </div>
                 <pre><code class="language-bash"># 1. Open this URL in your browser (it will redirect to login)
-open "https://localhost:5001/connect/authorize?\
+open "https://localhost:7088/connect/authorize?\
 client_id=claude-desktop&\
 response_type=code&\
 redirect_uri=http://localhost:3000/callback&\
@@ -329,7 +329,7 @@ state=abc123"
 # Example: http://localhost:3000/callback?code=ABC123&state=abc123
 
 # 3. Exchange the code for tokens (use the code from step 2)
-curl -k -X POST https://localhost:5001/connect/token \
+curl -k -X POST https://localhost:7088/connect/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=authorization_code" \
   -d "client_id=claude-desktop" \
@@ -423,7 +423,9 @@ curl -k -X POST https://localhost:5001/connect/token \
             <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
             <div class="docs-search-results" id="search-results"></div>
         </div>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>

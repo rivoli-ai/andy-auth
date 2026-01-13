@@ -409,7 +409,7 @@ dotnet ef database update</code></pre>
         }
     },
     "OpenIddict": {
-        "Issuer": "https://localhost:5001"
+        "Issuer": "https://localhost:7088"
     }
 }</code></pre>
             </div>
@@ -457,8 +457,8 @@ dotnet run
 dotnet watch run
 
 # The application will start on:
-# - HTTPS: https://localhost:5001
-# - HTTP:  http://localhost:5000</code></pre>
+# - HTTPS: https://localhost:7088
+# - HTTP:  http://localhost:5271</code></pre>
             </div>
 
             <h3>Verify Installation</h3>
@@ -474,7 +474,7 @@ dotnet watch run
                     </button>
                 </div>
                 <pre><code class="language-bash"># Check the OpenID discovery endpoint
-curl https://localhost:5001/.well-known/openid-configuration
+curl https://localhost:7088/.well-known/openid-configuration
 
 # You should see a JSON response with endpoints like:
 # - authorization_endpoint
@@ -494,19 +494,19 @@ curl https://localhost:5001/.well-known/openid-configuration
                 </thead>
                 <tbody>
                     <tr>
-                        <td><code>https://localhost:5001</code></td>
+                        <td><code>https://localhost:7088</code></td>
                         <td>Application home page</td>
                     </tr>
                     <tr>
-                        <td><code>https://localhost:5001/docs</code></td>
+                        <td><code>https://localhost:7088/docs</code></td>
                         <td>Documentation</td>
                     </tr>
                     <tr>
-                        <td><code>https://localhost:5001/.well-known/openid-configuration</code></td>
+                        <td><code>https://localhost:7088/.well-known/openid-configuration</code></td>
                         <td>OpenID Discovery</td>
                     </tr>
                     <tr>
-                        <td><code>https://localhost:5001/admin</code></td>
+                        <td><code>https://localhost:7088/admin</code></td>
                         <td>Admin dashboard</td>
                     </tr>
                 </tbody>
@@ -525,7 +525,7 @@ curl https://localhost:5001/.well-known/openid-configuration
                     </button>
                 </div>
                 <pre><code class="language-bash"># The first user registered automatically becomes an admin
-# Navigate to https://localhost:5001/register and create an account
+# Navigate to https://localhost:7088/Account/Register and create an account
 
 # Alternatively, use the CLI tool:
 cd src/Andy.Auth.Server
@@ -596,7 +596,7 @@ docker run -d \
             <p>If you encounter issues not covered here:</p>
 
             <ul>
-                <li>Check the <a href="https://github.com/rivoli-ai/andy-auth/issues">GitHub Issues</a> for similar problems</li>
+                <li>Check the <a href="https://github.com/rivoli-ai/andy-auth/issues" target="_blank">GitHub Issues</a> for similar problems</li>
                 <li>Review the application logs in the console output</li>
                 <li>Enable debug logging by setting <code>Logging:LogLevel:Default</code> to <code>Debug</code></li>
             </ul>
@@ -641,7 +641,9 @@ docker run -d \
             <input type="text" class="docs-search-modal-input" id="search-modal-input" placeholder="Search documentation...">
             <div class="docs-search-results" id="search-results"></div>
         </div>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
