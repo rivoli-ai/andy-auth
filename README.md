@@ -198,7 +198,13 @@ See [docs/TESTING.md](./docs/TESTING.md) for testing guide.
 
 ## Contributing
 
-This is a private repository for Rivoli AI. Contributions are welcome from team members.
+Contributions are welcome! Please feel free to submit issues, feature requests, and pull requests.
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
