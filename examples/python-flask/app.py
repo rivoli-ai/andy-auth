@@ -15,11 +15,12 @@ ANDY_AUTH_SERVER = os.environ.get('ANDY_AUTH_SERVER', 'https://localhost:7088')
 CLIENT_ID = os.environ.get('CLIENT_ID', 'my-python-app')
 REDIRECT_URI = os.environ.get('REDIRECT_URI', 'http://localhost:5000/callback')
 
-# Initialize OAuth client
+# Initialize OAuth client (lazy_discovery=True so app starts without auth server)
 auth_client = AndyAuthClient(
     client_id=CLIENT_ID,
     redirect_uri=REDIRECT_URI,
-    auth_server=ANDY_AUTH_SERVER
+    auth_server=ANDY_AUTH_SERVER,
+    lazy_discovery=True
 )
 
 

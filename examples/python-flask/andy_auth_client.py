@@ -13,16 +13,21 @@ import requests
 class AndyAuthClient:
     """OAuth 2.0 client for Andy Auth with PKCE support."""
 
-    def __init__(self, client_id: str, redirect_uri: str, auth_server: str):
+    def __init__(self, client_id: str, redirect_uri: str, auth_server: str, lazy_discovery: bool = False):
         self.client_id = client_id
         self.redirect_uri = redirect_uri
         self.auth_server = auth_server.rstrip('/')
+        self._endpoints_discovered = False
 
-        # Discover endpoints
-        self._discover_endpoints()
+        # Discover endpoints (can be deferred with lazy_discovery=True)
+        if not lazy_discovery:
+            self._discover_endpoints()
 
     def _discover_endpoints(self):
         """Fetch OpenID Connect discovery document."""
+        if self._endpoints_discovered:
+            return
+
         response = requests.get(
             f"{self.auth_server}/.well-known/openid-configuration",
             verify=False  # Set to True in production
@@ -35,6 +40,12 @@ class AndyAuthClient:
         self.userinfo_endpoint = config['userinfo_endpoint']
         self.introspection_endpoint = config.get('introspection_endpoint')
         self.end_session_endpoint = config.get('end_session_endpoint')
+        self._endpoints_discovered = True
+
+    def _ensure_discovered(self):
+        """Ensure endpoints have been discovered."""
+        if not self._endpoints_discovered:
+            self._discover_endpoints()
 
     def generate_pkce(self) -> tuple[str, str]:
         """Generate PKCE code verifier and challenge."""
@@ -58,6 +69,7 @@ class AndyAuthClient:
         Returns:
             tuple: (authorization_url, state, code_verifier)
         """
+        self._ensure_discovered()
         code_verifier, code_challenge = self.generate_pkce()
         state = state or secrets.token_urlsafe(32)
 
@@ -76,6 +88,7 @@ class AndyAuthClient:
 
     def exchange_code(self, code: str, code_verifier: str) -> dict:
         """Exchange authorization code for tokens."""
+        self._ensure_discovered()
         response = requests.post(
             self.token_endpoint,
             data={
@@ -93,6 +106,7 @@ class AndyAuthClient:
 
     def refresh_token(self, refresh_token: str) -> dict:
         """Use refresh token to get new access token."""
+        self._ensure_discovered()
         response = requests.post(
             self.token_endpoint,
             data={
@@ -108,6 +122,7 @@ class AndyAuthClient:
 
     def get_userinfo(self, access_token: str) -> dict:
         """Get user information using access token."""
+        self._ensure_discovered()
         response = requests.get(
             self.userinfo_endpoint,
             headers={'Authorization': f'Bearer {access_token}'},
