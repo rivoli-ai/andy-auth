@@ -242,7 +242,8 @@ public class AdminController : Controller
             AllowOpenIdScope = permissions.Contains(OpenIddictConstants.Permissions.Scopes.Email) || permissions.Any(p => p.Contains("openid")),
             AllowProfileScope = permissions.Contains(OpenIddictConstants.Permissions.Scopes.Profile),
             AllowEmailScope = permissions.Contains(OpenIddictConstants.Permissions.Scopes.Email),
-            AllowRolesScope = permissions.Contains(OpenIddictConstants.Permissions.Scopes.Roles)
+            AllowRolesScope = permissions.Contains(OpenIddictConstants.Permissions.Scopes.Roles),
+            AllowOfflineAccessScope = permissions.Any(p => p.Contains("offline_access"))
         };
 
         return View(model);
@@ -323,7 +324,7 @@ public class AdminController : Controller
         if (model.AllowProfileScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Profile);
         if (model.AllowEmailScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Email);
         if (model.AllowRolesScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Roles);
-        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access");
+        if (model.AllowOfflineAccessScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access");
 
         // Update the client
         await _applicationManager.UpdateAsync(application, descriptor);
@@ -1041,6 +1042,8 @@ public class AdminController : Controller
         public bool AllowEmailScope { get; set; }
 
         public bool AllowRolesScope { get; set; }
+
+        public bool AllowOfflineAccessScope { get; set; }
     }
 
     public class TokenViewModel
