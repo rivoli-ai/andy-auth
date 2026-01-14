@@ -194,6 +194,7 @@ public class DbSeeder
 
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
                 "scp:urn:lexipro-api",  // Permission to request lexipro-api resource
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
@@ -244,6 +245,7 @@ public class DbSeeder
 
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
                 "scp:urn:lexipro-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
@@ -291,6 +293,7 @@ public class DbSeeder
 
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
                 "scp:urn:lexipro-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
@@ -343,6 +346,7 @@ public class DbSeeder
 
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
                 "scp:urn:lexipro-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
@@ -395,6 +399,7 @@ public class DbSeeder
 
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
                 "scp:urn:lexipro-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
