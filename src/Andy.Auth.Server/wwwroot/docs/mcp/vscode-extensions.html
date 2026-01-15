@@ -170,24 +170,85 @@
 
             <h1>VS Code Extensions</h1>
             <p class="lead">
-                Configure popular VS Code AI extensions - Cline, Roo, and Continue.dev - to authenticate
-                with MCP servers using Andy Auth as your OAuth 2.1 provider.
+                Configure VS Code and popular AI extensions to connect to MCP servers using streamable HTTP transport
+                with OAuth 2.1 authentication via Andy Auth.
             </p>
 
             <div class="callout callout-info">
                 <div class="callout-title">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                    Pre-configured Clients
+                    Streamable HTTP Transport
                 </div>
                 <p>
-                    Andy Auth includes pre-configured OAuth clients for these VS Code extensions:
+                    Andy Docs (Lexipro) uses <strong>streamable HTTP transport</strong> for MCP connections.
+                    This is different from stdio-based local servers. Simply provide the MCP server URL and
+                    OAuth authentication is handled automatically via Dynamic Client Registration (DCR).
                 </p>
-                <ul style="margin-bottom: 0;">
-                    <li><code>cline</code> - Cline (Claude Dev) extension</li>
-                    <li><code>roo</code> - Roo extension</li>
-                    <li><code>continue-dev</code> - Continue.dev extension</li>
-                </ul>
             </div>
+
+            <h2 id="vscode-native">VS Code Native MCP Support</h2>
+
+            <p>VS Code now has built-in MCP support with useful commands for managing MCP servers.</p>
+
+            <h3 id="vscode-commands">VS Code MCP Commands</h3>
+
+            <p>Open the Command Palette (Ctrl+Shift+P / Cmd+Shift+P) and use these commands:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>MCP: List Servers</code></td>
+                        <td>List all configured MCP servers and their status</td>
+                    </tr>
+                    <tr>
+                        <td><code>MCP: Start Server</code></td>
+                        <td>Start a specific MCP server</td>
+                    </tr>
+                    <tr>
+                        <td><code>MCP: Stop Server</code></td>
+                        <td>Stop a running MCP server</td>
+                    </tr>
+                    <tr>
+                        <td><code>MCP: Restart Server</code></td>
+                        <td>Restart a specific MCP server</td>
+                    </tr>
+                    <tr>
+                        <td><code>MCP: Show Server Logs</code></td>
+                        <td>View logs for an MCP server</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 id="vscode-copilot">VS Code Copilot MCP Configuration</h3>
+
+            <p>GitHub Copilot in VS Code supports MCP servers with OAuth. Add to your <code>settings.json</code>:</p>
+
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code class="language-json">{
+  "github.copilot.chat.mcp.servers": {
+    "andy-docs": {
+      "url": "https://lexipro-uat.up.railway.app/mcp"
+    }
+  }
+}</code></pre>
+            </div>
+
+            <p>That's it! VS Code Copilot auto-discovers OAuth settings from the MCP server's protected resource metadata.</p>
+
+            <hr>
 
             <h2 id="supported-extensions">Supported Extensions</h2>
 
@@ -195,45 +256,76 @@
                 <thead>
                     <tr>
                         <th>Extension</th>
-                        <th>Client ID</th>
-                        <th>Marketplace Link</th>
+                        <th>OAuth Support</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
+                        <td><strong>VS Code Copilot</strong></td>
+                        <td>Full OAuth 2.1</td>
+                        <td><span class="badge badge-success">Fully Working</span></td>
+                    </tr>
+                    <tr>
                         <td><strong>Cline</strong></td>
-                        <td><code>cline</code></td>
-                        <td><a href="https://marketplace.visualstudio.com/items?itemName=saoudrizwan.claude-dev" target="_blank">VS Code Marketplace</a></td>
+                        <td>OAuth Discovery</td>
+                        <td><span class="badge badge-warning">Limited</span></td>
                     </tr>
                     <tr>
                         <td><strong>Roo</strong></td>
-                        <td><code>roo</code></td>
-                        <td><a href="https://marketplace.visualstudio.com/items?itemName=RooCode.roo-cline" target="_blank">VS Code Marketplace</a></td>
+                        <td>OAuth Discovery</td>
+                        <td><span class="badge badge-warning">Limited</span></td>
                     </tr>
                     <tr>
                         <td><strong>Continue.dev</strong></td>
-                        <td><code>continue-dev</code></td>
-                        <td><a href="https://marketplace.visualstudio.com/items?itemName=Continue.continue" target="_blank">VS Code Marketplace</a></td>
+                        <td>OAuth Discovery</td>
+                        <td><span class="badge badge-warning">Limited</span></td>
                     </tr>
                 </tbody>
             </table>
 
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    VS Code URI Handler Limitation
+                </div>
+                <p>
+                    Cline, Roo, and Continue.dev can initiate OAuth flows, but VS Code's <code>vscode://</code> URI handler
+                    has a known issue where query parameters are stripped from callbacks. This breaks the OAuth code exchange.
+                    <strong>Use VS Code Copilot for reliable MCP OAuth authentication.</strong>
+                </p>
+            </div>
+
+            <hr>
+
             <h2 id="cline">Cline Configuration</h2>
 
-            <p>Cline is an autonomous AI coding assistant for VS Code that supports MCP servers with OAuth authentication.</p>
+            <p>Cline is an autonomous AI coding assistant. Configure it with streamable HTTP:</p>
 
-            <h3 id="cline-install">Step 1: Install Cline</h3>
+            <h3 id="cline-settings">VS Code Settings</h3>
 
-            <ol>
-                <li>Open VS Code</li>
-                <li>Go to Extensions (Ctrl+Shift+X / Cmd+Shift+X)</li>
-                <li>Search for "Cline" or "Claude Dev"</li>
-                <li>Click Install</li>
-            </ol>
+            <p>Add to your VS Code <code>settings.json</code>:</p>
 
-            <h3 id="cline-mcp-config">Step 2: Configure MCP Server</h3>
+            <div class="code-block">
+                <div class="code-block-header">
+                    <span class="code-block-lang">json</span>
+                    <button class="code-block-copy">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code class="language-json">{
+  "cline.mcpServers": {
+    "andy-docs": {
+      "url": "https://lexipro-uat.up.railway.app/mcp"
+    }
+  }
+}</code></pre>
+            </div>
 
-            <p>Cline uses a configuration file for MCP servers. Create or edit the MCP settings file:</p>
+            <h3 id="cline-config-file">Configuration File</h3>
+
+            <p>Or use Cline's config file:</p>
 
             <div class="code-block">
                 <div class="code-block-header">
@@ -250,8 +342,6 @@
 %APPDATA%\cline\mcp_settings.json</code></pre>
             </div>
 
-            <p>Add your MCP server configuration with OAuth:</p>
-
             <div class="code-block">
                 <div class="code-block-header">
                     <span class="code-block-lang">json</span>
@@ -262,28 +352,20 @@
                 </div>
                 <pre><code class="language-json">{
   "mcpServers": {
-    "company-tools": {
-      "command": "npx",
-      "args": ["-y", "@company/mcp-server"],
-      "oauth": {
-        "clientId": "cline",
-        "issuer": "https://auth.example.com",
-        "scopes": ["openid", "profile", "email", "offline_access", "tools:execute"]
-      }
+    "andy-docs": {
+      "url": "https://lexipro-uat.up.railway.app/mcp"
     }
   }
 }</code></pre>
             </div>
 
-            <h3 id="cline-vs-code-settings">Alternative: VS Code Settings</h3>
+            <hr>
 
-            <p>You can also configure MCP servers in VS Code settings:</p>
+            <h2 id="roo">Roo Configuration</h2>
 
-            <ol>
-                <li>Open VS Code Settings (Ctrl+, / Cmd+,)</li>
-                <li>Search for "Cline MCP"</li>
-                <li>Click "Edit in settings.json"</li>
-            </ol>
+            <p>Roo is an AI coding assistant extension with MCP support.</p>
+
+            <h3 id="roo-settings">VS Code Settings</h3>
 
             <div class="code-block">
                 <div class="code-block-header">
@@ -294,49 +376,15 @@
                     </button>
                 </div>
                 <pre><code class="language-json">{
-  "cline.mcpServers": {
-    "company-tools": {
-      "command": "npx",
-      "args": ["-y", "@company/mcp-server"],
-      "oauth": {
-        "clientId": "cline",
-        "authorizationEndpoint": "https://auth.example.com/connect/authorize",
-        "tokenEndpoint": "https://auth.example.com/connect/token",
-        "scopes": ["openid", "profile", "email", "offline_access"]
-      }
+  "roo.mcpServers": {
+    "andy-docs": {
+      "url": "https://lexipro-uat.up.railway.app/mcp"
     }
   }
 }</code></pre>
             </div>
 
-            <h3 id="cline-authenticate">Step 3: Authenticate</h3>
-
-            <ol>
-                <li>Open the Cline sidebar panel in VS Code</li>
-                <li>Select your MCP server from the dropdown</li>
-                <li>Click "Connect" or start a conversation that uses the server</li>
-                <li>A browser window opens to Andy Auth login</li>
-                <li>Sign in and grant permissions</li>
-                <li>Return to VS Code - Cline is now authenticated</li>
-            </ol>
-
-            <hr>
-
-            <h2 id="roo">Roo Configuration</h2>
-
-            <p>Roo is an AI coding assistant extension with MCP support.</p>
-
-            <h3 id="roo-install">Step 1: Install Roo</h3>
-
-            <ol>
-                <li>Open VS Code Extensions</li>
-                <li>Search for "Roo" or "Roo Cline"</li>
-                <li>Click Install</li>
-            </ol>
-
-            <h3 id="roo-mcp-config">Step 2: Configure MCP Server</h3>
-
-            <p>Roo uses a similar configuration format to Cline. Create the settings file:</p>
+            <h3 id="roo-config-file">Configuration File</h3>
 
             <div class="code-block">
                 <div class="code-block-header">
@@ -363,48 +411,8 @@
                 </div>
                 <pre><code class="language-json">{
   "mcpServers": {
-    "secure-database": {
-      "command": "npx",
-      "args": ["-y", "@company/db-mcp-server"],
-      "oauth": {
-        "clientId": "roo",
-        "issuer": "https://auth.example.com",
-        "scopes": ["openid", "profile", "database:read", "database:write"]
-      }
-    },
-    "code-analysis": {
-      "command": "npx",
-      "args": ["-y", "@company/analysis-mcp-server"],
-      "oauth": {
-        "clientId": "roo",
-        "issuer": "https://auth.example.com",
-        "scopes": ["openid", "profile", "code:analyze"]
-      }
-    }
-  }
-}</code></pre>
-            </div>
-
-            <h3 id="roo-vs-code-settings">VS Code Settings Alternative</h3>
-
-            <div class="code-block">
-                <div class="code-block-header">
-                    <span class="code-block-lang">json</span>
-                    <button class="code-block-copy">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                        Copy
-                    </button>
-                </div>
-                <pre><code class="language-json">{
-  "roo.mcpServers": {
-    "my-server": {
-      "command": "node",
-      "args": ["/path/to/mcp-server/index.js"],
-      "oauth": {
-        "clientId": "roo",
-        "issuer": "https://auth.example.com",
-        "scopes": ["openid", "profile", "email"]
-      }
+    "andy-docs": {
+      "url": "https://lexipro-uat.up.railway.app/mcp"
     }
   }
 }</code></pre>
@@ -414,19 +422,9 @@
 
             <h2 id="continue-dev">Continue.dev Configuration</h2>
 
-            <p>Continue is an open-source AI code assistant that supports both VS Code and JetBrains IDEs.</p>
+            <p>Continue is an open-source AI code assistant supporting VS Code and JetBrains IDEs.</p>
 
-            <h3 id="continue-install">Step 1: Install Continue</h3>
-
-            <ol>
-                <li>Open VS Code Extensions</li>
-                <li>Search for "Continue"</li>
-                <li>Click Install</li>
-            </ol>
-
-            <h3 id="continue-config-file">Step 2: Locate Configuration File</h3>
-
-            <p>Continue uses a <code>config.json</code> file:</p>
+            <h3 id="continue-config-file">Configuration File</h3>
 
             <div class="code-block">
                 <div class="code-block-header">
@@ -443,8 +441,6 @@
 %USERPROFILE%\.continue\config.json</code></pre>
             </div>
 
-            <h3 id="continue-mcp-config">Step 3: Configure MCP with OAuth</h3>
-
             <div class="code-block">
                 <div class="code-block-header">
                     <span class="code-block-lang">json</span>
@@ -454,83 +450,34 @@
                     </button>
                 </div>
                 <pre><code class="language-json">{
-  "models": [
-    {
-      "title": "Claude 3.5 Sonnet",
-      "provider": "anthropic",
-      "model": "claude-3-5-sonnet-20241022"
-    }
-  ],
-  "mcpServers": [
-    {
-      "name": "company-knowledge",
-      "command": "npx",
-      "args": ["-y", "@company/knowledge-mcp-server"],
-      "oauth": {
-        "clientId": "continue-dev",
-        "issuer": "https://auth.example.com",
-        "scopes": ["openid", "profile", "knowledge:read"]
+  "experimental": {
+    "modelContextProtocolServers": [
+      {
+        "transport": {
+          "type": "sse",
+          "url": "https://lexipro-uat.up.railway.app/mcp"
+        }
       }
-    },
-    {
-      "name": "code-search",
-      "command": "npx",
-      "args": ["-y", "@company/search-mcp-server"],
-      "oauth": {
-        "clientId": "continue-dev",
-        "issuer": "https://auth.example.com",
-        "scopes": ["openid", "profile", "code:search"]
-      }
-    }
-  ],
-  "contextProviders": [
-    {
-      "name": "code",
-      "params": {}
-    },
-    {
-      "name": "docs",
-      "params": {}
-    }
-  ]
-}</code></pre>
-            </div>
-
-            <h3 id="continue-explicit-endpoints">Using Explicit Endpoints</h3>
-
-            <p>If you prefer explicit endpoint configuration over discovery:</p>
-
-            <div class="code-block">
-                <div class="code-block-header">
-                    <span class="code-block-lang">json</span>
-                    <button class="code-block-copy">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                        Copy
-                    </button>
-                </div>
-                <pre><code class="language-json">{
-  "mcpServers": [
-    {
-      "name": "my-server",
-      "command": "npx",
-      "args": ["-y", "@company/mcp-server"],
-      "oauth": {
-        "clientId": "continue-dev",
-        "authorizationEndpoint": "https://auth.example.com/connect/authorize",
-        "tokenEndpoint": "https://auth.example.com/connect/token",
-        "scopes": ["openid", "profile", "email", "offline_access"],
-        "redirectUri": "http://localhost:65432/callback"
-      }
-    }
-  ]
+    ]
+  }
 }</code></pre>
             </div>
 
             <hr>
 
-            <h2 id="authentication-flow">Common Authentication Flow</h2>
+            <h2 id="authentication-flow">How OAuth Authentication Works</h2>
 
-            <p>All VS Code extensions follow a similar OAuth flow:</p>
+            <p>When connecting to an MCP server with OAuth:</p>
+
+            <ol>
+                <li>Extension discovers OAuth requirements from the MCP server's protected resource metadata</li>
+                <li>Client registers automatically via Dynamic Client Registration (DCR)</li>
+                <li>Browser opens to Andy Auth login page</li>
+                <li>User authenticates and grants consent</li>
+                <li>OAuth callback returns authorization code</li>
+                <li>Extension exchanges code for access token</li>
+                <li>MCP connection established with authenticated session</li>
+            </ol>
 
             <div class="code-block">
                 <div class="code-block-header">
@@ -538,85 +485,63 @@
                 </div>
                 <pre><code class="language-none">┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
 │   VS Code Ext    │     │    Andy Auth     │     │    MCP Server    │
-│ (Cline/Roo/etc)  │     │                  │     │                  │
+│                  │     │                  │     │  (Andy Docs)     │
 └────────┬─────────┘     └────────┬─────────┘     └────────┬─────────┘
          │                        │                        │
-         │  1. User triggers MCP  │                        │
-         │     server connection  │                        │
-         │                        │                        │
-         │  2. Open browser to    │                        │
-         │     authorization URL  │                        │
-         │───────────────────────>│                        │
-         │                        │                        │
-         │  3. User logs in       │                        │
-         │                        │                        │
-         │  4. User grants consent│                        │
-         │                        │                        │
-         │  5. Redirect with code │                        │
-         │<───────────────────────│                        │
-         │                        │                        │
-         │  6. Exchange for token │                        │
-         │───────────────────────>│                        │
-         │                        │                        │
-         │  7. Access + Refresh   │                        │
-         │     tokens             │                        │
-         │<───────────────────────│                        │
-         │                        │                        │
-         │  8. Connect to MCP server with token           │
+         │  1. Connect to MCP URL │                        │
          │────────────────────────────────────────────────>│
          │                        │                        │
-         │  9. MCP tools available                        │
+         │  2. Get OAuth metadata │                        │
+         │<────────────────────────────────────────────────│
+         │                        │                        │
+         │  3. Register via DCR   │                        │
+         │───────────────────────>│                        │
+         │                        │                        │
+         │  4. client_id issued   │                        │
+         │<───────────────────────│                        │
+         │                        │                        │
+         │  5. Open browser for   │                        │
+         │     authorization      │                        │
+         │───────────────────────>│                        │
+         │                        │                        │
+         │  6. User authenticates │                        │
+         │                        │                        │
+         │  7. Callback with code │                        │
+         │<───────────────────────│                        │
+         │                        │                        │
+         │  8. Exchange for token │                        │
+         │───────────────────────>│                        │
+         │                        │                        │
+         │  9. Access token       │                        │
+         │<───────────────────────│                        │
+         │                        │                        │
+         │  10. Connect with token                         │
+         │────────────────────────────────────────────────>│
+         │                        │                        │
+         │  11. MCP tools ready   │                        │
          │<────────────────────────────────────────────────│</code></pre>
             </div>
 
-            <h2 id="environment-variables">Environment Variables</h2>
-
-            <p>You can use environment variables in your MCP server configuration:</p>
-
-            <div class="code-block">
-                <div class="code-block-header">
-                    <span class="code-block-lang">json</span>
-                    <button class="code-block-copy">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                        Copy
-                    </button>
-                </div>
-                <pre><code class="language-json">{
-  "mcpServers": {
-    "company-api": {
-      "command": "npx",
-      "args": ["-y", "@company/mcp-server"],
-      "env": {
-        "API_URL": "${COMPANY_API_URL}",
-        "LOG_LEVEL": "info"
-      },
-      "oauth": {
-        "clientId": "cline",
-        "issuer": "${ANDY_AUTH_ISSUER}"
-      }
-    }
-  }
-}</code></pre>
-            </div>
+            <hr>
 
             <h2 id="troubleshooting">Troubleshooting</h2>
 
-            <h3 id="issue-browser-not-opening">Browser Doesn't Open for Authentication</h3>
+            <h3 id="issue-oauth-callback">OAuth Callback Fails (Cline/Roo/Continue)</h3>
 
             <div class="callout callout-warning">
                 <div class="callout-title">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    Solutions
+                    Known Issue
                 </div>
-                <ul>
-                    <li>Check VS Code has permission to open external URLs</li>
-                    <li>Verify your default browser is correctly configured</li>
-                    <li>Try manually opening the authorization URL from VS Code's output panel</li>
-                    <li>Restart VS Code and try again</li>
-                </ul>
+                <p>
+                    VS Code's <code>vscode://</code> URI handler strips query parameters from callbacks.
+                    When OAuth redirects to <code>vscode://extension/callback?code=XXX&amp;state=YYY</code>,
+                    VS Code only passes the path, losing the authorization code.
+                </p>
+                <p><strong>Workaround:</strong> Use VS Code Copilot instead, which handles OAuth correctly.</p>
             </div>
 
-            <h3 id="issue-callback-fails">OAuth Callback Fails</h3>
+            <h3 id="issue-scope-error">Scope Permission Error (ID2051)</h3>
 
             <div class="callout callout-warning">
                 <div class="callout-title">
@@ -624,38 +549,9 @@
                     Solutions
                 </div>
                 <ul>
-                    <li>Ensure the callback port is not blocked by firewall</li>
-                    <li>Check no other application is using the callback port</li>
-                    <li>Verify the redirect URI is registered in Andy Auth</li>
-                </ul>
-            </div>
-
-            <h3 id="issue-token-expired">Token Expired During Session</h3>
-
-            <div class="callout callout-warning">
-                <div class="callout-title">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    Solutions
-                </div>
-                <ul>
-                    <li>Include <code>offline_access</code> in scopes for refresh token support</li>
-                    <li>Disconnect and reconnect the MCP server</li>
-                    <li>Clear cached credentials and re-authenticate</li>
-                </ul>
-            </div>
-
-            <h3 id="issue-mcp-not-connecting">MCP Server Not Connecting</h3>
-
-            <div class="callout callout-warning">
-                <div class="callout-title">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    Solutions
-                </div>
-                <ul>
-                    <li>Verify the MCP server command is correct and executable</li>
-                    <li>Check the server's npm package is accessible</li>
-                    <li>Review the VS Code output panel for error messages</li>
-                    <li>Test the MCP server manually in terminal</li>
+                    <li>Delete the DCR client from Andy Auth Admin UI</li>
+                    <li>Reconnect - the extension will re-register with correct scopes</li>
+                    <li>New clients automatically get all allowed scopes</li>
                 </ul>
             </div>
 
@@ -673,17 +569,16 @@
 
             <ol>
                 <li>View &rarr; Output</li>
-                <li>Select the extension from the dropdown (Cline, Roo, or Continue)</li>
+                <li>Select the extension from the dropdown</li>
             </ol>
 
             <h2 id="security-tips">Security Best Practices</h2>
 
             <ul>
-                <li><strong>Minimize scopes</strong>: Only request scopes your MCP servers actually need</li>
-                <li><strong>Use offline_access wisely</strong>: Only enable if you need persistent sessions</li>
-                <li><strong>Review permissions</strong>: Check consent screens before approving</li>
-                <li><strong>Secure config files</strong>: Don't commit OAuth configuration to public repos</li>
-                <li><strong>Revoke unused tokens</strong>: Periodically clean up unused authorizations in Andy Auth</li>
+                <li><strong>Use HTTPS URLs</strong>: Always use HTTPS for MCP server URLs</li>
+                <li><strong>Review consent</strong>: Check the scopes requested before approving</li>
+                <li><strong>Revoke unused tokens</strong>: Periodically clean up in Andy Auth Admin UI</li>
+                <li><strong>Keep extensions updated</strong>: Install updates for security fixes</li>
             </ul>
 
             <h2 id="next-steps">Next Steps</h2>
@@ -691,15 +586,15 @@
             <div class="docs-cards">
                 <a href="/docs/mcp/dcr.html" class="docs-card">
                     <div class="docs-card-title">Dynamic Client Registration</div>
-                    <div class="docs-card-desc">Learn how custom MCP tools can register automatically.</div>
+                    <div class="docs-card-desc">Learn how MCP clients register automatically.</div>
                 </a>
                 <a href="/docs/mcp/oauth-flow.html" class="docs-card">
                     <div class="docs-card-title">OAuth 2.1 Flow Details</div>
                     <div class="docs-card-desc">Understand the authentication flow in depth.</div>
                 </a>
-                <a href="/docs/oauth/pkce.html" class="docs-card">
-                    <div class="docs-card-title">PKCE Deep Dive</div>
-                    <div class="docs-card-desc">Learn about PKCE security for public clients.</div>
+                <a href="/docs/mcp/claude-desktop.html" class="docs-card">
+                    <div class="docs-card-title">Claude Desktop</div>
+                    <div class="docs-card-desc">Configure Claude Desktop for MCP.</div>
                 </a>
             </div>
 
