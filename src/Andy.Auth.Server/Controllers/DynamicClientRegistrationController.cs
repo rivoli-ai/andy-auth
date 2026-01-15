@@ -182,7 +182,13 @@ public class DynamicClientRegistrationController : ControllerBase
         }
 
         // Add scope permissions
-        var scopes = request.Scope?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? new[] { "openid" };
+        // If no scopes specified, grant all allowed scopes by default for MCP clients
+        var scopes = request.Scope?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (scopes == null || scopes.Length == 0)
+        {
+            // Default to all allowed scopes
+            scopes = _settings.AllowedScopes.ToArray();
+        }
         foreach (var scope in scopes)
         {
             if (_settings.AllowedScopes.Contains(scope))

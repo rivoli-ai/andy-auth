@@ -192,10 +192,11 @@ public class AdminController : Controller
         }
 
         // Add scope permissions
-        if (model.AllowOpenIdScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Email);
+        if (model.AllowOpenIdScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Prefixes.Scope + "openid");
         if (model.AllowProfileScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Profile);
         if (model.AllowEmailScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Email);
         if (model.AllowRolesScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Roles);
+        // Always add offline_access for new clients
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access");
 
         // Create the client
@@ -320,7 +321,7 @@ public class AdminController : Controller
             descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.RefreshToken);
         }
 
-        if (model.AllowOpenIdScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Email);
+        if (model.AllowOpenIdScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Prefixes.Scope + "openid");
         if (model.AllowProfileScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Profile);
         if (model.AllowEmailScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Email);
         if (model.AllowRolesScope) descriptor.Permissions.Add(OpenIddictConstants.Permissions.Scopes.Roles);
