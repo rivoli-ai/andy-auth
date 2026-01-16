@@ -772,6 +772,58 @@
                     }
                 });
             });
+
+            // UTC to Local Time Conversion
+            function formatLocalDate(utcDateStr, format) {
+                if (!utcDateStr) return '';
+                const date = new Date(utcDateStr);
+                if (isNaN(date.getTime())) return utcDateStr;
+
+                const options = {};
+                switch (format) {
+                    case 'date':
+                        options.month = 'short';
+                        options.day = 'numeric';
+                        options.year = 'numeric';
+                        break;
+                    case 'datetime':
+                        options.month = 'short';
+                        options.day = 'numeric';
+                        options.year = 'numeric';
+                        options.hour = '2-digit';
+                        options.minute = '2-digit';
+                        break;
+                    case 'datetime-seconds':
+                        options.month = 'short';
+                        options.day = 'numeric';
+                        options.year = 'numeric';
+                        options.hour = '2-digit';
+                        options.minute = '2-digit';
+                        options.second = '2-digit';
+                        break;
+                    case 'time':
+                        options.hour = '2-digit';
+                        options.minute = '2-digit';
+                        break;
+                    default:
+                        options.month = 'short';
+                        options.day = 'numeric';
+                        options.year = 'numeric';
+                }
+                return date.toLocaleString(undefined, options);
+            }
+
+            // Convert all elements with data-utc attribute to local time
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('[data-utc]').forEach(function(el) {
+                    const utcDate = el.getAttribute('data-utc');
+                    const format = el.getAttribute('data-format') || 'datetime';
+                    if (utcDate) {
+                        el.textContent = formatLocalDate(utcDate, format);
+                        el.setAttribute('title', 'UTC: ' + utcDate);
+                    }
+                });
+            });
         </script>
     }
     else

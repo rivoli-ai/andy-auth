@@ -160,7 +160,7 @@
                                         <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
                                         <path d="M8 5V8L10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                                     </svg>
-                                    @log.PerformedAt.ToString("MMM dd, yyyy HH:mm:ss")
+                                    <span data-utc="@log.PerformedAt.ToString("o")" data-format="datetime-seconds"></span>
                                 </div>
                             </td>
                             <td>

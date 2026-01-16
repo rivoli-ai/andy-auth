@@ -308,7 +308,7 @@
                                     <path d="M5 1.5V3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
                                     <path d="M9 1.5V3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
                                 </svg>
-                                Signed in @session.CreatedAt.ToString("MMM d, yyyy")
+                                Signed in <span data-utc="@session.CreatedAt.ToString("o")" data-format="date"></span>
                             </div>
                         </div>
                     </div>
