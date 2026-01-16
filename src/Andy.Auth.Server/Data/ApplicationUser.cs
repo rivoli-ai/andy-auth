@@ -62,4 +62,10 @@ public class ApplicationUser : IdentityUser
     /// System users are automatically created and managed by the application.
     /// </summary>
     public bool IsSystemUser { get; set; }
+
+    /// <summary>
+    /// Indicates if the user must change their password on next login.
+    /// Set to true when an admin creates a user or resets their password.
+    /// </summary>
+    public bool MustChangePassword { get; set; }
 }

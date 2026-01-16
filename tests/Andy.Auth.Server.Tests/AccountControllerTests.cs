@@ -469,6 +469,141 @@ public class AccountControllerTests
 
     #endregion
 
+    #region ChangePassword Tests
+
+    [Fact]
+    public async Task ChangePassword_Get_ReturnsViewWithReturnUrl()
+    {
+        // Arrange
+        var returnUrl = "/some-return-url";
+
+        // Act
+        var result = _controller.ChangePassword(returnUrl);
+
+        // Assert
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal(returnUrl, viewResult.ViewData["ReturnUrl"]);
+    }
+
+    [Fact]
+    public async Task ChangePassword_Post_SamePassword_ReturnsError()
+    {
+        // Arrange
+        var user = new ApplicationUser
+        {
+            Id = "test-user-id",
+            Email = "test@example.com",
+            UserName = "test@example.com",
+            MustChangePassword = true
+        };
+
+        var model = new ChangePasswordViewModel
+        {
+            NewPassword = "CurrentPass123!",
+            ConfirmPassword = "CurrentPass123!"
+        };
+
+        // Setup mocks
+        _mockUserManager.Setup(m => m.GetUserAsync(It.IsAny<System.Security.Claims.ClaimsPrincipal>()))
+            .ReturnsAsync(user);
+
+        // Simulate password check returning true (same password)
+        _mockUserManager.Setup(m => m.CheckPasswordAsync(user, model.NewPassword))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _controller.ChangePassword(model);
+
+        // Assert
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.False(_controller.ModelState.IsValid);
+        Assert.Contains(_controller.ModelState.Values.SelectMany(v => v.Errors),
+            e => e.ErrorMessage.Contains("same as your current password"));
+    }
+
+    [Fact]
+    public async Task ChangePassword_Post_DifferentPassword_Succeeds()
+    {
+        // Arrange
+        var user = new ApplicationUser
+        {
+            Id = "test-user-id",
+            Email = "test@example.com",
+            UserName = "test@example.com",
+            MustChangePassword = true
+        };
+
+        var model = new ChangePasswordViewModel
+        {
+            NewPassword = "NewPass456!",
+            ConfirmPassword = "NewPass456!",
+            ReturnUrl = "/"
+        };
+
+        // Setup mocks
+        _mockUserManager.Setup(m => m.GetUserAsync(It.IsAny<System.Security.Claims.ClaimsPrincipal>()))
+            .ReturnsAsync(user);
+
+        // Simulate password check returning false (different password)
+        _mockUserManager.Setup(m => m.CheckPasswordAsync(user, model.NewPassword))
+            .ReturnsAsync(false);
+
+        _mockUserManager.Setup(m => m.GeneratePasswordResetTokenAsync(user))
+            .ReturnsAsync("reset-token");
+
+        _mockUserManager.Setup(m => m.ResetPasswordAsync(user, "reset-token", model.NewPassword))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _mockUserManager.Setup(m => m.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _mockUserManager.Setup(m => m.UpdateSecurityStampAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _mockAuditService.Setup(a => a.LogAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _controller.ChangePassword(model);
+
+        // Assert - Could be LocalRedirectResult or RedirectResult depending on URL validation
+        if (result is LocalRedirectResult localRedirect)
+        {
+            Assert.Equal("/", localRedirect.Url);
+        }
+        else
+        {
+            var redirectResult = Assert.IsType<RedirectResult>(result);
+            Assert.Equal("/", redirectResult.Url);
+        }
+        Assert.False(user.MustChangePassword);
+    }
+
+    [Fact]
+    public async Task ChangePassword_Post_NotLoggedIn_RedirectsToLogin()
+    {
+        // Arrange
+        var model = new ChangePasswordViewModel
+        {
+            NewPassword = "NewPass456!",
+            ConfirmPassword = "NewPass456!"
+        };
+
+        _mockUserManager.Setup(m => m.GetUserAsync(It.IsAny<System.Security.Claims.ClaimsPrincipal>()))
+            .ReturnsAsync((ApplicationUser?)null);
+
+        // Act
+        var result = await _controller.ChangePassword(model);
+
+        // Assert
+        var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Login", redirectResult.ActionName);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static Mock<UserManager<ApplicationUser>> MockUserManager()

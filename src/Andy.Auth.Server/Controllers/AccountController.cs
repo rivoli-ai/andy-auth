@@ -83,6 +83,13 @@ public class AccountController : Controller
 
         if (result.Succeeded)
         {
+            // Check if user must change password on first login
+            if (user.MustChangePassword)
+            {
+                _logger.LogInformation("User {Email} must change password on first login.", user.Email);
+                return RedirectToAction(nameof(ChangePassword), new { returnUrl = model.ReturnUrl });
+            }
+
             // Update last login time
             user.LastLoginAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(user);
@@ -700,5 +707,100 @@ public class AccountController : Controller
         }
 
         return BadRequest(new { error = "Invalid credentials" });
+    }
+
+    /// <summary>
+    /// Shows the change password page. Required for users who must change their password on first login.
+    /// </summary>
+    [HttpGet]
+    [Authorize(AuthenticationSchemes = "Identity.Application")]
+    public IActionResult ChangePassword(string? returnUrl = null)
+    {
+        ViewData["ReturnUrl"] = returnUrl;
+        return View(new ChangePasswordViewModel { ReturnUrl = returnUrl });
+    }
+
+    /// <summary>
+    /// Processes the password change request.
+    /// </summary>
+    [HttpPost]
+    [Authorize(AuthenticationSchemes = "Identity.Application")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+    {
+        ViewData["ReturnUrl"] = model.ReturnUrl;
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+        {
+            return RedirectToAction(nameof(Login));
+        }
+
+        // Check if new password is the same as current password
+        var isSamePassword = await _userManager.CheckPasswordAsync(user, model.NewPassword);
+        if (isSamePassword)
+        {
+            ModelState.AddModelError(string.Empty, "New password cannot be the same as your current password.");
+            return View(model);
+        }
+
+        // Validate password meets requirements
+        var passwordValidator = new PasswordValidator<ApplicationUser>();
+        var validationResult = await passwordValidator.ValidateAsync(_userManager, user, model.NewPassword);
+        if (!validationResult.Succeeded)
+        {
+            foreach (var error in validationResult.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+            return View(model);
+        }
+
+        // Generate token and reset password
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+            return View(model);
+        }
+
+        // Clear the MustChangePassword flag and update last login time
+        user.MustChangePassword = false;
+        user.LastLoginAt = DateTime.UtcNow;
+        await _userManager.UpdateAsync(user);
+
+        // Update security stamp to invalidate existing tokens
+        await _userManager.UpdateSecurityStampAsync(user);
+
+        // Log the password change
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        await _auditService.LogAsync(
+            "UserPasswordChanged",
+            user.Id,
+            user.Email ?? "Unknown",
+            user.Id,
+            user.Email,
+            "User changed their password (first login requirement)",
+            ipAddress);
+
+        _logger.LogInformation("User {Email} changed their password.", user.Email);
+
+        // Redirect to original destination or home
+        if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
+        {
+            return Redirect(model.ReturnUrl);
+        }
+
+        return RedirectToAction("Index", "Home");
     }
 }

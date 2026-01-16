@@ -524,6 +524,14 @@ public class AdminController : Controller
             return RedirectToAction(nameof(Users));
         }
 
+        // Prevent self-deletion
+        var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (user.Id == currentUserId)
+        {
+            TempData["ErrorMessage"] = "You cannot delete your own account.";
+            return RedirectToAction(nameof(Users));
+        }
+
         // Soft delete
         user.DeletedAt = DateTime.UtcNow;
         user.IsActive = false;
@@ -609,9 +617,137 @@ public class AdminController : Controller
         // Update security stamp to invalidate existing tokens
         await _userManager.UpdateSecurityStampAsync(user);
 
-        await LogAuditAsync("PasswordReset", user.Id, user.Email, "Password reset by admin");
+        // Set MustChangePassword flag so user is forced to change on next login
+        user.MustChangePassword = true;
+        await _userManager.UpdateAsync(user);
 
-        TempData["SuccessMessage"] = $"Password reset successfully for {user.Email}.";
+        await LogAuditAsync("PasswordReset", user.Id, user.Email, "Password reset by admin (must change on next login)");
+
+        TempData["SuccessMessage"] = $"Password reset successfully for {user.Email}. User will be required to change password on next login.";
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpGet]
+    public IActionResult CreateUser()
+    {
+        return View(new CreateUserViewModel());
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateUser(CreateUserViewModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        // Check if email already exists
+        var existingUser = await _userManager.FindByEmailAsync(model.Email);
+        if (existingUser != null)
+        {
+            // If the user was soft-deleted, hard-delete them to allow email reuse
+            if (existingUser.DeletedAt.HasValue)
+            {
+                await _userManager.DeleteAsync(existingUser);
+            }
+            else
+            {
+                ModelState.AddModelError("Email", "A user with this email already exists.");
+                return View(model);
+            }
+        }
+
+        // Validate password
+        var passwordValidator = new PasswordValidator<ApplicationUser>();
+        var tempUser = new ApplicationUser();
+        var validationResult = await passwordValidator.ValidateAsync(_userManager, tempUser, model.Password);
+        if (!validationResult.Succeeded)
+        {
+            foreach (var error in validationResult.Errors)
+            {
+                ModelState.AddModelError("Password", error.Description);
+            }
+            return View(model);
+        }
+
+        var user = new ApplicationUser
+        {
+            UserName = model.Email,
+            Email = model.Email,
+            FullName = model.FullName,
+            EmailConfirmed = true, // Admin-created users are pre-verified
+            IsActive = true,
+            MustChangePassword = model.MustChangePassword,
+            ExpiresAt = model.ExpiresAt,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var result = await _userManager.CreateAsync(user, model.Password);
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+            return View(model);
+        }
+
+        // Assign role
+        var role = model.IsAdmin ? "Admin" : "User";
+        await _userManager.AddToRoleAsync(user, role);
+
+        await LogAuditAsync("UserCreated", user.Id, user.Email,
+            $"Created with role: {role}, MustChangePassword: {model.MustChangePassword}");
+
+        TempData["SuccessMessage"] = $"User '{model.Email}' created successfully with {role} role.";
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangeUserRole(string userId, string role)
+    {
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(role))
+        {
+            TempData["ErrorMessage"] = "Invalid request.";
+            return RedirectToAction(nameof(Users));
+        }
+
+        if (role != "Admin" && role != "User")
+        {
+            TempData["ErrorMessage"] = "Invalid role specified.";
+            return RedirectToAction(nameof(Users));
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            TempData["ErrorMessage"] = "User not found.";
+            return RedirectToAction(nameof(Users));
+        }
+
+        // Prevent demoting the last admin
+        if (role == "User" && await _userManager.IsInRoleAsync(user, "Admin"))
+        {
+            var adminCount = (await _userManager.GetUsersInRoleAsync("Admin")).Count;
+            if (adminCount <= 1)
+            {
+                TempData["ErrorMessage"] = "Cannot demote the last admin user.";
+                return RedirectToAction(nameof(Users));
+            }
+        }
+
+        // Remove current roles and add new role
+        var currentRoles = await _userManager.GetRolesAsync(user);
+        await _userManager.RemoveFromRolesAsync(user, currentRoles);
+        await _userManager.AddToRoleAsync(user, role);
+
+        var oldRole = currentRoles.FirstOrDefault() ?? "None";
+        await LogAuditAsync("UserRoleChanged", user.Id, user.Email,
+            $"Role changed from {oldRole} to {role}");
+
+        TempData["SuccessMessage"] = $"Role for {user.Email} changed to {role}.";
         return RedirectToAction(nameof(Users));
     }
 
@@ -1066,5 +1202,29 @@ public class AdminController : Controller
         public int ActiveTokens { get; set; }
         public int ExpiredTokens { get; set; }
         public int RevokedTokens { get; set; }
+    }
+
+    public class CreateUserViewModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Email is required")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Invalid email address")]
+        public string Email { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Full name is required")]
+        [System.ComponentModel.DataAnnotations.StringLength(200, ErrorMessage = "Name cannot exceed 200 characters")]
+        public string FullName { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Password is required")]
+        [System.ComponentModel.DataAnnotations.StringLength(100, MinimumLength = 8, ErrorMessage = "Password must be at least 8 characters")]
+        public string Password { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Compare("Password", ErrorMessage = "Passwords do not match")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+
+        public bool IsAdmin { get; set; } = false;
+
+        public bool MustChangePassword { get; set; } = true;
+
+        public DateTime? ExpiresAt { get; set; }
     }
 }

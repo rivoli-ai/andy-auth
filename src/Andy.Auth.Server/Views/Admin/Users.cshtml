@@ -16,12 +16,21 @@
             <h1>Users</h1>
             <p class="subtitle">Total: @totalUsers users</p>
         </div>
-        <a asp-action="Index" class="btn btn-secondary">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Back to Dashboard
-        </a>
+        <div class="header-actions">
+            <a asp-action="CreateUser" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 3V13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Create User
+            </a>
+            <a asp-action="Index" class="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Back to Dashboard
+            </a>
+        </div>
     </div>
 
     @if (TempData["SuccessMessage"] != null)
@@ -214,6 +223,13 @@
                                             </svg>
                                         </button>
 
+                                        <button class="btn-action @(isAdmin ? "btn-admin-role" : "btn-user-role")" onclick="showRoleModal('@user.Id', '@user.Email', '@(isAdmin ? "Admin" : "User")')" title="Change Role">
+                                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M8 2C9.1 2 10 2.9 10 4C10 5.1 9.1 6 8 6C6.9 6 6 5.1 6 4C6 2.9 6.9 2 8 2Z" stroke="currentColor" stroke-width="1.5"/>
+                                                <path d="M4 14V13C4 10.79 5.79 9 8 9C10.21 9 12 10.79 12 13V14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                            </svg>
+                                        </button>
+
                                         @if (user.IsSystemUser)
                                         {
                                             <button class="btn-action btn-danger" disabled title="System users cannot be deleted" style="opacity: 0.5; cursor: not-allowed;">
@@ -392,6 +408,29 @@
 <form id="unsuspendForm" method="post" asp-action="UnsuspendUser" style="display: none;">
     <input type="hidden" name="userId" id="unsuspendUserId" />
 </form>
+
+<!-- Change Role Modal -->
+<div id="roleModal" class="modal">
+    <div class="modal-content">
+        <h3>Change User Role</h3>
+        <p>Changing role for <strong id="roleUserEmail"></strong></p>
+        <p>Current role: <span id="currentRole" class="badge"></span></p>
+        <form id="roleForm" method="post" asp-action="ChangeUserRole">
+            <input type="hidden" name="userId" id="roleUserId" />
+            <div class="form-group">
+                <label for="roleSelect">New Role:</label>
+                <select name="role" id="roleSelect" class="form-control">
+                    <option value="User">User</option>
+                    <option value="Admin">Admin</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('roleModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Change Role</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <style>
 :root {
@@ -757,6 +796,40 @@
     background: rgba(0, 102, 204, 0.1);
     color: var(--primary);
 }
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.btn-action.btn-admin-role {
+    color: var(--primary);
+}
+
+.btn-action.btn-admin-role:hover {
+    background: rgba(0, 102, 204, 0.1);
+    border-color: var(--primary);
+}
+
+.btn-action.btn-user-role {
+    color: var(--text-muted);
+}
+
+.btn-action.btn-user-role:hover {
+    background: rgba(108, 117, 125, 0.1);
+    border-color: var(--text-muted);
+}
+
+#currentRole.badge-admin {
+    background: rgba(0, 102, 204, 0.1);
+    color: var(--primary);
+}
+
+#currentRole.badge-user {
+    background: var(--surface-2);
+    color: var(--text-muted);
+}
 </style>
 
 <script>
@@ -799,6 +872,20 @@ function unsuspendUser(userId, email) {
         document.getElementById('unsuspendUserId').value = userId;
         document.getElementById('unsuspendForm').submit();
     }
+}
+
+function showRoleModal(userId, email, currentRole) {
+    document.getElementById('roleUserId').value = userId;
+    document.getElementById('roleUserEmail').textContent = email;
+
+    var currentRoleSpan = document.getElementById('currentRole');
+    currentRoleSpan.textContent = currentRole;
+    currentRoleSpan.className = 'badge ' + (currentRole === 'Admin' ? 'badge-admin' : 'badge-user');
+
+    // Pre-select the opposite role
+    document.getElementById('roleSelect').value = currentRole === 'Admin' ? 'User' : 'Admin';
+
+    document.getElementById('roleModal').classList.add('active');
 }
 
 function closeModal(modalId) {

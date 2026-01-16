@@ -72,7 +72,14 @@
             color: #2c3e50;
         }
 
-        button {
+        .buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button, .btn {
             background: #667eea;
             color: white;
             border: none;
@@ -81,15 +88,26 @@
             font-weight: 500;
             border-radius: 8px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
         }
 
-        button:hover {
+        button:hover, .btn:hover {
             background: #5568d3;
+            transform: translateY(-1px);
         }
 
-        button:active {
+        button:active, .btn:active {
             transform: translateY(1px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
         }
     </style>
 </head>
@@ -106,7 +124,12 @@
 
         <p>You may now close this window and return to the application.</p>
 
-        <button onclick="window.close()">Close Window</button>
+        <div class="buttons">
+            <button onclick="window.close()">Close Window</button>
+            <form asp-controller="Account" asp-action="Logout" method="post" style="display: inline;">
+                <button type="submit" class="btn-secondary">Sign Out</button>
+            </form>
+        </div>
     </div>
 </body>
 </html>
