@@ -375,6 +375,59 @@ public class DbSeeder
         await manager.CreateAsync(rooDescriptor);
         _logger.LogInformation("Created OAuth client: roo");
 
+        // Kilocode (VS Code Extension - fork of Cline/Roo)
+        var kilocodeClient = await manager.FindByClientIdAsync("kilocode");
+        if (kilocodeClient != null)
+        {
+            await manager.DeleteAsync(kilocodeClient);
+            _logger.LogInformation("Deleted existing OAuth client: kilocode");
+        }
+
+        var kilocodeDescriptor = new OpenIddictApplicationDescriptor
+        {
+            ClientId = "kilocode",
+            DisplayName = "Kilocode (VS Code)",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
+                "scp:urn:lexipro-api",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code,
+
+                // Allow requesting resource servers (for MCP)
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-uat.up.railway.app/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-api.rivoli.ai/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp"
+            },
+            RedirectUris =
+            {
+                // VS Code extension localhost callbacks (various ports)
+                new Uri("http://127.0.0.1/callback"),
+                new Uri("http://127.0.0.1:3000/callback"),
+                new Uri("http://127.0.0.1:8080/callback"),
+                new Uri("http://localhost/callback"),
+                new Uri("http://localhost:3000/callback"),
+                new Uri("http://localhost:8080/callback"),
+                // VS Code protocol handler
+                new Uri("vscode://kilocode.kilo-code/callback")
+            }
+        };
+
+        await manager.CreateAsync(kilocodeDescriptor);
+        _logger.LogInformation("Created OAuth client: kilocode");
+
         // Continue.dev (VS Code/IntelliJ Extension)
         var continueClient = await manager.FindByClientIdAsync("continue-dev");
         if (continueClient != null)
