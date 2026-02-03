@@ -44,7 +44,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
             { "grant_type", "client_credentials" },
             { "client_id", "lexipro-api" },
             { "client_secret", "lexipro-secret-change-in-production" },
-            { "scope", "urn:lexipro-api" }
+            { "scope", "urn:andy-docs-api" }
         });
 
         // Act
@@ -90,7 +90,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
             { "grant_type", "client_credentials" },
             { "client_id", "lexipro-api" },
             { "client_secret", "wrong-secret" },
-            { "scope", "urn:lexipro-api" }
+            { "scope", "urn:andy-docs-api" }
         });
 
         // Act
@@ -162,7 +162,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
             { "grant_type", "client_credentials" },
             { "client_id", "lexipro-api" },
             { "client_secret", "lexipro-secret-change-in-production" },
-            { "scope", "urn:lexipro-api" }
+            { "scope", "urn:andy-docs-api" }
         });
 
         var tokenResponse = await _client.PostAsync("/connect/token", tokenRequest);
@@ -263,7 +263,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
             { "grant_type", "client_credentials" },
             { "client_id", "lexipro-api" },
             { "client_secret", "lexipro-secret-change-in-production" },
-            { "scope", "urn:lexipro-api" }
+            { "scope", "urn:andy-docs-api" }
         });
 
         var tokenResponse = await _client.PostAsync("/connect/token", tokenRequest);
@@ -329,7 +329,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
             { "grant_type", "client_credentials" },
             { "client_id", "lexipro-api" },
             { "client_secret", "lexipro-secret-change-in-production" },
-            { "scope", "urn:lexipro-api" }
+            { "scope", "urn:andy-docs-api" }
         });
 
         var tokenResponse = await _client.PostAsync("/connect/token", tokenRequest);
@@ -418,7 +418,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
             { "grant_type", "client_credentials" },
             { "client_id", "lexipro-api" },
             { "client_secret", "lexipro-secret-change-in-production" },
-            { "scope", "urn:lexipro-api" }
+            { "scope", "urn:andy-docs-api" }
         });
 
         var tokenResponse = await _client.PostAsync("/connect/token", tokenRequest);

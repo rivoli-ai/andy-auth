@@ -21,7 +21,7 @@ def test_client_credentials_valid(client: OAuthTestClient, runner: TestRunner):
             "grant_type": "client_credentials",
             "client_id": config.client_id,
             "client_secret": config.client_secret,
-            "scope": "urn:lexipro-api"
+            "scope": "urn:andy-docs-api"
         })
 
         duration = (time.time() - start) * 1000
@@ -79,7 +79,7 @@ def test_client_credentials_invalid_secret(client: OAuthTestClient, runner: Test
             "grant_type": "client_credentials",
             "client_id": config.client_id,
             "client_secret": "wrong-secret",
-            "scope": "urn:lexipro-api"
+            "scope": "urn:andy-docs-api"
         })
 
         duration = (time.time() - start) * 1000
@@ -236,7 +236,7 @@ def test_client_credentials_with_resource(client: OAuthTestClient, runner: TestR
             "grant_type": "client_credentials",
             "client_id": config.client_id,
             "client_secret": config.client_secret,
-            "scope": "urn:lexipro-api",
+            "scope": "urn:andy-docs-api",
             "resource": "https://lexipro-uat.up.railway.app/mcp"
         })
 

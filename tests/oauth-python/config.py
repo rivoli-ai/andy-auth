@@ -56,7 +56,7 @@ CLIENTS: Dict[str, ClientConfig] = {
             "https://lexipro-api-uat.rivoli.ai/callback",
             "https://lexipro-api.rivoli.ai/callback"
         ],
-        scopes=["openid", "profile", "email", "roles", "urn:lexipro-api"],
+        scopes=["openid", "profile", "email", "roles", "urn:andy-docs-api"],
         supports_client_credentials=True,
         supports_authorization_code=True,
         supports_refresh_token=True
@@ -70,7 +70,7 @@ CLIENTS: Dict[str, ClientConfig] = {
             "https://wagram-uat.vercel.app/callback",
             "https://wagram.ai/callback"
         ],
-        scopes=["openid", "profile", "email", "roles", "urn:lexipro-api"],
+        scopes=["openid", "profile", "email", "roles", "urn:andy-docs-api"],
         supports_client_credentials=False,
         supports_authorization_code=True,
         supports_refresh_token=True
@@ -84,7 +84,7 @@ CLIENTS: Dict[str, ClientConfig] = {
             "http://127.0.0.1/callback",
             "http://localhost/callback"
         ],
-        scopes=["openid", "profile", "email", "urn:lexipro-api"],
+        scopes=["openid", "profile", "email", "urn:andy-docs-api"],
         supports_client_credentials=False,
         supports_authorization_code=True,
         supports_refresh_token=True
@@ -98,7 +98,7 @@ CLIENTS: Dict[str, ClientConfig] = {
             "https://chatgpt.com/api/mcp/auth_callback",
             "http://127.0.0.1/callback"
         ],
-        scopes=["openid", "profile", "email", "urn:lexipro-api"],
+        scopes=["openid", "profile", "email", "urn:andy-docs-api"],
         supports_client_credentials=False,
         supports_authorization_code=True,
         supports_refresh_token=True
@@ -112,7 +112,7 @@ CLIENTS: Dict[str, ClientConfig] = {
             "http://localhost/callback",
             "vscode://saoudrizwan.claude-dev/callback"
         ],
-        scopes=["openid", "profile", "email", "urn:lexipro-api"],
+        scopes=["openid", "profile", "email", "urn:andy-docs-api"],
         supports_client_credentials=False,
         supports_authorization_code=True,
         supports_refresh_token=True
@@ -126,7 +126,7 @@ CLIENTS: Dict[str, ClientConfig] = {
             "http://localhost/callback",
             "vscode://roo-cline.roo-cline/callback"
         ],
-        scopes=["openid", "profile", "email", "urn:lexipro-api"],
+        scopes=["openid", "profile", "email", "urn:andy-docs-api"],
         supports_client_credentials=False,
         supports_authorization_code=True,
         supports_refresh_token=True
@@ -140,7 +140,7 @@ CLIENTS: Dict[str, ClientConfig] = {
             "http://localhost/callback",
             "vscode://continue.continue/callback"
         ],
-        scopes=["openid", "profile", "email", "urn:lexipro-api"],
+        scopes=["openid", "profile", "email", "urn:andy-docs-api"],
         supports_client_credentials=False,
         supports_authorization_code=True,
         supports_refresh_token=True
@@ -182,8 +182,8 @@ ENVIRONMENTS: Dict[str, EnvironmentConfig] = {
 
 # MCP Resource servers for token audience testing
 MCP_RESOURCES = [
-    "https://lexipro-uat.up.railway.app/mcp",
-    "https://lexipro-api.rivoli.ai/mcp",
+    "https://andy-docs-uat.up.railway.app/mcp",
+    "https://andy-docs-api.rivoli.ai/mcp",
     "https://localhost:7001/mcp",
     "https://localhost:5154/mcp",
 ]

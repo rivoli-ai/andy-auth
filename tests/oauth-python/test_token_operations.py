@@ -489,7 +489,7 @@ def run_token_operations_tests(
         "grant_type": "client_credentials",
         "client_id": config.client_id,
         "client_secret": config.client_secret,
-        "scope": "urn:lexipro-api"
+        "scope": "urn:andy-docs-api"
     })
     if response.status_code == 200:
         data = response.json()
@@ -507,7 +507,7 @@ def run_token_operations_tests(
         "grant_type": "client_credentials",
         "client_id": config.client_id,
         "client_secret": config.client_secret,
-        "scope": "urn:lexipro-api"
+        "scope": "urn:andy-docs-api"
     })
     if response.status_code == 200:
         revoke_token = response.json().get("access_token")
