@@ -70,7 +70,7 @@ public class DbSeederTests
         // Act
         await seeder.SeedAsync();
 
-        // Assert - 7 clients are created: lexipro-api, wagram-web, claude-desktop, chatgpt, cline, roo, continue-dev
+        // Assert - 7 clients are created: andy-docs-api, wagram-web, claude-desktop, chatgpt, cline, roo, continue-dev
         _mockAppManager.Verify(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default),
             Times.Exactly(7));
     }
@@ -89,7 +89,7 @@ public class DbSeederTests
         // Act
         await seeder.SeedAsync();
 
-        // Assert - lexipro-api, wagram-web, claude-desktop, chatgpt, cline, roo, continue-dev are always deleted and recreated
+        // Assert - andy-docs-api, wagram-web, claude-desktop, chatgpt, cline, roo, continue-dev are always deleted and recreated
         // So we expect 7 CreateAsync calls for the always-recreated clients
         _mockAppManager.Verify(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default),
             Times.Exactly(7));
@@ -99,12 +99,12 @@ public class DbSeederTests
     }
 
     [Fact]
-    public async Task SeedAsync_ShouldCreateLexiproApiClient_WithCorrectConfiguration()
+    public async Task SeedAsync_ShouldCreateAndyDocsApiClient_WithCorrectConfiguration()
     {
-        // Arrange - lexipro-api doesn't exist, all others exist
-        _mockAppManager.Setup(m => m.FindByClientIdAsync("lexipro-api", default))
+        // Arrange - andy-docs-api doesn't exist, all others exist
+        _mockAppManager.Setup(m => m.FindByClientIdAsync("andy-docs-api", default))
             .ReturnsAsync((object?)null);
-        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.Is<string>(s => s != "lexipro-api"), default))
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.Is<string>(s => s != "andy-docs-api"), default))
             .ReturnsAsync(new object());
 
         var configuration = CreateConfiguration("Production");
@@ -119,14 +119,14 @@ public class DbSeederTests
         // Act
         await seeder.SeedAsync();
 
-        // Assert - find the lexipro-api descriptor among all created
-        var lexiproDescriptor = capturedDescriptors.FirstOrDefault(d => d.ClientId == "lexipro-api");
-        Assert.NotNull(lexiproDescriptor);
-        Assert.Equal("Lexipro API", lexiproDescriptor.DisplayName);
-        Assert.Equal("lexipro-secret-change-in-production", lexiproDescriptor.ClientSecret);
-        Assert.Contains(OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode, lexiproDescriptor.Permissions);
-        Assert.Contains(OpenIddictConstants.Permissions.GrantTypes.RefreshToken, lexiproDescriptor.Permissions);
-        Assert.Contains(OpenIddictConstants.Permissions.GrantTypes.ClientCredentials, lexiproDescriptor.Permissions);
+        // Assert - find the andy-docs-api descriptor among all created
+        var andyDocsDescriptor = capturedDescriptors.FirstOrDefault(d => d.ClientId == "andy-docs-api");
+        Assert.NotNull(andyDocsDescriptor);
+        Assert.Equal("Andy Docs API", andyDocsDescriptor.DisplayName);
+        Assert.Equal("andy-docs-secret-change-in-production", andyDocsDescriptor.ClientSecret);
+        Assert.Contains(OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode, andyDocsDescriptor.Permissions);
+        Assert.Contains(OpenIddictConstants.Permissions.GrantTypes.RefreshToken, andyDocsDescriptor.Permissions);
+        Assert.Contains(OpenIddictConstants.Permissions.GrantTypes.ClientCredentials, andyDocsDescriptor.Permissions);
     }
 
     [Fact]

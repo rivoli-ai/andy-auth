@@ -96,7 +96,7 @@ ANDY_AUTH_TEST_PASSWORD="Test123!" python3 run_all_tests.py --env uat --html rep
 - Password: `Test123!`
 
 **OAuth Clients:**
-- `lexipro-api` - Confidential client with secret
+- `andy-docs-api` - Confidential client with secret
 - `wagram-web` - Public SPA client
 - `claude-desktop` - Public desktop client
 
@@ -110,7 +110,7 @@ ANDY_AUTH_TEST_PASSWORD=Test123!
 
 # Optional (for admin tests)
 ANDY_AUTH_ADMIN_PASSWORD=your-admin-password
-ANDY_AUTH_CLIENT_SECRET=lexipro-secret
+ANDY_AUTH_CLIENT_SECRET=andy-docs-secret
 ```
 
 Copy `tests/oauth-python/.env.example` to `.env` and fill in values.

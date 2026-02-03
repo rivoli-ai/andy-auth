@@ -27,7 +27,7 @@ dotnet run
 
 The server will:
 - Run migrations automatically
-- Seed OAuth clients (lexipro-api, wagram-web, claude-desktop)
+- Seed OAuth clients (andy-docs-api, wagram-web, claude-desktop)
 - Create test user: `test@andy.local` / `Test123!`
 - Start on https://localhost:5001
 
@@ -48,7 +48,7 @@ https://localhost:5001
 curl https://localhost:5001/.well-known/openid-configuration
 
 # Authorization endpoint
-https://localhost:5001/connect/authorize?client_id=lexipro-api&redirect_uri=https://localhost:7001/callback&response_type=code&scope=openid%20profile%20email
+https://localhost:5001/connect/authorize?client_id=andy-docs-api&redirect_uri=https://localhost:7001/callback&response_type=code&scope=openid%20profile%20email
 ```
 
 ## Configuration
@@ -68,7 +68,7 @@ Edit `src/Andy.Auth.Server/appsettings.Development.json`:
 ### OAuth Clients
 
 Clients are automatically seeded on startup. Edit `src/Andy.Auth.Server/Data/DbSeeder.cs` to modify:
-- `lexipro-api` - Confidential client for Lexipro API
+- `andy-docs-api` - Confidential client for Andy Docs API
 - `wagram-web` - Public client for Angular frontend
 - `claude-desktop` - Public client for Claude Desktop MCP
 
@@ -127,18 +127,18 @@ dotnet ef database drop -f
 dotnet ef database update
 ```
 
-## Testing with Lexipro.Api
+## Testing with Andy Docs.Api
 
-### 1. Update Lexipro.Api Configuration
+### 1. Update Andy Docs.Api Configuration
 
-Edit `Lexipro.Api/appsettings.Development.json`:
+Edit `Andy Docs.Api/appsettings.Development.json`:
 
 ```json
 {
   "AndyAuth": {
     "Provider": "AndyAuth",
     "Authority": "https://localhost:5001",
-    "Audience": "lexipro-api",
+    "Audience": "andy-docs-api",
     "RequireHttpsMetadata": false
   }
 }
@@ -152,15 +152,15 @@ cd andy-auth/src/Andy.Auth.Server
 dotnet run
 ```
 
-**Terminal 2 - Lexipro.Api:**
+**Terminal 2 - Andy Docs.Api:**
 ```bash
-cd lexipro/src/Lexipro.Api
+cd andy-docs/src/Andy Docs.Api
 dotnet run
 ```
 
 **Terminal 3 - Angular Frontend:**
 ```bash
-cd lexipro/client
+cd andy-docs/client
 npm start
 ```
 
@@ -170,7 +170,7 @@ npm start
 2. Click login → redirects to Andy Auth (https://localhost:5001)
 3. Login with test@andy.local / Test123!
 4. Redirected back to app with access token
-5. Frontend calls Lexipro.Api with token
+5. Frontend calls Andy Docs.Api with token
 6. API validates token with Andy.Auth.Server
 
 ## Troubleshooting
@@ -269,7 +269,7 @@ dotnet run
 
 ## Next Steps
 
-- [ ] Test OAuth flow with Lexipro.Api
+- [ ] Test OAuth flow with Andy Docs.Api
 - [ ] Add users via registration form
 - [ ] Test with Claude Desktop MCP
 - [ ] Test with ChatGPT/Roo

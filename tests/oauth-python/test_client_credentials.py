@@ -14,7 +14,7 @@ from config import CLIENTS, get_client
 def test_client_credentials_valid(client: OAuthTestClient, runner: TestRunner):
     """Test client credentials flow with valid credentials"""
     start = time.time()
-    config = get_client("lexipro-api")
+    config = get_client("andy-docs-api")
 
     try:
         response = client.post("/connect/token", data={
@@ -72,7 +72,7 @@ def test_client_credentials_valid(client: OAuthTestClient, runner: TestRunner):
 def test_client_credentials_invalid_secret(client: OAuthTestClient, runner: TestRunner):
     """Test client credentials flow with invalid secret"""
     start = time.time()
-    config = get_client("lexipro-api")
+    config = get_client("andy-docs-api")
 
     try:
         response = client.post("/connect/token", data={
@@ -229,7 +229,7 @@ def test_client_credentials_missing_params(client: OAuthTestClient, runner: Test
 def test_client_credentials_with_resource(client: OAuthTestClient, runner: TestRunner):
     """Test client credentials flow with resource parameter (MCP)"""
     start = time.time()
-    config = get_client("lexipro-api")
+    config = get_client("andy-docs-api")
 
     try:
         response = client.post("/connect/token", data={
@@ -237,7 +237,7 @@ def test_client_credentials_with_resource(client: OAuthTestClient, runner: TestR
             "client_id": config.client_id,
             "client_secret": config.client_secret,
             "scope": "urn:andy-docs-api",
-            "resource": "https://lexipro-uat.up.railway.app/mcp"
+            "resource": "https://andy-docs-uat.up.railway.app/mcp"
         })
 
         duration = (time.time() - start) * 1000

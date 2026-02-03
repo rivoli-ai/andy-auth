@@ -1,6 +1,6 @@
-# Lexipro Integration Example
+# Andy Docs Integration Example
 
-This example demonstrates migrating Lexipro API from manual JWT Bearer configuration to the **Andy.Auth** library.
+This example demonstrates migrating Andy Docs API from manual JWT Bearer configuration to the **Andy.Auth** library.
 
 ## Overview
 
@@ -12,10 +12,10 @@ This example demonstrates migrating Lexipro API from manual JWT Bearer configura
 
 ### Step 1: Install Andy.Auth Library
 
-Add the NuGet package to your Lexipro API project:
+Add the NuGet package to your Andy Docs API project:
 
 ```bash
-cd ../lexipro/src/Lexipro.Api
+cd andy-docs/src/Andy.Docs.Api
 dotnet add package Andy.Auth
 ```
 
@@ -34,7 +34,7 @@ dotnet add package Andy.Auth
   "AndyAuth": {
     "Provider": "AndyAuth",
     "Authority": "https://localhost:7088",
-    "Audience": "lexipro-api",
+    "Audience": "andy-docs-api",
     "RequireHttpsMetadata": false
   }
 }
@@ -66,7 +66,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.Authority = "https://localhost:7088";
-        options.Audience = "lexipro-api";
+        options.Audience = "andy-docs-api";
         options.RequireHttpsMetadata = false;
 
         options.TokenValidationParameters = new TokenValidationParameters
@@ -74,7 +74,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuer = true,
             ValidIssuer = "https://localhost:7088",
             ValidateAudience = true,
-            ValidAudience = "lexipro-api",
+            ValidAudience = "andy-docs-api",
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             ClockSkew = TimeSpan.FromMinutes(5),
@@ -291,14 +291,14 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Lexipro.Api.Data;
-using Lexipro.Api.Services;
+using Andy.Docs.Api.Data;
+using Andy.Docs.Api.Services;
 using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Database
-builder.Services.AddDbContext<LexiproDbContext>(options =>
+builder.Services.AddDbContext<AndyDocsDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Authentication - Manual JWT Bearer Setup
@@ -417,13 +417,13 @@ app.Run();
 using Andy.Auth.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
-using Lexipro.Api.Data;
-using Lexipro.Api.Services;
+using Andy.Docs.Api.Data;
+using Andy.Docs.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Database
-builder.Services.AddDbContext<LexiproDbContext>(options =>
+builder.Services.AddDbContext<AndyDocsDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Authentication - Andy.Auth Library (one line!)
@@ -491,12 +491,12 @@ app.Run();
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Database=lexipro;Username=postgres;Password=postgres"
+    "DefaultConnection": "Host=localhost;Database=andy_docs;Username=postgres;Password=postgres"
   },
   "AndyAuth": {
     "Provider": "AndyAuth",
     "Authority": "https://localhost:7088",
-    "Audience": "lexipro-api",
+    "Audience": "andy-docs-api",
     "RequireHttpsMetadata": false
   },
   "Logging": {
@@ -532,10 +532,10 @@ dotnet run
 # Server runs at https://localhost:7088
 ```
 
-### 2. Start Lexipro API
+### 2. Start Andy Docs API
 
 ```bash
-cd ../lexipro/src/Lexipro.Api
+cd andy-docs/src/Andy.Docs.Api
 dotnet run
 # API runs at https://localhost:7001
 ```
@@ -555,7 +555,7 @@ curl -X POST "https://localhost:7088/connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=authorization_code" \
   -d "code=YOUR_AUTH_CODE" \
-  -d "client_id=lexipro-api" \
+  -d "client_id=andy-docs-api" \
   -d "redirect_uri=https://localhost:7001/callback" \
   -d "code_verifier=YOUR_CODE_VERIFIER"
 ```

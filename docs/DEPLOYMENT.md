@@ -216,12 +216,12 @@ View in Admin UI:
 
 After deployment, update OAuth clients to use production URLs.
 
-### Lexipro API (Railway)
+### Andy Docs API (Railway)
 
 **Environment Variables:**
 ```bash
 AndyAuth__Authority=https://auth.rivoli.ai
-AndyAuth__Audience=lexipro-api
+AndyAuth__Audience=andy-docs-api
 AndyAuth__RequireHttpsMetadata=true
 ```
 
@@ -230,7 +230,7 @@ AndyAuth__RequireHttpsMetadata=true
 **Environment Variables:**
 ```bash
 VITE_AUTH_URL=https://auth.rivoli.ai
-VITE_API_URL=https://lexipro-api.rivoli.ai
+VITE_API_URL=https://andy-docs-api.rivoli.ai
 ```
 
 **Update auth config:**
@@ -246,7 +246,7 @@ export const environment = {
 
 Claude Desktop should autodiscover OAuth settings via:
 ```
-https://lexipro-api.rivoli.ai/.well-known/oauth-protected-resource
+https://andy-docs-api.rivoli.ai/.well-known/oauth-protected-resource
 ```
 
 ## Troubleshooting
@@ -388,7 +388,7 @@ railway variables --json > env-backup.json
 - [ ] Security headers present
 
 ### Client Integration
-- [ ] Lexipro API updated
+- [ ] Andy Docs API updated
 - [ ] Wagram frontend updated
 - [ ] Claude Desktop tested
 - [ ] All OAuth clients working

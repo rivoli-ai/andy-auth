@@ -47,7 +47,7 @@ Add authentication settings to `appsettings.json`:
   "AndyAuth": {
     "Provider": "AndyAuth",
     "Authority": "https://auth.rivoli.ai",
-    "Audience": "lexipro-api",
+    "Audience": "andy-docs-api",
     "RequireHttpsMetadata": true
   }
 }
@@ -141,7 +141,7 @@ public class ProfileController : ControllerBase
   "AndyAuth": {
     "Provider": "AndyAuth",
     "Authority": "https://auth.rivoli.ai",
-    "Audience": "lexipro-api",
+    "Audience": "andy-docs-api",
     "RequireHttpsMetadata": true
   }
 }
@@ -184,7 +184,7 @@ builder.Services.AddAndyAuth(options =>
 {
     options.Provider = AuthProvider.AndyAuth;
     options.Authority = "https://auth.rivoli.ai";
-    options.Audience = "lexipro-api";
+    options.Audience = "andy-docs-api";
     options.RequireHttpsMetadata = true;
 });
 ```
@@ -198,7 +198,7 @@ var authOptions = new AndyAuthOptions
 {
     Provider = AuthProvider.AndyAuth,
     Authority = "https://auth.rivoli.ai",
-    Audience = "lexipro-api",
+    Audience = "andy-docs-api",
     RequireHttpsMetadata = true
 };
 
@@ -358,7 +358,7 @@ cd andy-auth/src/Andy.Auth.Server
 dotnet run
 ```
 
-**Lexipro API** (Resource Server):
+**Andy Docs API** (Resource Server):
 ```bash
 # Add Andy.Auth library
 dotnet add package Andy.Auth
@@ -370,7 +370,7 @@ dotnet add package Andy.Auth
   "AndyAuth": {
     "Provider": "AndyAuth",
     "Authority": "https://auth.rivoli.ai",
-    "Audience": "lexipro-api",
+    "Audience": "andy-docs-api",
     "RequireHttpsMetadata": true
   }
 }
@@ -443,7 +443,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.Authority = "https://auth.rivoli.ai";
-        options.Audience = "lexipro-api";
+        options.Audience = "andy-docs-api";
         options.RequireHttpsMetadata = true;
 
         options.TokenValidationParameters = new TokenValidationParameters
@@ -451,7 +451,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuer = true,
             ValidIssuer = "https://auth.rivoli.ai",
             ValidateAudience = true,
-            ValidAudience = "lexipro-api",
+            ValidAudience = "andy-docs-api",
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             ClockSkew = TimeSpan.FromMinutes(5),
@@ -518,7 +518,7 @@ Handle authentication events:
 builder.Services.AddAndyAuth(options =>
 {
     options.Authority = "https://auth.rivoli.ai";
-    options.Audience = "lexipro-api";
+    options.Audience = "andy-docs-api";
 
     options.Events = new JwtBearerEvents
     {
@@ -714,9 +714,9 @@ var app = builder.Build();
 
 ## Examples
 
-### Complete Lexipro Integration
+### Complete Andy Docs Integration
 
-See `examples/LexiproIntegration/` for a working example showing:
+See `examples/Andy DocsIntegration/` for a working example showing:
 - Andy.Auth library setup
 - ICurrentUserService usage
 - Role-based authorization

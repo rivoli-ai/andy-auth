@@ -105,13 +105,13 @@ The admin dashboard provides a web-based interface for managing Andy Auth Server
 
 **Seeded Clients:**
 
-**lexipro-api** (Confidential)
-- Client ID: `lexipro-api`
+**andy-docs-api** (Confidential)
+- Client ID: `andy-docs-api`
 - Has client secret (hashed)
 - Redirect URIs:
   - https://localhost:7001/callback
   - http://localhost:7001/callback
-  - https://lexipro-api.rivoli.ai/callback
+  - https://andy-docs-api.rivoli.ai/callback
 - Permissions:
   - Authorization endpoint
   - Token endpoint

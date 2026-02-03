@@ -50,7 +50,7 @@ public class DbSeeder
     {
         var manager = _serviceProvider.GetRequiredService<IOpenIddictScopeManager>();
 
-        // Register the lexipro-api resource scope
+        // Register the andy-docs-api resource scope
         if (await manager.FindByNameAsync("urn:andy-docs-api") == null)
         {
             await manager.CreateAsync(new OpenIddictScopeDescriptor
@@ -73,17 +73,25 @@ public class DbSeeder
 
         // Andy Docs API Client (for MCP)
         // Delete existing client if it exists (to ensure clean slate with updated permissions)
-        var lexiproApiClient = await manager.FindByClientIdAsync("lexipro-api");
-        if (lexiproApiClient != null)
+        var andyDocsApiClient = await manager.FindByClientIdAsync("andy-docs-api");
+        if (andyDocsApiClient != null)
         {
-            await manager.DeleteAsync(lexiproApiClient);
-            _logger.LogInformation("Deleted existing OAuth client: lexipro-api");
+            await manager.DeleteAsync(andyDocsApiClient);
+            _logger.LogInformation("Deleted existing OAuth client: andy-docs-api");
+        }
+
+        // Also clean up legacy lexipro-api client if it exists
+        var legacyClient = await manager.FindByClientIdAsync("lexipro-api");
+        if (legacyClient != null)
+        {
+            await manager.DeleteAsync(legacyClient);
+            _logger.LogInformation("Deleted legacy OAuth client: lexipro-api");
         }
 
         await manager.CreateAsync(new OpenIddictApplicationDescriptor
         {
-            ClientId = "lexipro-api",
-            ClientSecret = "lexipro-secret-change-in-production",
+            ClientId = "andy-docs-api",
+            ClientSecret = "andy-docs-secret-change-in-production",
             DisplayName = "Andy Docs API",
             ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
             Permissions =
@@ -100,25 +108,25 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Scopes.Roles,
-                "scp:urn:andy-docs-api",  // Permission to request lexipro-api resource
+                "scp:urn:andy-docs-api",  // Permission to request andy-docs-api resource
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code
             },
             RedirectUris =
             {
                 new Uri("https://localhost:7001/callback"),
-                new Uri("https://lexipro-api-uat.rivoli.ai/callback"),
-                new Uri("https://lexipro-api.rivoli.ai/callback")
+                new Uri("https://andy-docs-uat.up.railway.app/callback"),
+                new Uri("https://andy-docs-api.rivoli.ai/callback")
             },
             PostLogoutRedirectUris =
             {
                 new Uri("https://localhost:7001/"),
-                new Uri("https://lexipro-api-uat.rivoli.ai/"),
-                new Uri("https://lexipro-api.rivoli.ai/")
+                new Uri("https://andy-docs-uat.up.railway.app/"),
+                new Uri("https://andy-docs-api.rivoli.ai/")
             }
         });
 
-        _logger.LogInformation("Created OAuth client: lexipro-api with updated permissions");
+        _logger.LogInformation("Created OAuth client: andy-docs-api with updated permissions");
 
         // Wagram Web Client
         // Delete and recreate to ensure latest configuration
@@ -146,7 +154,7 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Scopes.Roles,
-                "scp:urn:andy-docs-api",  // Permission to request lexipro-api resource
+                "scp:urn:andy-docs-api",  // Permission to request andy-docs-api resource
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code
             },
@@ -195,7 +203,7 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
-                "scp:urn:andy-docs-api",  // Permission to request lexipro-api resource
+                "scp:urn:andy-docs-api",  // Permission to request andy-docs-api resource
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 

@@ -25,7 +25,7 @@ public class AndyAuthOptions
 
     /// <summary>
     /// OAuth Audience (API identifier)
-    /// Example: "lexipro-api"
+    /// Example: "andy-docs-api"
     /// </summary>
     public string? Audience { get; set; }
 

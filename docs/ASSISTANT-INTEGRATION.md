@@ -80,8 +80,8 @@ Add the following to your Claude Desktop MCP configuration file:
 ```json
 {
   "mcpServers": {
-    "lexipro": {
-      "url": "https://lexipro-uat.up.railway.app/mcp"
+    "andy-docs": {
+      "url": "https://andy-docs-uat.up.railway.app/mcp"
     }
   }
 }
@@ -105,7 +105,7 @@ ChatGPT fully supports MCP OAuth 2.1 with auto-discovery.
 
 In ChatGPT settings, add the MCP server URL:
 ```
-https://lexipro-uat.up.railway.app/mcp
+https://andy-docs-uat.up.railway.app/mcp
 ```
 
 ChatGPT handles OAuth discovery and authentication automatically.
@@ -126,8 +126,8 @@ In VS Code settings.json:
 ```json
 {
   "github.copilot.chat.mcp.servers": {
-    "lexipro": {
-      "url": "https://lexipro-uat.up.railway.app/mcp"
+    "andy-docs": {
+      "url": "https://andy-docs-uat.up.railway.app/mcp"
     }
   }
 }
@@ -146,8 +146,8 @@ In VS Code settings.json:
 ```json
 {
   "cline.mcpServers": {
-    "lexipro": {
-      "url": "https://lexipro-uat.up.railway.app/mcp"
+    "andy-docs": {
+      "url": "https://andy-docs-uat.up.railway.app/mcp"
     }
   }
 }
@@ -173,8 +173,8 @@ In VS Code settings.json:
 ```json
 {
   "roo-cline.mcpServers": {
-    "lexipro": {
-      "url": "https://lexipro-uat.up.railway.app/mcp"
+    "andy-docs": {
+      "url": "https://andy-docs-uat.up.railway.app/mcp"
     }
   }
 }
@@ -201,7 +201,7 @@ In `.continue/config.json`:
       {
         "transport": {
           "type": "sse",
-          "url": "https://lexipro-uat.up.railway.app/mcp"
+          "url": "https://andy-docs-uat.up.railway.app/mcp"
         }
       }
     ]
@@ -232,7 +232,7 @@ https://andy-auth-uat-api-production.up.railway.app/connect/authorize?
   client_id=YOUR_CLIENT_ID&
   response_type=code&
   redirect_uri=YOUR_REDIRECT_URI&
-  scope=openid%20email%20profile%20urn:lexipro-api&
+  scope=openid%20email%20profile%20urn:andy-docs-api&
   code_challenge=YOUR_PKCE_CHALLENGE&
   code_challenge_method=S256&
   state=YOUR_STATE

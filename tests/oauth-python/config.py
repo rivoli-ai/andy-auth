@@ -47,14 +47,14 @@ class EnvironmentConfig:
 
 # Pre-registered OAuth clients
 CLIENTS: Dict[str, ClientConfig] = {
-    "lexipro-api": ClientConfig(
-        client_id="lexipro-api",
-        client_secret=os.environ.get("ANDY_AUTH_CLIENT_SECRET", "lexipro-secret-change-in-production"),
+    "andy-docs-api": ClientConfig(
+        client_id="andy-docs-api",
+        client_secret=os.environ.get("ANDY_AUTH_CLIENT_SECRET", "andy-docs-secret-change-in-production"),
         is_confidential=True,
         redirect_uris=[
             "https://localhost:7001/callback",
-            "https://lexipro-api-uat.rivoli.ai/callback",
-            "https://lexipro-api.rivoli.ai/callback"
+            "https://andy-docs-uat.up.railway.app/callback",
+            "https://andy-docs-api.rivoli.ai/callback"
         ],
         scopes=["openid", "profile", "email", "roles", "urn:andy-docs-api"],
         supports_client_credentials=True,
@@ -152,7 +152,7 @@ CLIENTS: Dict[str, ClientConfig] = {
 # Set these in your environment or in a .env file (not committed to git):
 #   ANDY_AUTH_TEST_PASSWORD - Password for test@andy.local
 #   ANDY_AUTH_ADMIN_PASSWORD - Password for admin user (optional, for admin tests)
-#   ANDY_AUTH_CLIENT_SECRET - Client secret for lexipro-api (optional)
+#   ANDY_AUTH_CLIENT_SECRET - Client secret for andy-docs-api (optional)
 
 def _get_env(key: str, default: str = "") -> str:
     """Get environment variable with fallback"""

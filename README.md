@@ -94,7 +94,7 @@ Access at: **/Admin**
 
 | Client | Type | Use Case |
 |--------|------|----------|
-| `lexipro-api` | Confidential | Server-to-server communication |
+| `andy-docs-api` | Confidential | Server-to-server communication |
 | `wagram-web` | Public SPA | Angular/React web applications |
 | `claude-desktop` | Public | Claude Desktop MCP integration |
 | `chatgpt` | Public | ChatGPT MCP integration |

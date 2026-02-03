@@ -112,7 +112,7 @@ def test_token_introspection_valid(
 ):
     """Test token introspection with valid token"""
     start = time.time()
-    config = get_client("lexipro-api")  # Need confidential client for introspection
+    config = get_client("andy-docs-api")  # Need confidential client for introspection
 
     try:
         response = client.post("/connect/introspect", data={
@@ -156,7 +156,7 @@ def test_token_introspection_valid(
 def test_token_introspection_invalid(client: OAuthTestClient, runner: TestRunner):
     """Test token introspection with invalid token"""
     start = time.time()
-    config = get_client("lexipro-api")
+    config = get_client("andy-docs-api")
 
     try:
         response = client.post("/connect/introspect", data={
@@ -238,7 +238,7 @@ def test_token_revocation_valid(
 ):
     """Test token revocation with valid token"""
     start = time.time()
-    config = get_client("lexipro-api")
+    config = get_client("andy-docs-api")
 
     try:
         response = client.post("/connect/revoke", data={
@@ -304,7 +304,7 @@ def test_token_revocation_valid(
 def test_token_revocation_invalid(client: OAuthTestClient, runner: TestRunner):
     """Test token revocation with invalid token (should still succeed per RFC 7009)"""
     start = time.time()
-    config = get_client("lexipro-api")
+    config = get_client("andy-docs-api")
 
     try:
         response = client.post("/connect/revoke", data={
@@ -484,7 +484,7 @@ def run_token_operations_tests(
     # Note: Tokens from auth code flow may be reference tokens that can only be introspected
     # by the issuing client, so we use a client credentials token for reliable testing
     introspection_token = None
-    config = get_client("lexipro-api")
+    config = get_client("andy-docs-api")
     response = client.post("/connect/token", data={
         "grant_type": "client_credentials",
         "client_id": config.client_id,
@@ -502,7 +502,7 @@ def run_token_operations_tests(
     test_token_introspection_no_credentials(client, runner)
 
     # Run revocation tests (get fresh token to revoke)
-    config = get_client("lexipro-api")
+    config = get_client("andy-docs-api")
     response = client.post("/connect/token", data={
         "grant_type": "client_credentials",
         "client_id": config.client_id,
