@@ -133,14 +133,14 @@ public class AuthorizationController : ControllerBase
             case ConsentTypes.External when authorizations.Any():
                 var principal = await CreateClaimsPrincipalAsync(user, request.GetScopes());
 
-                // Always include lexipro-api audience for wagram-web client
+                // Always include andy-docs-api audience for wagram-web client
                 if (request.ClientId == "wagram-web")
                 {
                     var currentResources = principal.GetResources().ToList();
-                    const string lexiproApiResource = "urn:lexipro-api";
-                    if (!currentResources.Contains(lexiproApiResource))
+                    const string andyDocsApiResource = "urn:andy-docs-api";
+                    if (!currentResources.Contains(andyDocsApiResource))
                     {
-                        currentResources.Add(lexiproApiResource);
+                        currentResources.Add(andyDocsApiResource);
                     }
                     principal.SetResources(currentResources);
                 }
@@ -154,14 +154,14 @@ public class AuthorizationController : ControllerBase
             case ConsentTypes.Explicit when consentGranted:
                 var principalExplicit = await CreateClaimsPrincipalAsync(user, request.GetScopes());
 
-                // Always include lexipro-api audience for wagram-web client
+                // Always include andy-docs-api audience for wagram-web client
                 if (request.ClientId == "wagram-web")
                 {
                     var currentResources = principalExplicit.GetResources().ToList();
-                    const string lexiproApiResource = "urn:lexipro-api";
-                    if (!currentResources.Contains(lexiproApiResource))
+                    const string andyDocsApiResource = "urn:andy-docs-api";
+                    if (!currentResources.Contains(andyDocsApiResource))
                     {
-                        currentResources.Add(lexiproApiResource);
+                        currentResources.Add(andyDocsApiResource);
                     }
                     principalExplicit.SetResources(currentResources);
                 }
@@ -275,14 +275,14 @@ public class AuthorizationController : ControllerBase
                 principal.SetResources(requestedResources);
             }
 
-            // Always include lexipro-api audience for wagram-web client
+            // Always include andy-docs-api audience for wagram-web client
             if (request.ClientId == "wagram-web")
             {
                 var currentResources = principal.GetResources().ToList();
-                const string lexiproApiResource = "urn:lexipro-api";
-                if (!currentResources.Contains(lexiproApiResource))
+                const string andyDocsApiResource = "urn:andy-docs-api";
+                if (!currentResources.Contains(andyDocsApiResource))
                 {
-                    currentResources.Add(lexiproApiResource);
+                    currentResources.Add(andyDocsApiResource);
                 }
                 principal.SetResources(currentResources);
             }

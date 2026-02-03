@@ -51,19 +51,19 @@ public class DbSeeder
         var manager = _serviceProvider.GetRequiredService<IOpenIddictScopeManager>();
 
         // Register the lexipro-api resource scope
-        if (await manager.FindByNameAsync("urn:lexipro-api") == null)
+        if (await manager.FindByNameAsync("urn:andy-docs-api") == null)
         {
             await manager.CreateAsync(new OpenIddictScopeDescriptor
             {
-                Name = "urn:lexipro-api",
-                DisplayName = "Lexipro API",
+                Name = "urn:andy-docs-api",
+                DisplayName = "Andy Docs API",
                 Resources =
                 {
-                    "urn:lexipro-api"
+                    "urn:andy-docs-api"
                 }
             });
 
-            _logger.LogInformation("Created API resource scope: urn:lexipro-api");
+            _logger.LogInformation("Created API resource scope: urn:andy-docs-api");
         }
     }
 
@@ -71,7 +71,7 @@ public class DbSeeder
     {
         var manager = _serviceProvider.GetRequiredService<IOpenIddictApplicationManager>();
 
-        // Lexipro API Client (for MCP)
+        // Andy Docs API Client (for MCP)
         // Delete existing client if it exists (to ensure clean slate with updated permissions)
         var lexiproApiClient = await manager.FindByClientIdAsync("lexipro-api");
         if (lexiproApiClient != null)
@@ -84,7 +84,7 @@ public class DbSeeder
         {
             ClientId = "lexipro-api",
             ClientSecret = "lexipro-secret-change-in-production",
-            DisplayName = "Lexipro API",
+            DisplayName = "Andy Docs API",
             ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
             Permissions =
             {
@@ -100,7 +100,7 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Scopes.Roles,
-                "scp:urn:lexipro-api",  // Permission to request lexipro-api resource
+                "scp:urn:andy-docs-api",  // Permission to request lexipro-api resource
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code
             },
@@ -146,7 +146,7 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Scopes.Roles,
-                "scp:urn:lexipro-api",  // Permission to request lexipro-api resource
+                "scp:urn:andy-docs-api",  // Permission to request lexipro-api resource
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code
             },
@@ -195,13 +195,13 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
-                "scp:urn:lexipro-api",  // Permission to request lexipro-api resource
+                "scp:urn:andy-docs-api",  // Permission to request lexipro-api resource
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
                 // Allow requesting resource servers (for MCP) - using rst: prefix for OpenIddict 7.x resource parameter
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-uat.up.railway.app/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-api.rivoli.ai/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-uat.up.railway.app/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-api.rivoli.ai/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp"
@@ -246,13 +246,13 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
-                "scp:urn:lexipro-api",
+                "scp:urn:andy-docs-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
                 // Allow requesting resource servers (for MCP)
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-uat.up.railway.app/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-api.rivoli.ai/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-uat.up.railway.app/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-api.rivoli.ai/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp"
             },
             RedirectUris =
@@ -294,13 +294,13 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
-                "scp:urn:lexipro-api",
+                "scp:urn:andy-docs-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
                 // Allow requesting resource servers (for MCP)
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-uat.up.railway.app/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-api.rivoli.ai/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-uat.up.railway.app/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-api.rivoli.ai/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp"
@@ -347,13 +347,13 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
-                "scp:urn:lexipro-api",
+                "scp:urn:andy-docs-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
                 // Allow requesting resource servers (for MCP)
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-uat.up.railway.app/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-api.rivoli.ai/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-uat.up.railway.app/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-api.rivoli.ai/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp"
@@ -400,13 +400,13 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
-                "scp:urn:lexipro-api",
+                "scp:urn:andy-docs-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
                 // Allow requesting resource servers (for MCP)
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-uat.up.railway.app/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-api.rivoli.ai/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-uat.up.railway.app/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-api.rivoli.ai/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp"
@@ -453,13 +453,13 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
-                "scp:urn:lexipro-api",
+                "scp:urn:andy-docs-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
                 // Allow requesting resource servers (for MCP)
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-uat.up.railway.app/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://lexipro-api.rivoli.ai/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-uat.up.railway.app/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-api.rivoli.ai/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp"

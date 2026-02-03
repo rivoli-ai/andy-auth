@@ -192,8 +192,8 @@ builder.Services.AddOpenIddict()
         // Register MCP resource servers (allows 'resource' parameter in authorization requests)
         // These are the audience values that clients can request tokens for
         options.RegisterResources(
-            "https://lexipro-uat.up.railway.app/mcp",
-            "https://lexipro-api.rivoli.ai/mcp",
+            "https://andy-docs-uat.up.railway.app/mcp",
+            "https://andy-docs-api.rivoli.ai/mcp",
             "https://localhost:7001/mcp",
             "https://localhost:5154/mcp",
             "http://localhost:5154/mcp"
