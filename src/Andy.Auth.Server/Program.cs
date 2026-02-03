@@ -187,7 +187,7 @@ builder.Services.AddOpenIddict()
         }
 
         // Register scopes
-        options.RegisterScopes("openid", "profile", "email", "roles", "offline_access");
+        options.RegisterScopes("openid", "profile", "email", "roles", "offline_access", "urn:andy-docs-api");
 
         // Register MCP resource servers (allows 'resource' parameter in authorization requests)
         // These are the audience values that clients can request tokens for
