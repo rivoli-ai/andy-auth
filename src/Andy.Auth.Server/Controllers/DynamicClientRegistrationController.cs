@@ -201,8 +201,8 @@ public class DynamicClientRegistrationController : ControllerBase
         // This allows DCR clients to use the OAuth 2.0 resource parameter (RFC 8707)
         var mcpResources = new[]
         {
-            "https://lexipro-uat.up.railway.app/mcp",
-            "https://lexipro-api.rivoli.ai/mcp",
+            "https://andy-docs-uat.up.railway.app/mcp",
+            "https://andy-docs-api.rivoli.ai/mcp",
             "https://localhost:7001/mcp",
             "https://localhost:5154/mcp",
             "http://localhost:5154/mcp"
