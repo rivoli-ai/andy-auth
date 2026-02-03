@@ -421,3 +421,4 @@ static string NormalizePostgresConnectionString(string connectionString)
 
 // Make Program class accessible for integration tests
 public partial class Program { }
+// Force rebuild Tue Feb  3 12:51:47 PST 2026
