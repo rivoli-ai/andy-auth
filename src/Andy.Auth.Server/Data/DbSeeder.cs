@@ -65,6 +65,22 @@ public class DbSeeder
 
             _logger.LogInformation("Created API resource scope: urn:andy-docs-api");
         }
+
+        // Register the andy-code-index-api resource scope
+        if (await manager.FindByNameAsync("urn:andy-code-index-api") == null)
+        {
+            await manager.CreateAsync(new OpenIddictScopeDescriptor
+            {
+                Name = "urn:andy-code-index-api",
+                DisplayName = "Andy Code Index API",
+                Resources =
+                {
+                    "urn:andy-code-index-api"
+                }
+            });
+
+            _logger.LogInformation("Created API resource scope: urn:andy-code-index-api");
+        }
     }
 
     private async Task SeedClientsAsync()
@@ -488,6 +504,87 @@ public class DbSeeder
 
         await manager.CreateAsync(continueDescriptor);
         _logger.LogInformation("Created OAuth client: continue-dev");
+
+        // Andy Code Index Web Client
+        var andyCodeIndexWebClient = await manager.FindByClientIdAsync("andy-code-index-web");
+        if (andyCodeIndexWebClient != null)
+        {
+            await manager.DeleteAsync(andyCodeIndexWebClient);
+            _logger.LogInformation("Deleted existing OAuth client: andy-code-index-web");
+        }
+
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "andy-code-index-web",
+            DisplayName = "Andy Code Index Web",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
+                "scp:urn:andy-code-index-api",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                new Uri("https://localhost:4201/callback")
+            },
+            PostLogoutRedirectUris =
+            {
+                new Uri("https://localhost:4201/")
+            }
+        });
+
+        _logger.LogInformation("Created OAuth client: andy-code-index-web");
+
+        // Andy Containers Web Client
+        var andyContainersWebClient = await manager.FindByClientIdAsync("andy-containers-web");
+        if (andyContainersWebClient != null)
+        {
+            await manager.DeleteAsync(andyContainersWebClient);
+            _logger.LogInformation("Deleted existing OAuth client: andy-containers-web");
+        }
+
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "andy-containers-web",
+            DisplayName = "Andy Containers Web",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Scopes.Roles,
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                new Uri("https://localhost:4200/callback")
+            },
+            PostLogoutRedirectUris =
+            {
+                new Uri("https://localhost:4200/")
+            }
+        });
+
+        _logger.LogInformation("Created OAuth client: andy-containers-web");
     }
 
     /// <summary>
