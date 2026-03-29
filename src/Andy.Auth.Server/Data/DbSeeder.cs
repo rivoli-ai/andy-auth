@@ -81,6 +81,22 @@ public class DbSeeder
 
             _logger.LogInformation("Created API resource scope: urn:andy-code-index-api");
         }
+
+        // Register the andy-containers-api resource scope
+        if (await manager.FindByNameAsync("urn:andy-containers-api") == null)
+        {
+            await manager.CreateAsync(new OpenIddictScopeDescriptor
+            {
+                Name = "urn:andy-containers-api",
+                DisplayName = "Andy Containers API",
+                Resources =
+                {
+                    "urn:andy-containers-api"
+                }
+            });
+
+            _logger.LogInformation("Created API resource scope: urn:andy-containers-api");
+        }
     }
 
     private async Task SeedClientsAsync()
@@ -571,6 +587,8 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Email,
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Scopes.Roles,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
+                "scp:urn:andy-containers-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code
             },
