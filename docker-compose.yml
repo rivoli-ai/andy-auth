@@ -25,12 +25,13 @@ services:
     container_name: andy-auth-server
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=https://+:8443
+      - ASPNETCORE_URLS=https://+:8443;http://+:8080
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=andy_auth_dev;Username=postgres;Password=postgres
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
       - "5001:8443"
+      - "5002:8080"
     volumes:
       - ./certs:/usr/local/share/ca-certificates/custom:ro
     depends_on:
