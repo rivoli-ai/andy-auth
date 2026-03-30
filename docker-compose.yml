@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: andy-auth-postgres
+    container_name: andy-auth-db
     environment:
       POSTGRES_DB: andy_auth_dev
       POSTGRES_USER: postgres
@@ -14,9 +12,36 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
+
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      additional_contexts:
+        certs: ./certs
+    container_name: andy-auth-server
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:8443
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=andy_auth_dev;Username=postgres;Password=postgres
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "5001:8443"
+    volumes:
+      - ./certs:/usr/local/share/ca-certificates/custom:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fk", "https://localhost:8443/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
   adminer:
     image: adminer:latest
