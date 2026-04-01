@@ -26,8 +26,20 @@ public class AndyAuthProvider : IAuthProvider
             jwtOptions.Audience = options.Audience;
             jwtOptions.RequireHttpsMetadata = options.RequireHttpsMetadata;
 
-            // Ensure the authority ends with a trailing slash to match OpenIddict's issuer format
-            var authority = options.Authority.TrimEnd('/') + "/";
+            // In development, skip SSL validation for self-signed certificates
+            if (!options.RequireHttpsMetadata)
+            {
+                jwtOptions.BackchannelHttpHandler = new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback =
+                        HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                };
+            }
+
+            // Accept both trailing-slash and no-trailing-slash issuer formats
+            // OpenIddict uses trailing slash, Duende does not by default
+            var authorityBase = options.Authority.TrimEnd('/');
+            var validIssuers = new[] { authorityBase, authorityBase + "/" };
 
             // Build list of valid audiences (primary + additional)
             var validAudiences = new List<string>();
@@ -39,7 +51,7 @@ public class AndyAuthProvider : IAuthProvider
             jwtOptions.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
-                ValidIssuer = authority,
+                ValidIssuers = validIssuers,
                 ValidateAudience = validAudiences.Count > 0,  // Validate audience when any are configured
                 ValidAudiences = validAudiences.Count > 0 ? validAudiences : null,
                 ValidateLifetime = true,

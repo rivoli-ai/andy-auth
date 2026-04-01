@@ -65,6 +65,54 @@ public class DbSeeder
 
             _logger.LogInformation("Created API resource scope: urn:andy-docs-api");
         }
+
+        // Register the andy-code-index-api resource scope
+        if (await manager.FindByNameAsync("urn:andy-code-index-api") == null)
+        {
+            await manager.CreateAsync(new OpenIddictScopeDescriptor
+            {
+                Name = "urn:andy-code-index-api",
+                DisplayName = "Andy Code Index API",
+                Resources =
+                {
+                    "urn:andy-code-index-api"
+                }
+            });
+
+            _logger.LogInformation("Created API resource scope: urn:andy-code-index-api");
+        }
+
+        // Register the andy-containers-api resource scope
+        if (await manager.FindByNameAsync("urn:andy-containers-api") == null)
+        {
+            await manager.CreateAsync(new OpenIddictScopeDescriptor
+            {
+                Name = "urn:andy-containers-api",
+                DisplayName = "Andy Containers API",
+                Resources =
+                {
+                    "urn:andy-containers-api"
+                }
+            });
+
+            _logger.LogInformation("Created API resource scope: urn:andy-containers-api");
+        }
+
+        // Register the andy-rbac resource scope
+        if (await manager.FindByNameAsync("andy-rbac") == null)
+        {
+            await manager.CreateAsync(new OpenIddictScopeDescriptor
+            {
+                Name = "andy-rbac",
+                DisplayName = "Andy RBAC API",
+                Resources =
+                {
+                    "andy-rbac"
+                }
+            });
+
+            _logger.LogInformation("Created API resource scope: andy-rbac");
+        }
     }
 
     private async Task SeedClientsAsync()
@@ -204,6 +252,7 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
                 "scp:urn:andy-docs-api",  // Permission to request andy-docs-api resource
+                "scp:urn:andy-code-index-api",  // Permission to request andy-code-index-api resource
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
@@ -212,7 +261,10 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-api.rivoli.ai/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp"
+                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp",
+                // Andy Code Index MCP resources
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5101/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5100/mcp"
             },
             RedirectUris =
             {
@@ -255,13 +307,17 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
                 "scp:urn:andy-docs-api",
+                "scp:urn:andy-code-index-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
                 // Allow requesting resource servers (for MCP)
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-uat.up.railway.app/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-api.rivoli.ai/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp"
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
+                // Andy Code Index MCP resources
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5101/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5100/mcp"
             },
             RedirectUris =
             {
@@ -303,6 +359,7 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
                 "scp:urn:andy-docs-api",
+                "scp:urn:andy-code-index-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
@@ -310,6 +367,9 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-uat.up.railway.app/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-api.rivoli.ai/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
+                // Andy Code Index MCP resources
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5101/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5100/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp"
             },
@@ -356,6 +416,7 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
                 "scp:urn:andy-docs-api",
+                "scp:urn:andy-code-index-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
@@ -363,6 +424,9 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-uat.up.railway.app/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-api.rivoli.ai/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
+                // Andy Code Index MCP resources
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5101/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5100/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp"
             },
@@ -409,6 +473,7 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
                 "scp:urn:andy-docs-api",
+                "scp:urn:andy-code-index-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
@@ -416,6 +481,9 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-uat.up.railway.app/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-api.rivoli.ai/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
+                // Andy Code Index MCP resources
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5101/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5100/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp"
             },
@@ -462,6 +530,7 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Scopes.Profile,
                 OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
                 "scp:urn:andy-docs-api",
+                "scp:urn:andy-code-index-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code,
 
@@ -469,6 +538,9 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-uat.up.railway.app/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-api.rivoli.ai/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
+                // Andy Code Index MCP resources
+                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5101/mcp",
+                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5100/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
                 OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp"
             },
@@ -488,6 +560,230 @@ public class DbSeeder
 
         await manager.CreateAsync(continueDescriptor);
         _logger.LogInformation("Created OAuth client: continue-dev");
+
+        // Andy Agentic Web Client (SPA)
+        var agenticWebClient = await manager.FindByClientIdAsync("andy-agentic-web");
+        if (agenticWebClient != null)
+        {
+            await manager.DeleteAsync(agenticWebClient);
+            _logger.LogInformation("Deleted existing OAuth client: andy-agentic-web");
+        }
+
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "andy-agentic-web",
+            DisplayName = "Andy Agentic Web",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Scopes.Roles,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                new Uri("http://localhost:4200"),
+                new Uri("http://localhost:4200/callback"),
+                new Uri("https://localhost:4200"),
+                new Uri("https://localhost:4200/callback")
+            },
+            PostLogoutRedirectUris =
+            {
+                new Uri("http://localhost:4200"),
+                new Uri("https://localhost:4200")
+            }
+        });
+
+        _logger.LogInformation("Created OAuth client: andy-agentic-web");
+
+        // Andy Code Index Web Client (SPA)
+        var codeIndexClient = await manager.FindByClientIdAsync("andy-code-index-web");
+        if (codeIndexClient != null)
+        {
+            await manager.DeleteAsync(codeIndexClient);
+            _logger.LogInformation("Deleted existing OAuth client: andy-code-index-web");
+        }
+
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "andy-code-index-web",
+            DisplayName = "Andy Code Index Web",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Scopes.Roles,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
+                "scp:urn:andy-code-index-api",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                new Uri("https://localhost:4201/callback"),
+                new Uri("http://localhost:4201/callback")
+            },
+            PostLogoutRedirectUris =
+            {
+                new Uri("https://localhost:4201/"),
+                new Uri("https://localhost:4201/login"),
+                new Uri("http://localhost:4201/"),
+                new Uri("http://localhost:4201/login")
+            }
+        });
+
+        _logger.LogInformation("Created OAuth client: andy-code-index-web");
+
+        // Andy Containers Web Client (SPA)
+        var containersWebClient = await manager.FindByClientIdAsync("andy-containers-web");
+        if (containersWebClient != null)
+        {
+            await manager.DeleteAsync(containersWebClient);
+            _logger.LogInformation("Deleted existing OAuth client: andy-containers-web");
+        }
+
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "andy-containers-web",
+            DisplayName = "Andy Containers Web",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Scopes.Roles,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
+                "scp:urn:andy-containers-api",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                new Uri("https://localhost:4200/callback"),
+                new Uri("http://localhost:4200/callback")
+            },
+            PostLogoutRedirectUris =
+            {
+                new Uri("https://localhost:4200/"),
+                new Uri("https://localhost:4200/login"),
+                new Uri("http://localhost:4200/"),
+                new Uri("http://localhost:4200/login")
+            }
+        });
+
+        _logger.LogInformation("Created OAuth client: andy-containers-web");
+
+        // Andy Containers CLI Client (device flow)
+        var containersCliClient = await manager.FindByClientIdAsync("andy-containers-cli");
+        if (containersCliClient != null)
+        {
+            await manager.DeleteAsync(containersCliClient);
+            _logger.LogInformation("Deleted existing OAuth client: andy-containers-cli");
+        }
+
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "andy-containers-cli",
+            DisplayName = "Andy Containers CLI",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Scopes.Roles,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
+                "scp:urn:andy-containers-api",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                new Uri("http://127.0.0.1/callback"),
+                new Uri("http://localhost/callback")
+            }
+        });
+
+        _logger.LogInformation("Created OAuth client: andy-containers-cli");
+
+        // Andy RBAC Web Client (server-side Blazor/MVC)
+        var rbacWebClient = await manager.FindByClientIdAsync("andy-rbac-web");
+        if (rbacWebClient != null)
+        {
+            await manager.DeleteAsync(rbacWebClient);
+            _logger.LogInformation("Deleted existing OAuth client: andy-rbac-web");
+        }
+
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "andy-rbac-web",
+            DisplayName = "Andy RBAC Web",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Scopes.Roles,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
+                "scp:andy-rbac",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                new Uri("https://localhost:5180/signin-oidc"),
+                new Uri("http://localhost:5181/signin-oidc"),
+                new Uri("https://localhost:5180/callback"),
+                new Uri("http://localhost:5181/callback")
+            },
+            PostLogoutRedirectUris =
+            {
+                new Uri("https://localhost:5180/"),
+                new Uri("https://localhost:5180/signout-callback-oidc"),
+                new Uri("http://localhost:5181/"),
+                new Uri("http://localhost:5181/signout-callback-oidc")
+            }
+        });
+
+        _logger.LogInformation("Created OAuth client: andy-rbac-web");
     }
 
     /// <summary>
