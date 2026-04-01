@@ -44,6 +44,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     /// </summary>
     public DbSet<DynamicClientRegistration> DynamicClientRegistrations { get; set; }
 
+    /// <summary>
+    /// Groups that users can belong to.
+    /// </summary>
+    public DbSet<Group> Groups { get; set; }
+
+    /// <summary>
+    /// User-to-group memberships.
+    /// </summary>
+    public DbSet<UserGroup> UserGroups { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -113,6 +123,31 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasOne(d => d.RegistrationAccessToken)
                 .WithMany()
                 .HasForeignKey("RegistrationAccessTokenId")
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure Group entity
+        builder.Entity<Group>(entity =>
+        {
+            entity.HasIndex(g => g.Code).IsUnique();
+            entity.Property(g => g.Code).HasMaxLength(100).IsRequired();
+            entity.Property(g => g.Name).HasMaxLength(200).IsRequired();
+            entity.Property(g => g.Source).HasMaxLength(50).HasDefaultValue("local");
+            entity.Property(g => g.ExternalId).HasMaxLength(500);
+        });
+
+        // Configure UserGroup entity
+        builder.Entity<UserGroup>(entity =>
+        {
+            entity.HasIndex(ug => new { ug.UserId, ug.GroupId }).IsUnique();
+            entity.Property(ug => ug.Source).HasMaxLength(50).HasDefaultValue("manual");
+            entity.HasOne(ug => ug.User)
+                .WithMany()
+                .HasForeignKey(ug => ug.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(ug => ug.Group)
+                .WithMany(g => g.UserGroups)
+                .HasForeignKey(ug => ug.GroupId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

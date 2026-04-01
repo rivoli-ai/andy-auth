@@ -83,6 +83,44 @@ public class UsersApiController : ControllerBase
     }
 
     /// <summary>
+    /// Search for users by email or name.
+    /// Lightweight endpoint for quick lookups (no pagination, limited fields).
+    /// </summary>
+    [HttpGet("search")]
+    [ProducesResponseType(typeof(List<UserSearchResult>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> SearchUsers(
+        [FromQuery] string query,
+        [FromQuery] int limit = 20)
+    {
+        if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+        {
+            return Ok(new List<UserSearchResult>());
+        }
+
+        var queryLower = query.ToLower();
+        var users = await _userManager.Users
+            .Where(u => u.DeletedAt == null)
+            .Where(u =>
+                (u.Email != null && u.Email.ToLower().Contains(queryLower)) ||
+                (u.FullName != null && u.FullName.ToLower().Contains(queryLower)) ||
+                (u.UserName != null && u.UserName.ToLower().Contains(queryLower)))
+            .Take(Math.Min(limit, 100))
+            .Select(u => new UserSearchResult
+            {
+                Id = u.Id,
+                Email = u.Email ?? "",
+                FullName = u.FullName,
+                UserName = u.UserName,
+                EmailConfirmed = u.EmailConfirmed,
+                TwoFactorEnabled = u.TwoFactorEnabled,
+                IsLockedOut = u.LockoutEnd > DateTimeOffset.UtcNow
+            })
+            .ToListAsync();
+
+        return Ok(users);
+    }
+
+    /// <summary>
     /// Get a specific user by ID.
     /// </summary>
     [HttpGet("{id}")]
@@ -403,4 +441,15 @@ public class ChangeRoleRequest
 {
     [Required]
     public string Role { get; set; } = "User";
+}
+
+public class UserSearchResult
+{
+    public string Id { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string? FullName { get; set; }
+    public string? UserName { get; set; }
+    public bool EmailConfirmed { get; set; }
+    public bool TwoFactorEnabled { get; set; }
+    public bool IsLockedOut { get; set; }
 }

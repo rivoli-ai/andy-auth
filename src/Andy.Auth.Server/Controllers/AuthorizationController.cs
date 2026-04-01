@@ -430,6 +430,13 @@ public class AuthorizationController : ControllerBase
         identity.AddClaim(new Claim(Claims.Name, user.FullName ?? user.UserName ?? user.Email!).SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
         identity.AddClaim(new Claim(Claims.PreferredUsername, user.UserName ?? user.Email!).SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
 
+        // Add groups claims for RBAC integration
+        var groups = await GetUserGroupsAsync(user.Id);
+        foreach (var groupCode in groups)
+        {
+            identity.AddClaim(new Claim("groups", groupCode).SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+        }
+
         // Set the list of scopes granted to the client application
         principal.SetScopes(scopes);
 
@@ -506,6 +513,12 @@ public class AuthorizationController : ControllerBase
 
                 yield break;
 
+            // Groups claim for RBAC integration - always include in access token
+            case "groups":
+                yield return Destinations.AccessToken;
+                yield return Destinations.IdentityToken;
+                yield break;
+
             // Never include the security stamp in the access and identity tokens, as it's a secret value
             case "AspNet.Identity.SecurityStamp":
                 yield break;
@@ -529,5 +542,17 @@ public class AuthorizationController : ControllerBase
             return true;
 
         return dcr.IsApproved && !dcr.IsDisabled;
+    }
+
+    private async Task<List<string>> GetUserGroupsAsync(string userId)
+    {
+        var now = DateTime.UtcNow;
+        return await _dbContext.UserGroups
+            .AsNoTracking()
+            .Where(ug => ug.UserId == userId
+                && ug.Group.IsActive
+                && (ug.ExpiresAt == null || ug.ExpiresAt > now))
+            .Select(ug => ug.Group.Code)
+            .ToListAsync();
     }
 }

@@ -1,5 +1,6 @@
 using Andy.Auth.Server.Configuration;
 using Andy.Auth.Server.Data;
+using Andy.Auth.Server.Mcp;
 using Andy.Auth.Server.Middleware;
 using Andy.Auth.Server.Services;
 using AspNetCoreRateLimit;
@@ -14,7 +15,8 @@ var builder = WebApplication.CreateBuilder(args);
 // In Development, use HTTPS on port 5001. In production (Railway), use HTTP with the PORT env variable.
 if (builder.Environment.IsDevelopment())
 {
-    builder.WebHost.UseUrls("https://localhost:5001");
+    var urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+    builder.WebHost.UseUrls(urls ?? "https://localhost:5001");
 }
 else
 {
@@ -131,6 +133,11 @@ builder.Services.AddOpenIddict()
     // Register the OpenIddict server components
     .AddServer(options =>
     {
+        // Fix the issuer so it's consistent regardless of how the server is accessed
+        // (localhost vs host.docker.internal). Without this, Docker containers that
+        // access via host.docker.internal get a different issuer than the browser.
+        options.SetIssuer(new Uri("https://localhost:5001/"));
+
         // Enable the authorization, token, introspection, and revocation endpoints
         // Note: userinfo and logout are handled by custom controller endpoints
         options.SetAuthorizationEndpointUris("connect/authorize")
@@ -245,6 +252,14 @@ builder.Services.AddScoped<DcrService>();
 // Register token cleanup background service
 builder.Services.AddHostedService<TokenCleanupService>();
 
+// Add MCP Server for AI assistant integration with group management
+builder.Services
+    .AddMcpServer()
+    .WithHttpTransport()
+    .WithToolsFromAssembly();
+
+builder.Services.AddScoped<AuthMcpTools>();
+
 // Configure CORS to allow frontend applications
 var allowedOrigins = builder.Configuration.GetSection("CorsOrigins:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 
@@ -267,6 +282,14 @@ builder.Services.AddCors(options =>
                 .AllowAnyMethod()
                 .AllowCredentials();
         }
+    });
+
+    // Allow MCP clients (Claude Desktop, Cursor, etc.) to access /mcp endpoints
+    options.AddPolicy("AllowMcpClients", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
     });
 });
 
@@ -341,6 +364,12 @@ if (app.Environment.IsDevelopment())
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Map MCP Server endpoint at /mcp with permissive CORS for MCP clients
+// Require authorization so clients (e.g., Claude Desktop) receive an OAuth challenge
+app.MapMcp("/mcp")
+    .RequireCors("AllowMcpClients")
+    .RequireAuthorization();
 
 // Seed database on startup
 using (var scope = app.Services.CreateScope())
