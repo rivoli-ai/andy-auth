@@ -467,7 +467,7 @@
                             <td class="token-date">
                                 @if (token.CreatedAt.HasValue)
                                 {
-                                    @token.CreatedAt.Value.ToString("MMM d, yyyy HH:mm")
+                                    <span data-utc="@token.CreatedAt.Value.ToString("o")" data-format="datetime"></span>
                                 }
                             </td>
                             <td class="token-date">
@@ -475,7 +475,7 @@
                                 {
                                     var isExpired = token.ExpiresAt < DateTime.UtcNow;
                                     <span style="@(isExpired ? "color: var(--danger);" : "")">
-                                        @token.ExpiresAt.Value.ToString("MMM d, yyyy HH:mm")
+                                        <span data-utc="@token.ExpiresAt.Value.ToString("o")" data-format="datetime"></span>
                                         @if (isExpired)
                                         {
                                             <span>(expired)</span>

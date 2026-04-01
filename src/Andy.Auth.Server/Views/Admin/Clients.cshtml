@@ -442,7 +442,7 @@
                         @if (client.IsDynamicallyRegistered && client.RegisteredAt.HasValue)
                         {
                             <div class="dcr-info">
-                                Dynamically registered on @client.RegisteredAt.Value.ToString("MMM dd, yyyy 'at' HH:mm") UTC
+                                Dynamically registered on <span data-utc="@client.RegisteredAt.Value.ToString("o")" data-format="datetime"></span>
                             </div>
                         }
                         <div class="detail-section">

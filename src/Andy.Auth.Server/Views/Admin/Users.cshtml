@@ -163,17 +163,24 @@
                                 @if (user.ExpiresAt.HasValue)
                                 {
                                     var isExpired = user.ExpiresAt.Value < DateTime.UtcNow;
-                                    <span class="expiration-badge @(isExpired ? "expired" : "")">
-                                        @user.ExpiresAt.Value.ToString("MMM dd, yyyy")
-                                    </span>
+                                    <span class="expiration-badge @(isExpired ? "expired" : "")" data-utc="@user.ExpiresAt.Value.ToString("o")" data-format="date"></span>
                                 }
                                 else
                                 {
                                     <span class="text-muted">Never</span>
                                 }
                             </td>
-                            <td>@user.CreatedAt.ToString("MMM dd, yyyy")</td>
-                            <td>@(user.LastLoginAt?.ToString("MMM dd, yyyy HH:mm") ?? "Never")</td>
+                            <td><span data-utc="@user.CreatedAt.ToString("o")" data-format="date"></span></td>
+                            <td>
+                                @if (user.LastLoginAt.HasValue)
+                                {
+                                    <span data-utc="@user.LastLoginAt.Value.ToString("o")" data-format="datetime"></span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Never</span>
+                                }
+                            </td>
                             <td>
                                 <div class="action-buttons">
                                     @if (!user.DeletedAt.HasValue)

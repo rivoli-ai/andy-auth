@@ -69,7 +69,12 @@
                     {
                         <tr>
                             <td>@login.Email</td>
-                            <td>@login.LastLoginAt?.ToString("MMM dd, yyyy HH:mm")</td>
+                            <td>
+                                @if (login.LastLoginAt.HasValue)
+                                {
+                                    <span data-utc="@login.LastLoginAt.Value.ToString("o")" data-format="datetime"></span>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>
