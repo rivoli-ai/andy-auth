@@ -80,3 +80,9 @@ nupkg/
 __pycache__/
 *.pyc
 .env
+
+# Certificates (keep .gitkeep, ignore actual certs)
+certs/*.crt
+certs/*.pem
+certs/*.cer
+certs/*.key
