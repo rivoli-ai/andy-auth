@@ -43,20 +43,16 @@ builder.Services.Configure<IpRateLimitPolicies>(builder.Configuration.GetSection
 builder.Services.AddInMemoryRateLimiting();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
-// Configure PostgreSQL database
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
-// Normalize PostgreSQL connection string (convert URI format to key=value format)
-if (!string.IsNullOrWhiteSpace(connectionString) &&
-    (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
-     connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)))
-{
-    connectionString = NormalizePostgresConnectionString(connectionString);
-}
+// Configure database provider (SQLite by default for embedded mode,
+// PostgreSQL for hosted production deployments). Selectable via
+// `Database__Provider=Sqlite|PostgreSql` env var. See
+// `Data/DatabaseProviderExtensions.cs` for details.
+var dbProvider = DatabaseProviderExtensions.GetDatabaseProvider(builder.Configuration);
+var connectionString = DatabaseProviderExtensions.ResolveConnectionString(builder.Configuration, dbProvider);
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    options.UseNpgsql(connectionString);
+    DatabaseProviderExtensions.ConfigureDbContext(options, dbProvider, connectionString);
     options.UseOpenIddict();
 });
 
@@ -378,7 +374,20 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
-        await context.Database.MigrateAsync();
+
+        // Schema bootstrap differs by provider:
+        //   - PostgreSQL: apply EF migrations (committed under `Migrations/`).
+        //   - SQLite: use `EnsureCreated` so a fresh embedded install gets a
+        //     schema generated from the current EF model. Migrations for the
+        //     SQLite provider are tracked separately under G2.1.
+        if (dbProvider == DatabaseProvider.Sqlite)
+        {
+            await context.Database.EnsureCreatedAsync();
+        }
+        else
+        {
+            await context.Database.MigrateAsync();
+        }
 
         // Seed OAuth clients and test data
         var seeder = new DbSeeder(
@@ -395,58 +404,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
-
-// Helper function to convert PostgreSQL URI format to key=value connection string format
-static string NormalizePostgresConnectionString(string connectionString)
-{
-    try
-    {
-        // Parse the URI
-        var uri = new Uri(connectionString);
-
-        // Extract components
-        var host = uri.Host;
-        var port = uri.Port > 0 ? uri.Port : 5432;
-        var database = uri.AbsolutePath.TrimStart('/');
-        var userInfo = uri.UserInfo.Split(':');
-        var username = userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : "postgres";
-        var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
-
-        // Build key=value connection string
-        var builder = new System.Text.StringBuilder();
-        builder.Append($"Host={host};");
-        builder.Append($"Port={port};");
-        builder.Append($"Database={database};");
-        builder.Append($"Username={username};");
-        if (!string.IsNullOrEmpty(password))
-        {
-            builder.Append($"Password={password};");
-        }
-
-        // Add common parameters from query string if present
-        var query = uri.Query;
-        if (!string.IsNullOrEmpty(query))
-        {
-            // Remove leading '?' and parse manually
-            var queryString = query.TrimStart('?');
-            var pairs = queryString.Split('&');
-            foreach (var pair in pairs)
-            {
-                var keyValue = pair.Split('=');
-                if (keyValue.Length == 2)
-                {
-                    builder.Append($"{Uri.UnescapeDataString(keyValue[0])}={Uri.UnescapeDataString(keyValue[1])};");
-                }
-            }
-        }
-
-        return builder.ToString().TrimEnd(';');
-    }
-    catch (Exception ex)
-    {
-        throw new InvalidOperationException($"Failed to parse PostgreSQL URI: {ex.Message}", ex);
-    }
-}
 
 // Make Program class accessible for integration tests
 public partial class Program { }
