@@ -27,11 +27,19 @@ public enum DatabaseProvider
 public static class DatabaseProviderExtensions
 {
     /// <summary>
-    /// Resolves the configured provider, defaulting to <see cref="DatabaseProvider.Sqlite"/>.
+    /// Resolves the configured provider, defaulting to
+    /// <see cref="DatabaseProvider.PostgreSql"/> when nothing is configured.
+    ///
+    /// SQLite is for **embedded Conductor only** — it must be opted into
+    /// explicitly via <c>Database__Provider=Sqlite</c> (which Conductor's
+    /// embedded launcher sets). The hosted/Docker/IDE/CLI paths read
+    /// <c>Database:Provider=PostgreSql</c> from <c>appsettings.json</c>;
+    /// the code default acts as a safety net so a broken JSON load can
+    /// never silently fall to SQLite under hosted deployments.
     /// </summary>
     public static DatabaseProvider GetDatabaseProvider(IConfiguration configuration)
     {
-        var providerString = configuration["Database:Provider"] ?? "Sqlite";
+        var providerString = configuration["Database:Provider"] ?? "PostgreSql";
 
         return providerString.ToLowerInvariant() switch
         {
