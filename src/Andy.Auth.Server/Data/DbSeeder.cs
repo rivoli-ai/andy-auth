@@ -784,6 +784,54 @@ public class DbSeeder
         });
 
         _logger.LogInformation("Created OAuth client: andy-rbac-web");
+
+        // Conductor macOS Client (native desktop app)
+        var conductorMacClient = await manager.FindByClientIdAsync("conductor-mac");
+        if (conductorMacClient != null)
+        {
+            await manager.DeleteAsync(conductorMacClient);
+            _logger.LogInformation("Deleted existing OAuth client: conductor-mac");
+        }
+
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "conductor-mac",
+            DisplayName = "Conductor macOS",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+                OpenIddictConstants.Permissions.Endpoints.Introspection,
+                OpenIddictConstants.Permissions.Endpoints.Revocation,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Scopes.Roles,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
+                "scp:urn:andy-docs-api",
+                "scp:urn:andy-code-index-api",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                new Uri("http://127.0.0.1/conductor/callback"),
+                new Uri("http://localhost/conductor/callback"),
+                new Uri("conductor://callback")
+            },
+            PostLogoutRedirectUris =
+            {
+                new Uri("http://127.0.0.1/conductor/logout"),
+                new Uri("http://localhost/conductor/logout")
+            }
+        });
+
+        _logger.LogInformation("Created OAuth client: conductor-mac");
     }
 
     /// <summary>
