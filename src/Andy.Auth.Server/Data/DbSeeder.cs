@@ -98,6 +98,38 @@ public class DbSeeder
             _logger.LogInformation("Created API resource scope: urn:andy-containers-api");
         }
 
+        // Register the andy-narration-api resource scope
+        if (await manager.FindByNameAsync("urn:andy-narration-api") == null)
+        {
+            await manager.CreateAsync(new OpenIddictScopeDescriptor
+            {
+                Name = "urn:andy-narration-api",
+                DisplayName = "Andy Narration API",
+                Resources =
+                {
+                    "urn:andy-narration-api"
+                }
+            });
+
+            _logger.LogInformation("Created API resource scope: urn:andy-narration-api");
+        }
+
+        // Register the andy-subscription-api resource scope
+        if (await manager.FindByNameAsync("urn:andy-subscription-api") == null)
+        {
+            await manager.CreateAsync(new OpenIddictScopeDescriptor
+            {
+                Name = "urn:andy-subscription-api",
+                DisplayName = "Andy Subscription API",
+                Resources =
+                {
+                    "urn:andy-subscription-api"
+                }
+            });
+
+            _logger.LogInformation("Created API resource scope: urn:andy-subscription-api");
+        }
+
         // Register the andy-rbac resource scope
         if (await manager.FindByNameAsync("andy-rbac") == null)
         {
@@ -832,6 +864,139 @@ public class DbSeeder
         });
 
         _logger.LogInformation("Created OAuth client: conductor-mac");
+
+        // Andy Subscription Web Client (SPA)
+        var subscriptionWebClient = await manager.FindByClientIdAsync("andy-subscription-web");
+        if (subscriptionWebClient != null)
+        {
+            await manager.DeleteAsync(subscriptionWebClient);
+            _logger.LogInformation("Deleted existing OAuth client: andy-subscription-web");
+        }
+
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "andy-subscription-web",
+            DisplayName = "Andy Subscription Web",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Scopes.Roles,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
+                "scp:urn:andy-subscription-api",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                new Uri("https://localhost:4202/callback"),
+                new Uri("http://localhost:4202/callback"),
+                new Uri("https://localhost:5320/callback"),
+                new Uri("http://localhost:5320/callback")
+            },
+            PostLogoutRedirectUris =
+            {
+                new Uri("https://localhost:4202/"),
+                new Uri("https://localhost:4202/login"),
+                new Uri("http://localhost:4202/"),
+                new Uri("http://localhost:4202/login"),
+                new Uri("https://localhost:5320/"),
+                new Uri("https://localhost:5320/login"),
+                new Uri("http://localhost:5320/"),
+                new Uri("http://localhost:5320/login")
+            }
+        });
+
+        _logger.LogInformation("Created OAuth client: andy-subscription-web");
+
+        // Andy Subscription CLI Client
+        var subscriptionCliClient = await manager.FindByClientIdAsync("andy-subscription-cli");
+        if (subscriptionCliClient != null)
+        {
+            await manager.DeleteAsync(subscriptionCliClient);
+            _logger.LogInformation("Deleted existing OAuth client: andy-subscription-cli");
+        }
+
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "andy-subscription-cli",
+            DisplayName = "Andy Subscription CLI",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Scopes.Roles,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
+                "scp:urn:andy-subscription-api",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                new Uri("http://127.0.0.1/callback"),
+                new Uri("http://localhost/callback")
+            }
+        });
+
+        _logger.LogInformation("Created OAuth client: andy-subscription-cli");
+
+        // Andy Narration Web Client
+        var andyNarrationWebClient = await manager.FindByClientIdAsync("andy-narration-web");
+        if (andyNarrationWebClient != null)
+        {
+            await manager.DeleteAsync(andyNarrationWebClient);
+        }
+
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "andy-narration-web",
+            DisplayName = "Andy Narration Web",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Scopes.Roles,
+                "scp:urn:andy-narration-api",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                new Uri("https://localhost:5310/callback"),
+                new Uri("https://localhost:4200/callback")
+            },
+            PostLogoutRedirectUris =
+            {
+                new Uri("https://localhost:5310/"),
+                new Uri("https://localhost:4200/")
+            }
+        });
+
+        _logger.LogInformation("Created OAuth client: andy-narration-web");
     }
 
     /// <summary>
