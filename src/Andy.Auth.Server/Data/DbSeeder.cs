@@ -162,6 +162,22 @@ public class DbSeeder
             _logger.LogInformation("Created API resource scope: urn:andy-agents-api");
         }
 
+        // Register the andy-tasks-api resource scope
+        if (await manager.FindByNameAsync("urn:andy-tasks-api") == null)
+        {
+            await manager.CreateAsync(new OpenIddictScopeDescriptor
+            {
+                Name = "urn:andy-tasks-api",
+                DisplayName = "Andy Tasks API",
+                Resources =
+                {
+                    "urn:andy-tasks-api"
+                }
+            });
+
+            _logger.LogInformation("Created API resource scope: urn:andy-tasks-api");
+        }
+
         // Register the andy-rbac resource scope
         if (await manager.FindByNameAsync("andy-rbac") == null)
         {
@@ -1201,6 +1217,92 @@ public class DbSeeder
         });
 
         _logger.LogInformation("Created OAuth client: andy-agents-web");
+
+        // Andy Tasks API Client (confidential, service-to-service)
+        var tasksApiClient = await manager.FindByClientIdAsync("andy-tasks-api");
+        if (tasksApiClient != null)
+        {
+            await manager.DeleteAsync(tasksApiClient);
+            _logger.LogInformation("Deleted existing OAuth client: andy-tasks-api");
+        }
+
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "andy-tasks-api",
+            ClientSecret = "andy-tasks-secret-change-in-production",
+            DisplayName = "Andy Tasks API",
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+                OpenIddictConstants.Permissions.Endpoints.Introspection,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+                OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Scopes.Roles,
+                "scp:urn:andy-tasks-api",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                new Uri("https://localhost:5430/callback"),
+            },
+            PostLogoutRedirectUris =
+            {
+                new Uri("https://localhost:5430/"),
+            }
+        });
+
+        _logger.LogInformation("Created OAuth client: andy-tasks-api");
+
+        // Andy Tasks Web Client (public, Angular SPA)
+        var tasksWebClient = await manager.FindByClientIdAsync("andy-tasks-web");
+        if (tasksWebClient != null)
+        {
+            await manager.DeleteAsync(tasksWebClient);
+            _logger.LogInformation("Deleted existing OAuth client: andy-tasks-web");
+        }
+
+        await manager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "andy-tasks-web",
+            DisplayName = "Andy Tasks Web",
+            ClientType = OpenIddictConstants.ClientTypes.Public,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Authorization,
+                OpenIddictConstants.Permissions.Endpoints.Token,
+
+                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+
+                OpenIddictConstants.Permissions.Scopes.Email,
+                OpenIddictConstants.Permissions.Scopes.Profile,
+                OpenIddictConstants.Permissions.Scopes.Roles,
+                "scp:urn:andy-tasks-api",
+
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+            },
+            RedirectUris =
+            {
+                new Uri("https://localhost:4205/callback"),
+                new Uri("https://localhost:4200/callback"),
+            },
+            PostLogoutRedirectUris =
+            {
+                new Uri("https://localhost:4205/"),
+                new Uri("https://localhost:4200/"),
+            }
+        });
+
+        _logger.LogInformation("Created OAuth client: andy-tasks-web");
     }
 
     /// <summary>
