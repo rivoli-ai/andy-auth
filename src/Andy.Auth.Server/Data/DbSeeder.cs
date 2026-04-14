@@ -895,6 +895,13 @@ public class DbSeeder
                 OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
                 "scp:urn:andy-docs-api",
                 "scp:urn:andy-code-index-api",
+                // conductor-mac talks to andy-issues (backlog import,
+                // repo registry, etc.); without this permission the
+                // JWT emitted for Conductor has aud=[docs, code-index]
+                // only, and andy-issues' JwtBearer middleware rejects
+                // every request with IDX10214 audience mismatch. See
+                // rivoli-ai/conductor#545 for the broader sweep.
+                "scp:urn:andy-issues-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code
             },
