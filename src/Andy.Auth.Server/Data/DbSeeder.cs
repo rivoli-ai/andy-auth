@@ -902,6 +902,14 @@ public class DbSeeder
                 // every request with IDX10214 audience mismatch. See
                 // rivoli-ai/conductor#545 for the broader sweep.
                 "scp:urn:andy-issues-api",
+                // Conductor also talks directly to andy-containers
+                // (sandbox provisioning, template catalog) and andy-rbac
+                // (org membership checks). Without these, the same
+                // IDX10214 audience mismatch hits those services and
+                // their ClaimsPrincipal stays anonymous. Part of the
+                // conductor#545 sweep.
+                "scp:urn:andy-containers-api",
+                "scp:andy-rbac",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code
             },
