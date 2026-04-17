@@ -719,14 +719,20 @@ public class DbSeeder
             RedirectUris =
             {
                 new Uri("https://localhost:4201/callback"),
-                new Uri("http://localhost:4201/callback")
+                new Uri("http://localhost:4201/callback"),
+                new Uri("https://localhost:6201/callback"),
+                new Uri("http://localhost:6201/callback"),
+                new Uri("http://localhost:9100/code-index/callback"),
             },
             PostLogoutRedirectUris =
             {
                 new Uri("https://localhost:4201/"),
                 new Uri("https://localhost:4201/login"),
                 new Uri("http://localhost:4201/"),
-                new Uri("http://localhost:4201/login")
+                new Uri("http://localhost:4201/login"),
+                new Uri("https://localhost:6201/"),
+                new Uri("http://localhost:6201/"),
+                new Uri("http://localhost:9100/code-index/"),
             }
         });
 
@@ -765,14 +771,20 @@ public class DbSeeder
             RedirectUris =
             {
                 new Uri("https://localhost:4200/callback"),
-                new Uri("http://localhost:4200/callback")
+                new Uri("http://localhost:4200/callback"),
+                new Uri("https://localhost:6200/callback"),
+                new Uri("http://localhost:6200/callback"),
+                new Uri("http://localhost:9100/containers/callback"),
             },
             PostLogoutRedirectUris =
             {
                 new Uri("https://localhost:4200/"),
                 new Uri("https://localhost:4200/login"),
                 new Uri("http://localhost:4200/"),
-                new Uri("http://localhost:4200/login")
+                new Uri("http://localhost:4200/login"),
+                new Uri("https://localhost:6200/"),
+                new Uri("http://localhost:6200/"),
+                new Uri("http://localhost:9100/containers/"),
             }
         });
 
@@ -1136,12 +1148,18 @@ public class DbSeeder
             RedirectUris =
             {
                 new Uri("https://localhost:4203/callback"),
-                new Uri("https://localhost:4200/callback"),
+                new Uri("http://localhost:4203/callback"),
+                new Uri("https://localhost:6203/callback"),
+                new Uri("http://localhost:6203/callback"),
+                new Uri("http://localhost:9100/issues/callback"),
             },
             PostLogoutRedirectUris =
             {
                 new Uri("https://localhost:4203/"),
-                new Uri("https://localhost:4200/"),
+                new Uri("http://localhost:4203/"),
+                new Uri("https://localhost:6203/"),
+                new Uri("http://localhost:6203/"),
+                new Uri("http://localhost:9100/issues/"),
             }
         });
 
@@ -1222,12 +1240,18 @@ public class DbSeeder
             RedirectUris =
             {
                 new Uri("https://localhost:4204/callback"),
-                new Uri("https://localhost:4200/callback"),
+                new Uri("http://localhost:4204/callback"),
+                new Uri("https://localhost:6204/callback"),
+                new Uri("http://localhost:6204/callback"),
+                new Uri("http://localhost:9100/agents/callback"),
             },
             PostLogoutRedirectUris =
             {
                 new Uri("https://localhost:4204/"),
-                new Uri("https://localhost:4200/"),
+                new Uri("http://localhost:4204/"),
+                new Uri("https://localhost:6204/"),
+                new Uri("http://localhost:6204/"),
+                new Uri("http://localhost:9100/agents/"),
             }
         });
 
@@ -1305,15 +1329,25 @@ public class DbSeeder
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code
             },
+            // Redirect URIs span all three deployment modes per
+            // andy-service-template/docs/ports.md: dotnet native (4205),
+            // docker-compose (6205 = dotnet +2000), and Conductor embedded
+            // via the unified proxy (9100/tasks).
             RedirectUris =
             {
                 new Uri("https://localhost:4205/callback"),
-                new Uri("https://localhost:4200/callback"),
+                new Uri("http://localhost:4205/callback"),
+                new Uri("https://localhost:6205/callback"),
+                new Uri("http://localhost:6205/callback"),
+                new Uri("http://localhost:9100/tasks/callback"),
             },
             PostLogoutRedirectUris =
             {
                 new Uri("https://localhost:4205/"),
-                new Uri("https://localhost:4200/"),
+                new Uri("http://localhost:4205/"),
+                new Uri("https://localhost:6205/"),
+                new Uri("http://localhost:6205/"),
+                new Uri("http://localhost:9100/tasks/"),
             }
         });
 
