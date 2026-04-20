@@ -1,0 +1,46 @@
+{
+  "$schema": "../../andy-service-template/docs/registration.schema.json",
+  "service": {
+    "name": "andy-auth",
+    "displayName": "Andy Auth",
+    "description": "OAuth2/OIDC identity provider for the Andy ecosystem — sessions, MFA, OpenIddict-backed authorization server.",
+    "embeddedProxyPrefix": "/auth",
+    "ports": {
+      "dotnetHttps": 5001,
+      "dotnetHttp":  5002,
+      "dotnetPostgres": 5435,
+      "dockerHttps": 7001,
+      "dockerHttp":  7002,
+      "dockerPostgres": 7435,
+      "embeddedProxy": 9100
+    }
+  },
+  "auth": {
+    "audience": "urn:andy-auth-api"
+  },
+  "rbac": {
+    "applicationCode": "andy-auth",
+    "applicationName": "Andy Auth",
+    "description": "OAuth 2.0/OIDC authentication server",
+    "resourceTypes": [
+      { "code": "user",   "name": "User",          "supportsInstances": true  },
+      { "code": "client", "name": "OAuth Client",  "supportsInstances": true  },
+      { "code": "scope",  "name": "OAuth Scope",   "supportsInstances": true  },
+      { "code": "config", "name": "Configuration", "supportsInstances": false }
+    ],
+    "roles": [
+      { "code": "admin",  "name": "Administrator", "description": "Full access to Andy Auth",           "isSystem": true },
+      { "code": "user",   "name": "User",          "description": "Standard Andy Auth user",            "isSystem": true },
+      { "code": "viewer", "name": "Viewer",        "description": "Read-only access to Andy Auth data", "isSystem": true }
+    ],
+    "testUserRole": "admin"
+  },
+  "settings": {
+    "definitions": [
+      { "key": "andy.auth.authority",             "displayName": "Auth Authority URL",   "description": "OIDC authority URL",                              "category": "General",  "dataType": "Uri",     "defaultValue": "https://localhost:5001" },
+      { "key": "andy.auth.audience",              "displayName": "Auth Audience",        "description": "Expected JWT audience",                           "category": "General",  "dataType": "String",  "defaultValue": "urn:andy-auth-api" },
+      { "key": "andy.auth.requireHttpsMetadata",  "displayName": "Require HTTPS Metadata","description": "Require HTTPS for OIDC metadata",                 "category": "Security", "dataType": "Boolean", "defaultValue": false },
+      { "key": "andy.auth.tokenLifetimeMinutes",  "displayName": "Token Lifetime",       "description": "Access token lifetime in minutes",                "category": "Security", "dataType": "Integer", "defaultValue": 60 }
+    ]
+  }
+}

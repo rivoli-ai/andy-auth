@@ -22,9 +22,185 @@ public class DbSeeder
     public async Task SeedAsync()
     {
         await SeedRolesAsync();
+        await SeedFromManifestsAsync();
         await SeedScopesAsync();
         await SeedClientsAsync();
         await SeedTestUserAsync();
+    }
+
+    /// <summary>
+    /// Manifest-driven scope + OAuth client registration. Reads registration.json
+    /// manifests from each Andy service and emits the corresponding OpenIddict
+    /// scopes and application descriptors. Idempotent: uses delete-then-create so
+    /// re-runs pick up manifest changes. Services whose manifests cover their
+    /// registration will be handled here; the legacy hardcoded
+    /// SeedScopesAsync / SeedClientsAsync methods below still run afterwards
+    /// until every service has a committed manifest.
+    /// </summary>
+    private async Task SeedFromManifestsAsync()
+    {
+        var loaderLogger = _serviceProvider.GetRequiredService<ILogger<RegistrationManifestLoader>>();
+        var loader = new RegistrationManifestLoader(_configuration, loaderLogger);
+        var manifests = loader.LoadAll();
+
+        if (manifests.Count == 0)
+        {
+            _logger.LogInformation("No registration manifests found; falling back to legacy hardcoded seeding.");
+            return;
+        }
+
+        var scopeManager = _serviceProvider.GetRequiredService<IOpenIddictScopeManager>();
+        var appManager = _serviceProvider.GetRequiredService<IOpenIddictApplicationManager>();
+
+        foreach (var manifest in manifests)
+        {
+            if (manifest.Auth is null) continue;
+
+            await CreateOrUpdateScopeAsync(scopeManager, manifest);
+
+            if (manifest.Auth.ApiClient is not null)
+            {
+                await CreateOrUpdateClientAsync(appManager, manifest, manifest.Auth.ApiClient, isApi: true);
+            }
+            if (manifest.Auth.WebClient is not null)
+            {
+                await CreateOrUpdateClientAsync(appManager, manifest, manifest.Auth.WebClient, isApi: false);
+            }
+            if (manifest.Auth.CliClient is not null)
+            {
+                await CreateOrUpdateClientAsync(appManager, manifest, manifest.Auth.CliClient, isApi: false);
+            }
+        }
+    }
+
+    private async Task CreateOrUpdateScopeAsync(IOpenIddictScopeManager scopeManager, RegistrationManifest manifest)
+    {
+        var audience = manifest.Auth!.Audience;
+        var existing = await scopeManager.FindByNameAsync(audience);
+        if (existing is not null) return;
+
+        await scopeManager.CreateAsync(new OpenIddictScopeDescriptor
+        {
+            Name = audience,
+            DisplayName = $"{manifest.Service.DisplayName} API",
+            Resources = { audience },
+        });
+        _logger.LogInformation("[manifest] Created API resource scope: {Audience}", audience);
+    }
+
+    private async Task CreateOrUpdateClientAsync(
+        IOpenIddictApplicationManager appManager,
+        RegistrationManifest manifest,
+        RegistrationOAuthClient client,
+        bool isApi)
+    {
+        var existing = await appManager.FindByClientIdAsync(client.ClientId);
+        if (existing is not null)
+        {
+            await appManager.DeleteAsync(existing);
+            _logger.LogInformation("[manifest] Deleted existing OAuth client: {ClientId}", client.ClientId);
+        }
+
+        var descriptor = new OpenIddictApplicationDescriptor
+        {
+            ClientId = client.ClientId,
+            DisplayName = client.DisplayName,
+            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+        };
+
+        var isConfidential = string.Equals(client.ClientType, "confidential", StringComparison.OrdinalIgnoreCase)
+                              || (client.ClientType is null && isApi);
+        if (isConfidential)
+        {
+            descriptor.ClientSecret = ResolveClientSecret(client);
+        }
+        else
+        {
+            descriptor.ClientType = OpenIddictConstants.ClientTypes.Public;
+        }
+
+        var grantTypes = client.GrantTypes ?? Array.Empty<string>();
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Token);
+
+        if (grantTypes.Contains("authorization_code", StringComparer.OrdinalIgnoreCase))
+        {
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Authorization);
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode);
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.ResponseTypes.Code);
+        }
+        if (grantTypes.Contains("refresh_token", StringComparer.OrdinalIgnoreCase))
+        {
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.RefreshToken);
+        }
+        if (grantTypes.Contains("client_credentials", StringComparer.OrdinalIgnoreCase))
+        {
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.ClientCredentials);
+        }
+        if (grantTypes.Contains("device_code", StringComparer.OrdinalIgnoreCase))
+        {
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.DeviceCode);
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.DeviceAuthorization);
+        }
+        if (isConfidential)
+        {
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Introspection);
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Revocation);
+        }
+
+        foreach (var scope in client.Scopes ?? Array.Empty<string>())
+        {
+            descriptor.Permissions.Add(scope);
+        }
+
+        var redirectUris = CollectRedirectUris(manifest, client, postLogout: false);
+        foreach (var uri in redirectUris)
+        {
+            if (Uri.TryCreate(uri, UriKind.Absolute, out var parsed))
+            {
+                descriptor.RedirectUris.Add(parsed);
+            }
+        }
+        var postLogoutUris = CollectRedirectUris(manifest, client, postLogout: true);
+        foreach (var uri in postLogoutUris)
+        {
+            if (Uri.TryCreate(uri, UriKind.Absolute, out var parsed))
+            {
+                descriptor.PostLogoutRedirectUris.Add(parsed);
+            }
+        }
+
+        await appManager.CreateAsync(descriptor);
+        _logger.LogInformation("[manifest] Created OAuth client: {ClientId} ({Type})",
+            client.ClientId, isConfidential ? "confidential" : "public");
+    }
+
+    private static IEnumerable<string> CollectRedirectUris(
+        RegistrationManifest manifest,
+        RegistrationOAuthClient client,
+        bool postLogout)
+    {
+        var clientUris = postLogout ? client.PostLogoutRedirectUris : client.RedirectUris;
+        if (clientUris is not null)
+        {
+            foreach (var u in clientUris) yield return u;
+        }
+        var prod = manifest.Auth?.ProductionUris;
+        var prodUris = postLogout ? prod?.PostLogoutRedirectUris : prod?.RedirectUris;
+        if (prodUris is not null)
+        {
+            foreach (var u in prodUris) yield return u;
+        }
+    }
+
+    private string ResolveClientSecret(RegistrationOAuthClient client)
+    {
+        if (!string.IsNullOrWhiteSpace(client.ClientSecretEnvVar))
+        {
+            var value = Environment.GetEnvironmentVariable(client.ClientSecretEnvVar!);
+            if (!string.IsNullOrWhiteSpace(value)) return value;
+        }
+        // Dev fallback matches the legacy hardcoded pattern.
+        return $"{client.ClientId}-secret-change-in-production";
     }
 
     private async Task SeedRolesAsync()
@@ -46,215 +222,64 @@ public class DbSeeder
         }
     }
 
+    /// <summary>
+    /// Legacy hardcoded scope registration, kept for services that do not yet
+    /// ship a <c>config/registration.json</c> manifest. Scope declarations for
+    /// the in-scope Andy services (andy-auth, andy-rbac, andy-docs, andy-code-index,
+    /// andy-containers, andy-issues, andy-agents, andy-tasks, andy-policies,
+    /// andy-models) moved to <see cref="SeedFromManifestsAsync"/>.
+    ///
+    /// Only two service scopes remain hardcoded here:
+    /// - <c>urn:andy-narration-api</c> and <c>urn:andy-subscription-api</c>
+    ///   (services not in the Conductor-embedded scope).
+    /// - <c>andy-rbac</c> (bare) — legacy audience. The canonical form is
+    ///   <c>urn:andy-rbac-api</c>, created from the andy-rbac manifest. The
+    ///   bare form is preserved until rivoli-ai/andy-rbac#42 completes the
+    ///   rename across every consumer.
+    /// </summary>
     private async Task SeedScopesAsync()
     {
         var manager = _serviceProvider.GetRequiredService<IOpenIddictScopeManager>();
 
-        // Register the andy-docs-api resource scope
-        if (await manager.FindByNameAsync("urn:andy-docs-api") == null)
-        {
-            await manager.CreateAsync(new OpenIddictScopeDescriptor
-            {
-                Name = "urn:andy-docs-api",
-                DisplayName = "Andy Docs API",
-                Resources =
-                {
-                    "urn:andy-docs-api"
-                }
-            });
-
-            _logger.LogInformation("Created API resource scope: urn:andy-docs-api");
-        }
-
-        // Register the andy-code-index-api resource scope
-        if (await manager.FindByNameAsync("urn:andy-code-index-api") == null)
-        {
-            await manager.CreateAsync(new OpenIddictScopeDescriptor
-            {
-                Name = "urn:andy-code-index-api",
-                DisplayName = "Andy Code Index API",
-                Resources =
-                {
-                    "urn:andy-code-index-api"
-                }
-            });
-
-            _logger.LogInformation("Created API resource scope: urn:andy-code-index-api");
-        }
-
-        // Register the andy-containers-api resource scope
-        if (await manager.FindByNameAsync("urn:andy-containers-api") == null)
-        {
-            await manager.CreateAsync(new OpenIddictScopeDescriptor
-            {
-                Name = "urn:andy-containers-api",
-                DisplayName = "Andy Containers API",
-                Resources =
-                {
-                    "urn:andy-containers-api"
-                }
-            });
-
-            _logger.LogInformation("Created API resource scope: urn:andy-containers-api");
-        }
-
-        // Register the andy-narration-api resource scope
         if (await manager.FindByNameAsync("urn:andy-narration-api") == null)
         {
             await manager.CreateAsync(new OpenIddictScopeDescriptor
             {
                 Name = "urn:andy-narration-api",
                 DisplayName = "Andy Narration API",
-                Resources =
-                {
-                    "urn:andy-narration-api"
-                }
+                Resources = { "urn:andy-narration-api" }
             });
-
             _logger.LogInformation("Created API resource scope: urn:andy-narration-api");
         }
 
-        // Register the andy-subscription-api resource scope
         if (await manager.FindByNameAsync("urn:andy-subscription-api") == null)
         {
             await manager.CreateAsync(new OpenIddictScopeDescriptor
             {
                 Name = "urn:andy-subscription-api",
                 DisplayName = "Andy Subscription API",
-                Resources =
-                {
-                    "urn:andy-subscription-api"
-                }
+                Resources = { "urn:andy-subscription-api" }
             });
-
             _logger.LogInformation("Created API resource scope: urn:andy-subscription-api");
         }
 
-        // Register the andy-issues-api resource scope
-        if (await manager.FindByNameAsync("urn:andy-issues-api") == null)
-        {
-            await manager.CreateAsync(new OpenIddictScopeDescriptor
-            {
-                Name = "urn:andy-issues-api",
-                DisplayName = "Andy Issues API",
-                Resources =
-                {
-                    "urn:andy-issues-api"
-                }
-            });
-
-            _logger.LogInformation("Created API resource scope: urn:andy-issues-api");
-        }
-
-        // Register the andy-agents-api resource scope
-        if (await manager.FindByNameAsync("urn:andy-agents-api") == null)
-        {
-            await manager.CreateAsync(new OpenIddictScopeDescriptor
-            {
-                Name = "urn:andy-agents-api",
-                DisplayName = "Andy Agents API",
-                Resources =
-                {
-                    "urn:andy-agents-api"
-                }
-            });
-
-            _logger.LogInformation("Created API resource scope: urn:andy-agents-api");
-        }
-
-        // Register the andy-tasks-api resource scope
-        if (await manager.FindByNameAsync("urn:andy-tasks-api") == null)
-        {
-            await manager.CreateAsync(new OpenIddictScopeDescriptor
-            {
-                Name = "urn:andy-tasks-api",
-                DisplayName = "Andy Tasks API",
-                Resources =
-                {
-                    "urn:andy-tasks-api"
-                }
-            });
-
-            _logger.LogInformation("Created API resource scope: urn:andy-tasks-api");
-        }
-
-        // Register the andy-rbac resource scope
-        if (await manager.FindByNameAsync("andy-rbac") == null)
-        {
-            await manager.CreateAsync(new OpenIddictScopeDescriptor
-            {
-                Name = "andy-rbac",
-                DisplayName = "Andy RBAC API",
-                Resources =
-                {
-                    "andy-rbac"
-                }
-            });
-
-            _logger.LogInformation("Created API resource scope: andy-rbac");
-        }
+        // urn:andy-rbac-api comes from the andy-rbac manifest. The legacy
+        // bare "andy-rbac" scope was removed as part of rivoli-ai/andy-rbac#42.
     }
 
     private async Task SeedClientsAsync()
     {
         var manager = _serviceProvider.GetRequiredService<IOpenIddictApplicationManager>();
 
-        // Andy Docs API Client (for MCP)
-        // Delete existing client if it exists (to ensure clean slate with updated permissions)
-        var andyDocsApiClient = await manager.FindByClientIdAsync("andy-docs-api");
-        if (andyDocsApiClient != null)
-        {
-            await manager.DeleteAsync(andyDocsApiClient);
-            _logger.LogInformation("Deleted existing OAuth client: andy-docs-api");
-        }
+        // andy-docs-api: now manifest-driven via andy-docs/config/registration.json.
 
-        // Also clean up legacy lexipro-api client if it exists
+        // Also clean up legacy lexipro-api client if it exists.
         var legacyClient = await manager.FindByClientIdAsync("lexipro-api");
         if (legacyClient != null)
         {
             await manager.DeleteAsync(legacyClient);
             _logger.LogInformation("Deleted legacy OAuth client: lexipro-api");
         }
-
-        await manager.CreateAsync(new OpenIddictApplicationDescriptor
-        {
-            ClientId = "andy-docs-api",
-            ClientSecret = "andy-docs-secret-change-in-production",
-            DisplayName = "Andy Docs API",
-            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Authorization,
-                OpenIddictConstants.Permissions.Endpoints.Token,
-                OpenIddictConstants.Permissions.Endpoints.Introspection,
-                OpenIddictConstants.Permissions.Endpoints.Revocation,
-
-                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-                OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
-
-                OpenIddictConstants.Permissions.Scopes.Email,
-                OpenIddictConstants.Permissions.Scopes.Profile,
-                OpenIddictConstants.Permissions.Scopes.Roles,
-                "scp:urn:andy-docs-api",  // Permission to request andy-docs-api resource
-
-                OpenIddictConstants.Permissions.ResponseTypes.Code
-            },
-            RedirectUris =
-            {
-                new Uri("https://localhost:7001/callback"),
-                new Uri("https://andy-docs-uat.up.railway.app/callback"),
-                new Uri("https://andy-docs-api.rivoli.ai/callback")
-            },
-            PostLogoutRedirectUris =
-            {
-                new Uri("https://localhost:7001/"),
-                new Uri("https://andy-docs-uat.up.railway.app/"),
-                new Uri("https://andy-docs-api.rivoli.ai/")
-            }
-        });
-
-        _logger.LogInformation("Created OAuth client: andy-docs-api with updated permissions");
 
         // Wagram Web Client
         // Delete and recreate to ensure latest configuration
@@ -334,17 +359,12 @@ public class DbSeeder
                 "scp:urn:andy-docs-api",  // Permission to request andy-docs-api resource
                 "scp:urn:andy-code-index-api",  // Permission to request andy-code-index-api resource
 
-                OpenIddictConstants.Permissions.ResponseTypes.Code,
-
-                // Allow requesting resource servers (for MCP) - using rst: prefix for OpenIddict 7.x resource parameter
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-uat.up.railway.app/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-api.rivoli.ai/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5154/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5154/mcp",
-                // Andy Code Index MCP resources
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5101/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5100/mcp"
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+                // MCP resource permissions appended below from the
+                // config-driven `OpenIddict:Resources` list so seeded
+                // clients stay in lock-step with Program.cs /
+                // DynamicClientRegistrationController. One list, one
+                // source of truth, per deployment mode.
             },
             RedirectUris =
             {
@@ -358,6 +378,7 @@ public class DbSeeder
             }
         };
 
+        AppendConfiguredMcpResources(claudeDescriptor);
         await manager.CreateAsync(claudeDescriptor);
         _logger.LogInformation("Created OAuth client: claude-desktop with correct redirect URIs and resource permissions");
 
@@ -389,15 +410,8 @@ public class DbSeeder
                 "scp:urn:andy-docs-api",
                 "scp:urn:andy-code-index-api",
 
-                OpenIddictConstants.Permissions.ResponseTypes.Code,
-
-                // Allow requesting resource servers (for MCP)
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-uat.up.railway.app/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://andy-docs-api.rivoli.ai/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7001/mcp",
-                // Andy Code Index MCP resources
-                OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:5101/mcp",
-                OpenIddictConstants.Permissions.Prefixes.Resource + "http://localhost:5100/mcp"
+                OpenIddictConstants.Permissions.ResponseTypes.Code
+                // MCP resource permissions appended below from config.
             },
             RedirectUris =
             {
@@ -410,6 +424,7 @@ public class DbSeeder
             }
         };
 
+        AppendConfiguredMcpResources(chatGptDescriptor);
         await manager.CreateAsync(chatGptDescriptor);
         _logger.LogInformation("Created OAuth client: chatgpt");
 
@@ -686,196 +701,10 @@ public class DbSeeder
 
         _logger.LogInformation("Created OAuth client: andy-agentic-web");
 
-        // Andy Code Index Web Client (SPA)
-        var codeIndexClient = await manager.FindByClientIdAsync("andy-code-index-web");
-        if (codeIndexClient != null)
-        {
-            await manager.DeleteAsync(codeIndexClient);
-            _logger.LogInformation("Deleted existing OAuth client: andy-code-index-web");
-        }
+        // andy-code-index-web, andy-containers-web, andy-containers-cli:
+        // manifest-driven via each service's config/registration.json.
 
-        await manager.CreateAsync(new OpenIddictApplicationDescriptor
-        {
-            ClientId = "andy-code-index-web",
-            DisplayName = "Andy Code Index Web",
-            ClientType = OpenIddictConstants.ClientTypes.Public,
-            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Authorization,
-                OpenIddictConstants.Permissions.Endpoints.Token,
-
-                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-
-                OpenIddictConstants.Permissions.Scopes.Email,
-                OpenIddictConstants.Permissions.Scopes.Profile,
-                OpenIddictConstants.Permissions.Scopes.Roles,
-                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
-                "scp:urn:andy-code-index-api",
-
-                OpenIddictConstants.Permissions.ResponseTypes.Code
-            },
-            RedirectUris =
-            {
-                new Uri("https://localhost:4201/callback"),
-                new Uri("http://localhost:4201/callback"),
-                new Uri("https://localhost:6201/callback"),
-                new Uri("http://localhost:6201/callback"),
-                new Uri("http://localhost:9100/code-index/callback"),
-            },
-            PostLogoutRedirectUris =
-            {
-                new Uri("https://localhost:4201/"),
-                new Uri("https://localhost:4201/login"),
-                new Uri("http://localhost:4201/"),
-                new Uri("http://localhost:4201/login"),
-                new Uri("https://localhost:6201/"),
-                new Uri("http://localhost:6201/"),
-                new Uri("http://localhost:9100/code-index/"),
-            }
-        });
-
-        _logger.LogInformation("Created OAuth client: andy-code-index-web");
-
-        // Andy Containers Web Client (SPA)
-        var containersWebClient = await manager.FindByClientIdAsync("andy-containers-web");
-        if (containersWebClient != null)
-        {
-            await manager.DeleteAsync(containersWebClient);
-            _logger.LogInformation("Deleted existing OAuth client: andy-containers-web");
-        }
-
-        await manager.CreateAsync(new OpenIddictApplicationDescriptor
-        {
-            ClientId = "andy-containers-web",
-            DisplayName = "Andy Containers Web",
-            ClientType = OpenIddictConstants.ClientTypes.Public,
-            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Authorization,
-                OpenIddictConstants.Permissions.Endpoints.Token,
-
-                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-
-                OpenIddictConstants.Permissions.Scopes.Email,
-                OpenIddictConstants.Permissions.Scopes.Profile,
-                OpenIddictConstants.Permissions.Scopes.Roles,
-                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
-                "scp:urn:andy-containers-api",
-
-                OpenIddictConstants.Permissions.ResponseTypes.Code
-            },
-            RedirectUris =
-            {
-                new Uri("https://localhost:4200/callback"),
-                new Uri("http://localhost:4200/callback"),
-                new Uri("https://localhost:6200/callback"),
-                new Uri("http://localhost:6200/callback"),
-                new Uri("http://localhost:9100/containers/callback"),
-            },
-            PostLogoutRedirectUris =
-            {
-                new Uri("https://localhost:4200/"),
-                new Uri("https://localhost:4200/login"),
-                new Uri("http://localhost:4200/"),
-                new Uri("http://localhost:4200/login"),
-                new Uri("https://localhost:6200/"),
-                new Uri("http://localhost:6200/"),
-                new Uri("http://localhost:9100/containers/"),
-            }
-        });
-
-        _logger.LogInformation("Created OAuth client: andy-containers-web");
-
-        // Andy Containers CLI Client (device flow)
-        var containersCliClient = await manager.FindByClientIdAsync("andy-containers-cli");
-        if (containersCliClient != null)
-        {
-            await manager.DeleteAsync(containersCliClient);
-            _logger.LogInformation("Deleted existing OAuth client: andy-containers-cli");
-        }
-
-        await manager.CreateAsync(new OpenIddictApplicationDescriptor
-        {
-            ClientId = "andy-containers-cli",
-            DisplayName = "Andy Containers CLI",
-            ClientType = OpenIddictConstants.ClientTypes.Public,
-            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Authorization,
-                OpenIddictConstants.Permissions.Endpoints.Token,
-
-                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-
-                OpenIddictConstants.Permissions.Scopes.Email,
-                OpenIddictConstants.Permissions.Scopes.Profile,
-                OpenIddictConstants.Permissions.Scopes.Roles,
-                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
-                "scp:urn:andy-containers-api",
-
-                OpenIddictConstants.Permissions.ResponseTypes.Code
-            },
-            RedirectUris =
-            {
-                new Uri("http://127.0.0.1/callback"),
-                new Uri("http://localhost/callback")
-            }
-        });
-
-        _logger.LogInformation("Created OAuth client: andy-containers-cli");
-
-        // Andy RBAC Web Client (server-side Blazor/MVC)
-        var rbacWebClient = await manager.FindByClientIdAsync("andy-rbac-web");
-        if (rbacWebClient != null)
-        {
-            await manager.DeleteAsync(rbacWebClient);
-            _logger.LogInformation("Deleted existing OAuth client: andy-rbac-web");
-        }
-
-        await manager.CreateAsync(new OpenIddictApplicationDescriptor
-        {
-            ClientId = "andy-rbac-web",
-            DisplayName = "Andy RBAC Web",
-            ClientType = OpenIddictConstants.ClientTypes.Public,
-            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Authorization,
-                OpenIddictConstants.Permissions.Endpoints.Token,
-
-                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-
-                OpenIddictConstants.Permissions.Scopes.Email,
-                OpenIddictConstants.Permissions.Scopes.Profile,
-                OpenIddictConstants.Permissions.Scopes.Roles,
-                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
-                "scp:andy-rbac",
-
-                OpenIddictConstants.Permissions.ResponseTypes.Code
-            },
-            RedirectUris =
-            {
-                new Uri("https://localhost:5180/signin-oidc"),
-                new Uri("http://localhost:5181/signin-oidc"),
-                new Uri("https://localhost:5180/callback"),
-                new Uri("http://localhost:5181/callback")
-            },
-            PostLogoutRedirectUris =
-            {
-                new Uri("https://localhost:5180/"),
-                new Uri("https://localhost:5180/signout-callback-oidc"),
-                new Uri("http://localhost:5181/"),
-                new Uri("http://localhost:5181/signout-callback-oidc")
-            }
-        });
-
-        _logger.LogInformation("Created OAuth client: andy-rbac-web");
+        // andy-rbac-web: manifest-driven via andy-rbac/config/registration.json.
 
         // Conductor macOS Client (native desktop app)
         var conductorMacClient = await manager.FindByClientIdAsync("conductor-mac");
@@ -921,7 +750,7 @@ public class DbSeeder
                 // their ClaimsPrincipal stays anonymous. Part of the
                 // conductor#545 sweep.
                 "scp:urn:andy-containers-api",
-                "scp:andy-rbac",
+                "scp:urn:andy-rbac-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code
             },
@@ -1073,290 +902,38 @@ public class DbSeeder
 
         _logger.LogInformation("Created OAuth client: andy-narration-web");
 
-        // Andy Issues API Client (confidential, service-to-service)
-        var issuesApiClient = await manager.FindByClientIdAsync("andy-issues-api");
-        if (issuesApiClient != null)
-        {
-            await manager.DeleteAsync(issuesApiClient);
-            _logger.LogInformation("Deleted existing OAuth client: andy-issues-api");
-        }
-
-        await manager.CreateAsync(new OpenIddictApplicationDescriptor
-        {
-            ClientId = "andy-issues-api",
-            ClientSecret = "andy-issues-secret-change-in-production",
-            DisplayName = "Andy Issues API",
-            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Authorization,
-                OpenIddictConstants.Permissions.Endpoints.Token,
-                OpenIddictConstants.Permissions.Endpoints.Introspection,
-
-                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-                OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
-
-                OpenIddictConstants.Permissions.Scopes.Email,
-                OpenIddictConstants.Permissions.Scopes.Profile,
-                OpenIddictConstants.Permissions.Scopes.Roles,
-                "scp:urn:andy-issues-api",
-
-                OpenIddictConstants.Permissions.ResponseTypes.Code
-            },
-            RedirectUris =
-            {
-                new Uri("https://localhost:5410/callback"),
-            },
-            PostLogoutRedirectUris =
-            {
-                new Uri("https://localhost:5410/"),
-            }
-        });
-
-        _logger.LogInformation("Created OAuth client: andy-issues-api");
-
-        // Andy Issues Web Client (public, Angular SPA)
-        var issuesWebClient = await manager.FindByClientIdAsync("andy-issues-web");
-        if (issuesWebClient != null)
-        {
-            await manager.DeleteAsync(issuesWebClient);
-            _logger.LogInformation("Deleted existing OAuth client: andy-issues-web");
-        }
-
-        await manager.CreateAsync(new OpenIddictApplicationDescriptor
-        {
-            ClientId = "andy-issues-web",
-            DisplayName = "Andy Issues Web",
-            ClientType = OpenIddictConstants.ClientTypes.Public,
-            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Authorization,
-                OpenIddictConstants.Permissions.Endpoints.Token,
-
-                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-
-                OpenIddictConstants.Permissions.Scopes.Email,
-                OpenIddictConstants.Permissions.Scopes.Profile,
-                OpenIddictConstants.Permissions.Scopes.Roles,
-                "scp:urn:andy-issues-api",
-
-                OpenIddictConstants.Permissions.ResponseTypes.Code
-            },
-            RedirectUris =
-            {
-                new Uri("https://localhost:4203/callback"),
-                new Uri("http://localhost:4203/callback"),
-                new Uri("https://localhost:6203/callback"),
-                new Uri("http://localhost:6203/callback"),
-                new Uri("http://localhost:9100/issues/callback"),
-            },
-            PostLogoutRedirectUris =
-            {
-                new Uri("https://localhost:4203/"),
-                new Uri("http://localhost:4203/"),
-                new Uri("https://localhost:6203/"),
-                new Uri("http://localhost:6203/"),
-                new Uri("http://localhost:9100/issues/"),
-            }
-        });
-
-        _logger.LogInformation("Created OAuth client: andy-issues-web");
-
-        // Andy Agents API Client (confidential, service-to-service)
-        var agentsApiClient = await manager.FindByClientIdAsync("andy-agents-api");
-        if (agentsApiClient != null)
-        {
-            await manager.DeleteAsync(agentsApiClient);
-            _logger.LogInformation("Deleted existing OAuth client: andy-agents-api");
-        }
-
-        await manager.CreateAsync(new OpenIddictApplicationDescriptor
-        {
-            ClientId = "andy-agents-api",
-            ClientSecret = "andy-agents-secret-change-in-production",
-            DisplayName = "Andy Agents API",
-            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Authorization,
-                OpenIddictConstants.Permissions.Endpoints.Token,
-                OpenIddictConstants.Permissions.Endpoints.Introspection,
-
-                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-                OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
-
-                OpenIddictConstants.Permissions.Scopes.Email,
-                OpenIddictConstants.Permissions.Scopes.Profile,
-                OpenIddictConstants.Permissions.Scopes.Roles,
-                "scp:urn:andy-agents-api",
-
-                OpenIddictConstants.Permissions.ResponseTypes.Code
-            },
-            RedirectUris =
-            {
-                new Uri("https://localhost:5420/callback"),
-            },
-            PostLogoutRedirectUris =
-            {
-                new Uri("https://localhost:5420/"),
-            }
-        });
-
-        _logger.LogInformation("Created OAuth client: andy-agents-api");
-
-        // Andy Agents Web Client (public, Angular SPA)
-        var agentsWebClient = await manager.FindByClientIdAsync("andy-agents-web");
-        if (agentsWebClient != null)
-        {
-            await manager.DeleteAsync(agentsWebClient);
-            _logger.LogInformation("Deleted existing OAuth client: andy-agents-web");
-        }
-
-        await manager.CreateAsync(new OpenIddictApplicationDescriptor
-        {
-            ClientId = "andy-agents-web",
-            DisplayName = "Andy Agents Web",
-            ClientType = OpenIddictConstants.ClientTypes.Public,
-            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Authorization,
-                OpenIddictConstants.Permissions.Endpoints.Token,
-
-                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-
-                OpenIddictConstants.Permissions.Scopes.Email,
-                OpenIddictConstants.Permissions.Scopes.Profile,
-                OpenIddictConstants.Permissions.Scopes.Roles,
-                "scp:urn:andy-agents-api",
-
-                OpenIddictConstants.Permissions.ResponseTypes.Code
-            },
-            RedirectUris =
-            {
-                new Uri("https://localhost:4204/callback"),
-                new Uri("http://localhost:4204/callback"),
-                new Uri("https://localhost:6204/callback"),
-                new Uri("http://localhost:6204/callback"),
-                new Uri("http://localhost:9100/agents/callback"),
-            },
-            PostLogoutRedirectUris =
-            {
-                new Uri("https://localhost:4204/"),
-                new Uri("http://localhost:4204/"),
-                new Uri("https://localhost:6204/"),
-                new Uri("http://localhost:6204/"),
-                new Uri("http://localhost:9100/agents/"),
-            }
-        });
-
-        _logger.LogInformation("Created OAuth client: andy-agents-web");
-
-        // Andy Tasks API Client (confidential, service-to-service)
-        var tasksApiClient = await manager.FindByClientIdAsync("andy-tasks-api");
-        if (tasksApiClient != null)
-        {
-            await manager.DeleteAsync(tasksApiClient);
-            _logger.LogInformation("Deleted existing OAuth client: andy-tasks-api");
-        }
-
-        await manager.CreateAsync(new OpenIddictApplicationDescriptor
-        {
-            ClientId = "andy-tasks-api",
-            ClientSecret = "andy-tasks-secret-change-in-production",
-            DisplayName = "Andy Tasks API",
-            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Authorization,
-                OpenIddictConstants.Permissions.Endpoints.Token,
-                OpenIddictConstants.Permissions.Endpoints.Introspection,
-
-                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-                OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
-
-                OpenIddictConstants.Permissions.Scopes.Email,
-                OpenIddictConstants.Permissions.Scopes.Profile,
-                OpenIddictConstants.Permissions.Scopes.Roles,
-                "scp:urn:andy-tasks-api",
-
-                OpenIddictConstants.Permissions.ResponseTypes.Code
-            },
-            RedirectUris =
-            {
-                new Uri("https://localhost:5430/callback"),
-            },
-            PostLogoutRedirectUris =
-            {
-                new Uri("https://localhost:5430/"),
-            }
-        });
-
-        _logger.LogInformation("Created OAuth client: andy-tasks-api");
-
-        // Andy Tasks Web Client (public, Angular SPA)
-        var tasksWebClient = await manager.FindByClientIdAsync("andy-tasks-web");
-        if (tasksWebClient != null)
-        {
-            await manager.DeleteAsync(tasksWebClient);
-            _logger.LogInformation("Deleted existing OAuth client: andy-tasks-web");
-        }
-
-        await manager.CreateAsync(new OpenIddictApplicationDescriptor
-        {
-            ClientId = "andy-tasks-web",
-            DisplayName = "Andy Tasks Web",
-            ClientType = OpenIddictConstants.ClientTypes.Public,
-            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Authorization,
-                OpenIddictConstants.Permissions.Endpoints.Token,
-
-                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-
-                OpenIddictConstants.Permissions.Scopes.Email,
-                OpenIddictConstants.Permissions.Scopes.Profile,
-                OpenIddictConstants.Permissions.Scopes.Roles,
-                "scp:urn:andy-tasks-api",
-
-                OpenIddictConstants.Permissions.ResponseTypes.Code
-            },
-            // Redirect URIs span all three deployment modes per
-            // andy-service-template/docs/ports.md: dotnet native (4205),
-            // docker-compose (6205 = dotnet +2000), and Conductor embedded
-            // via the unified proxy (9100/tasks).
-            RedirectUris =
-            {
-                new Uri("https://localhost:4205/callback"),
-                new Uri("http://localhost:4205/callback"),
-                new Uri("https://localhost:6205/callback"),
-                new Uri("http://localhost:6205/callback"),
-                new Uri("http://localhost:9100/tasks/callback"),
-            },
-            PostLogoutRedirectUris =
-            {
-                new Uri("https://localhost:4205/"),
-                new Uri("http://localhost:4205/"),
-                new Uri("https://localhost:6205/"),
-                new Uri("http://localhost:6205/"),
-                new Uri("http://localhost:9100/tasks/"),
-            }
-        });
-
-        _logger.LogInformation("Created OAuth client: andy-tasks-web");
+        // andy-issues-api, andy-issues-web, andy-agents-api, andy-agents-web,
+        // andy-tasks-api, andy-tasks-web: manifest-driven via each service's
+        // config/registration.json.
     }
 
     /// <summary>
     /// Generates a random password that meets ASP.NET Identity requirements
     /// </summary>
+    /// <summary>
+    /// Appends `rst:<resource>` permissions to the descriptor for every
+    /// entry in <c>OpenIddict:Resources</c> config. Called from the
+    /// claude-desktop and chatgpt seeders so their allowed MCP resource
+    /// list stays in lock-step with the central config list — the same
+    /// list <c>Program.cs</c> registers at startup and
+    /// <c>DynamicClientRegistrationController</c> grants to DCR clients.
+    ///
+    /// Without this, hardcoded MCP URLs in the seeder would diverge from
+    /// runtime config per deployment mode (Development/Docker/Embedded/
+    /// Production).
+    /// </summary>
+    internal void AppendConfiguredMcpResources(OpenIddictApplicationDescriptor descriptor)
+    {
+        var resources = _configuration
+            .GetSection("OpenIddict:Resources")
+            .Get<string[]>() ?? Array.Empty<string>();
+        foreach (var resource in resources)
+        {
+            descriptor.Permissions.Add(
+                OpenIddictConstants.Permissions.Prefixes.Resource + resource);
+        }
+    }
+
     private static string GenerateRandomPassword()
     {
         const string upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";

@@ -29,11 +29,16 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=https://+:5001;http://+:5000
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=andy_auth_dev;Username=postgres;Password=postgres
+      # Registration manifests — read at startup to seed OAuth clients + scopes.
+      # The monorepo is mounted read-only at /monorepo so each sibling service
+      # contributes its config/registration.json. See andy-service-template/docs/registration.schema.json.
+      - REGISTRATIONS__MANIFEST_PATHS=/monorepo/andy-auth/config/registration.json:/monorepo/andy-rbac/config/registration.json:/monorepo/andy-containers/config/registration.json:/monorepo/andy-docs/config/registration.json:/monorepo/andy-code-index/config/registration.json:/monorepo/andy-issues/config/registration.json:/monorepo/andy-agents/config/registration.json:/monorepo/andy-tasks/config/registration.json:/monorepo/andy-policies/config/registration.json:/monorepo/andy-models/config/registration.json
     ports:
       - "7001:5001"
       - "7002:5000"
     volumes:
       - ./certs:/usr/local/share/ca-certificates/custom:ro
+      - ..:/monorepo:ro
     depends_on:
       postgres:
         condition: service_healthy
