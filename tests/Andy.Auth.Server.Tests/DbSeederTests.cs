@@ -208,6 +208,7 @@ public class DbSeederTests
         // Assert
         _mockUserManager.Verify(m => m.CreateAsync(
             It.Is<ApplicationUser>(u =>
+                u.Id == DbSeeder.TestUserWellKnownId && // #56 — deterministic Id for downstream pre-binding
                 u.Email == "test@andy.local" &&
                 u.UserName == "test@andy.local" &&
                 u.EmailConfirmed == true &&
@@ -215,6 +216,15 @@ public class DbSeederTests
                 u.IsActive == true),
             "Test123!"),
             Times.Once);
+    }
+
+    [Fact]
+    public void TestUserWellKnownId_IsTheDocumentedConstant()
+    {
+        // Locks the Id contract so changing it requires a deliberate update —
+        // downstream consumers (andy-rbac, andy-policies E2E) hardcode the same
+        // string and would silently miss bindings if it drifted.
+        Assert.Equal("00000000-0000-0000-0000-000000000001", DbSeeder.TestUserWellKnownId);
     }
 
     [Fact]
