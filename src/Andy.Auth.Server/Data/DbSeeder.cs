@@ -8,6 +8,15 @@ namespace Andy.Auth.Server.Data;
 /// </summary>
 public class DbSeeder
 {
+    /// <summary>
+    /// Deterministic <c>ApplicationUser.Id</c> (and JWT <c>sub</c> claim) for
+    /// <c>test@andy.local</c> in non-Production environments. Exposed so
+    /// downstream ecosystem services (andy-rbac, consumer integration tests)
+    /// can pre-bind roles and permissions to this subject without runtime
+    /// coordination. See rivoli-ai/andy-auth#56.
+    /// </summary>
+    public const string TestUserWellKnownId = "00000000-0000-0000-0000-000000000001";
+
     private readonly IServiceProvider _serviceProvider;
     private readonly IConfiguration _configuration;
     private readonly ILogger<DbSeeder> _logger;
@@ -1093,6 +1102,7 @@ public class DbSeeder
             {
                 var testUser = new ApplicationUser
                 {
+                    Id = TestUserWellKnownId,
                     UserName = testEmail,
                     Email = testEmail,
                     EmailConfirmed = true,
@@ -1106,7 +1116,7 @@ public class DbSeeder
                 {
                     // Assign User role to test user (not Admin)
                     await userManager.AddToRoleAsync(testUser, "User");
-                    _logger.LogInformation("Created test user: {Email} with password 'Test123!' in {Environment} environment", testEmail, environment);
+                    _logger.LogInformation("Created test user: {Email} with deterministic Id {UserId} in {Environment} environment", testEmail, testUser.Id, environment);
                 }
                 else
                 {
@@ -1115,6 +1125,19 @@ public class DbSeeder
             }
             else
             {
+                // Id is the primary key + FK anchor for Identity-related rows; mutating
+                // it in place would orphan history. If an older non-deterministic Id
+                // exists from a pre-#56 upgrade, log and leave alone — operators can
+                // delete + recreate manually if they need the deterministic Id.
+                if (existingTestUser.Id != TestUserWellKnownId)
+                {
+                    _logger.LogWarning(
+                        "Test user {Email} exists with Id {ActualId} rather than the well-known {ExpectedId}. " +
+                        "Downstream services that pre-bind roles by Id (andy-rbac et al) will not match this user. " +
+                        "To reset: delete the user via the admin UI and restart andy-auth.",
+                        testEmail, existingTestUser.Id, TestUserWellKnownId);
+                }
+
                 // Reset password for existing test user to ensure it's always Test123!
                 var token = await userManager.GeneratePasswordResetTokenAsync(existingTestUser);
                 var resetResult = await userManager.ResetPasswordAsync(existingTestUser, token, "Test123!");
