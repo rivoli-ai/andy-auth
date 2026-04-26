@@ -50,6 +50,12 @@ public class DbSeederTests
 
         // Setup service provider
         var services = new ServiceCollection();
+        // AddLogging registers the default logger factory + ILogger<T> for any T,
+        // including ILogger<RegistrationManifestLoader> which DbSeeder.SeedFromManifestsAsync
+        // resolves via _serviceProvider.GetRequiredService. Without this, every test in
+        // this file fails with "No service for type ILogger<RegistrationManifestLoader>"
+        // (pre-existing breakage on main; fixed as part of E0-S6).
+        services.AddLogging();
         services.AddSingleton(_mockAppManager.Object);
         services.AddSingleton(_mockScopeManager.Object);
         services.AddSingleton(_mockUserManager.Object);
