@@ -61,8 +61,8 @@ CLIENTS: Dict[str, ClientConfig] = {
         supports_authorization_code=True,
         supports_refresh_token=True
     ),
-    "wagram-web": ClientConfig(
-        client_id="wagram-web",
+    "andy-docs-web": ClientConfig(
+        client_id="andy-docs-web",
         client_secret=None,
         is_confidential=False,
         redirect_uris=[

@@ -70,7 +70,7 @@ public class DbSeederTests
         // Act
         await seeder.SeedAsync();
 
-        // Assert - 7 clients are created: andy-docs-api, wagram-web, claude-desktop, chatgpt, cline, roo, continue-dev
+        // Assert - 7 clients are created: andy-docs-api, andy-docs-web, claude-desktop, chatgpt, cline, roo, continue-dev
         _mockAppManager.Verify(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default),
             Times.Exactly(7));
     }
@@ -89,13 +89,13 @@ public class DbSeederTests
         // Act
         await seeder.SeedAsync();
 
-        // Assert - andy-docs-api, wagram-web, claude-desktop, chatgpt, cline, roo, continue-dev are always deleted and recreated
+        // Assert - andy-docs-api, andy-docs-web, claude-desktop, chatgpt, cline, roo, continue-dev are always deleted and recreated
         // So we expect 7 CreateAsync calls for the always-recreated clients
         _mockAppManager.Verify(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default),
             Times.Exactly(7));
-        // And 7 DeleteAsync calls
+        // 8 DeleteAsync calls — 7 client recreates + 1 legacy `wagram-web` cleanup (E0-S6)
         _mockAppManager.Verify(m => m.DeleteAsync(It.IsAny<object>(), default),
-            Times.Exactly(7));
+            Times.Exactly(8));
     }
 
     [Fact]
@@ -130,12 +130,12 @@ public class DbSeederTests
     }
 
     [Fact]
-    public async Task SeedAsync_ShouldCreateWagramWebClient_AsPublicClient()
+    public async Task SeedAsync_ShouldCreateAndyDocsWebClient_AsPublicClient()
     {
-        // Arrange - wagram-web doesn't exist, all others exist
-        _mockAppManager.Setup(m => m.FindByClientIdAsync("wagram-web", default))
+        // Arrange - andy-docs-web doesn't exist, all others exist
+        _mockAppManager.Setup(m => m.FindByClientIdAsync("andy-docs-web", default))
             .ReturnsAsync((object?)null);
-        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.Is<string>(s => s != "wagram-web"), default))
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.Is<string>(s => s != "andy-docs-web"), default))
             .ReturnsAsync(new object());
 
         var configuration = CreateConfiguration("Production");
@@ -150,12 +150,47 @@ public class DbSeederTests
         // Act
         await seeder.SeedAsync();
 
-        // Assert - find the wagram-web descriptor among all created
-        var wagramDescriptor = capturedDescriptors.FirstOrDefault(d => d.ClientId == "wagram-web");
-        Assert.NotNull(wagramDescriptor);
-        Assert.Equal("Wagram Web Application", wagramDescriptor.DisplayName);
-        Assert.Null(wagramDescriptor.ClientSecret); // Public client - no secret
-        Assert.Contains(new Uri("https://localhost:4200/callback"), wagramDescriptor.RedirectUris);
+        // Assert - find the andy-docs-web descriptor among all created
+        var andyDocsWebDescriptor = capturedDescriptors.FirstOrDefault(d => d.ClientId == "andy-docs-web");
+        Assert.NotNull(andyDocsWebDescriptor);
+        Assert.Equal("Andy Docs (web)", andyDocsWebDescriptor.DisplayName);
+        Assert.Equal(OpenIddictConstants.ClientTypes.Public, andyDocsWebDescriptor.ClientType);
+        Assert.Null(andyDocsWebDescriptor.ClientSecret); // Public client - no secret
+
+        // Canonical port 4202 per andy-service-template/docs/ports.md (replaces legacy wagram-web's :4200)
+        Assert.Contains(new Uri("http://localhost:4202/auth/callback"), andyDocsWebDescriptor.RedirectUris);
+        // Docker mode (offset +2000)
+        Assert.Contains(new Uri("http://localhost:6202/auth/callback"), andyDocsWebDescriptor.RedirectUris);
+        // Conductor embedded (unified proxy on 9100, /docs prefix)
+        Assert.Contains(new Uri("http://localhost:9100/docs/auth/callback"), andyDocsWebDescriptor.RedirectUris);
+        // UAT
+        Assert.Contains(new Uri("https://docs.uat.wagram.ai/auth/callback"), andyDocsWebDescriptor.RedirectUris);
+        // Production
+        Assert.Contains(new Uri("https://docs.wagram.ai/auth/callback"), andyDocsWebDescriptor.RedirectUris);
+
+        // PKCE required for this public client (closes part of andy-auth#46 for andy-docs-web).
+        Assert.Contains(OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange, andyDocsWebDescriptor.Requirements);
+    }
+
+    [Fact]
+    public async Task SeedAsync_ShouldDeleteLegacyWagramWebClient_WhenPresent()
+    {
+        // Arrange - simulate a legacy DB where the old `wagram-web` row exists
+        var legacyWagramRow = new object();
+        var existingAndyDocsWebRow = new object();
+        _mockAppManager.Setup(m => m.FindByClientIdAsync("wagram-web", default))
+            .ReturnsAsync(legacyWagramRow);
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.Is<string>(s => s != "wagram-web"), default))
+            .ReturnsAsync(existingAndyDocsWebRow);
+
+        var configuration = CreateConfiguration("Production");
+        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object);
+
+        // Act
+        await seeder.SeedAsync();
+
+        // Assert - the legacy `wagram-web` row was deleted as part of the seed
+        _mockAppManager.Verify(m => m.DeleteAsync(legacyWagramRow, default), Times.Once);
     }
 
     [Fact]

@@ -14,7 +14,7 @@ def test_refresh_token_flow(
     client: OAuthTestClient,
     runner: TestRunner,
     refresh_token: str,
-    client_id: str = "wagram-web"
+    client_id: str = "andy-docs-web"
 ) -> Optional[Dict[str, Any]]:
     """Test refresh token flow"""
     start = time.time()
@@ -69,7 +69,7 @@ def test_refresh_token_flow(
 def test_refresh_token_invalid(client: OAuthTestClient, runner: TestRunner):
     """Test refresh token with invalid token"""
     start = time.time()
-    config = get_client("wagram-web")
+    config = get_client("andy-docs-web")
 
     try:
         response = client.post("/connect/token", data={

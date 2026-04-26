@@ -152,7 +152,7 @@ def test_client_credentials_unknown_client(client: OAuthTestClient, runner: Test
 def test_client_credentials_public_client(client: OAuthTestClient, runner: TestRunner):
     """Test that public clients cannot use client_credentials flow"""
     start = time.time()
-    config = get_client("wagram-web")  # Public client
+    config = get_client("andy-docs-web")  # Public client
 
     try:
         response = client.post("/connect/token", data={
