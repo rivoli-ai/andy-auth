@@ -67,8 +67,8 @@ CLIENTS: Dict[str, ClientConfig] = {
         is_confidential=False,
         redirect_uris=[
             "https://localhost:4200/callback",
-            "https://wagram-uat.vercel.app/callback",
-            "https://wagram.ai/callback"
+            "https://docs.uat.wagram.ai/auth/callback",
+            "https://docs.wagram.ai/auth/callback"
         ],
         scopes=["openid", "profile", "email", "roles", "urn:andy-docs-api"],
         supports_client_credentials=False,

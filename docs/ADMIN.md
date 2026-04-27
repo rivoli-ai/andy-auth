@@ -118,12 +118,15 @@ The admin dashboard provides a web-based interface for managing Andy Auth Server
   - Refresh token grant
   - Authorization code grant
 
-**wagram-web** (Public)
-- Client ID: `wagram-web`
+**andy-docs-web** (Public)
+- Client ID: `andy-docs-web` *(renamed from `wagram-web` per E0-S6, rivoli-ai/andy-auth#25)*
 - No client secret (public SPA)
 - Redirect URIs:
-  - https://wagram.ai/callback
-  - http://localhost:4200/callback
+  - `http://localhost:4202/auth/callback` (canonical dotnet local port per andy-service-template/docs/ports.md)
+  - `http://localhost:6202/auth/callback` (docker-compose mode)
+  - `http://localhost:9100/docs/auth/callback` (Conductor embedded)
+  - `https://docs.uat.wagram.ai/auth/callback` (UAT)
+  - `https://docs.wagram.ai/auth/callback` (Production)
 - Permissions:
   - Authorization endpoint
   - Token endpoint

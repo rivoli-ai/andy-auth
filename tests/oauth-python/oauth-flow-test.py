@@ -339,7 +339,7 @@ def main():
         redirect_uri = 'https://localhost:4200/callback'
     else:  # uat
         base_url = 'https://andy-auth-uat-api.up.railway.app'
-        redirect_uri = 'https://wagram-uat.vercel.app/callback'
+        redirect_uri = 'https://docs.uat.wagram.ai/auth/callback'
 
     client_id = 'wagram-web'
 

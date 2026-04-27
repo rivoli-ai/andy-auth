@@ -109,7 +109,7 @@ andy-auth/
 | Client | Type | Purpose |
 |--------|------|---------|
 | `andy-docs-api` | Confidential | S2S for MCP backend |
-| `wagram-web` | Public SPA | Angular/React web app |
+| `andy-docs-web` | Public SPA | Angular web app *(renamed from wagram-web per E0-S6)* |
 | `claude-desktop` | Public | Claude Desktop MCP |
 | `chatgpt` | Public | ChatGPT MCP |
 | `cline`, `roo`, `continue-dev` | Public | VS Code extensions |
@@ -241,12 +241,12 @@ Then `[Authorize]` on controllers. Middleware fetches JWKS, validates RS256, che
 ## Data Flow — Auth Code + PKCE Login (1/2)
 
 1. **SPA** generates `code_verifier` + `code_challenge = Base64URL(SHA256(verifier))`
-2. **SPA** → `GET /connect/authorize?client_id=wagram-web&response_type=code&code_challenge=…&code_challenge_method=S256&scope=openid profile email offline_access urn:andy-docs-api`
+2. **SPA** → `GET /connect/authorize?client_id=andy-docs-web&response_type=code&code_challenge=…&code_challenge_method=S256&scope=openid profile email offline_access urn:andy-docs-api`
 3. **AuthorizationController**: not authenticated → `Challenge()` → redirect to `/Account/Login`
 4. **User** submits email+password → cookie set → back to `/connect/authorize`
 5. **Consent screen** (first time) — user clicks **Allow**
 6. **Server** mints authorization `code` (~10 min TTL, stores `code_challenge`)
-7. **Redirect** → `https://wagram.ai/callback?code=…&state=…`
+7. **Redirect** → `https://docs.wagram.ai/auth/callback?code=…&state=…`
 
 ---
 
