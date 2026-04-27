@@ -133,8 +133,8 @@ public class AuthorizationController : ControllerBase
             case ConsentTypes.External when authorizations.Any():
                 var principal = await CreateClaimsPrincipalAsync(user, request.GetScopes());
 
-                // Always include andy-docs-api audience for wagram-web client
-                if (request.ClientId == "wagram-web")
+                // Always include andy-docs-api audience for andy-docs-web client
+                if (request.ClientId == "andy-docs-web")
                 {
                     var currentResources = principal.GetResources().ToList();
                     const string andyDocsApiResource = "urn:andy-docs-api";
@@ -154,8 +154,8 @@ public class AuthorizationController : ControllerBase
             case ConsentTypes.Explicit when consentGranted:
                 var principalExplicit = await CreateClaimsPrincipalAsync(user, request.GetScopes());
 
-                // Always include andy-docs-api audience for wagram-web client
-                if (request.ClientId == "wagram-web")
+                // Always include andy-docs-api audience for andy-docs-web client
+                if (request.ClientId == "andy-docs-web")
                 {
                     var currentResources = principalExplicit.GetResources().ToList();
                     const string andyDocsApiResource = "urn:andy-docs-api";
@@ -275,8 +275,8 @@ public class AuthorizationController : ControllerBase
                 principal.SetResources(requestedResources);
             }
 
-            // Always include andy-docs-api audience for wagram-web client
-            if (request.ClientId == "wagram-web")
+            // Always include andy-docs-api audience for andy-docs-web client
+            if (request.ClientId == "andy-docs-web")
             {
                 var currentResources = principal.GetResources().ToList();
                 const string andyDocsApiResource = "urn:andy-docs-api";

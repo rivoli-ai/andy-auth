@@ -341,7 +341,7 @@ def main():
         base_url = 'https://andy-auth-uat-api.up.railway.app'
         redirect_uri = 'https://wagram-uat.vercel.app/callback'
 
-    client_id = 'wagram-web'
+    client_id = 'andy-docs-web'
 
     # Create tester and run flow
     tester = OAuthFlowTester(base_url, client_id, redirect_uri, args.username, args.password)

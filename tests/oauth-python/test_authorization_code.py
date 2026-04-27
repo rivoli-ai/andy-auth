@@ -183,7 +183,7 @@ class AuthorizationCodeTester:
 def test_auth_code_flow_public_client(
     tester: AuthorizationCodeTester,
     runner: TestRunner,
-    client_id: str = "wagram-web"
+    client_id: str = "andy-docs-web"
 ) -> Optional[Dict[str, Any]]:
     """Test complete authorization code flow for public client"""
     start = time.time()
@@ -297,7 +297,7 @@ def test_auth_code_flow_public_client(
 def test_auth_code_without_pkce(tester: AuthorizationCodeTester, runner: TestRunner):
     """Test that authorization without PKCE is rejected for public clients"""
     start = time.time()
-    config = get_client("wagram-web")
+    config = get_client("andy-docs-web")
     redirect_uri = get_redirect_uri_for_env(config, tester.env)
 
     try:
@@ -358,7 +358,7 @@ def test_auth_code_without_pkce(tester: AuthorizationCodeTester, runner: TestRun
 def test_auth_code_invalid_redirect_uri(tester: AuthorizationCodeTester, runner: TestRunner):
     """Test that invalid redirect URI is rejected"""
     start = time.time()
-    config = get_client("wagram-web")
+    config = get_client("andy-docs-web")
     code_verifier, code_challenge = generate_pkce_pair()
 
     try:
@@ -446,7 +446,7 @@ def test_auth_code_invalid_client_id(tester: AuthorizationCodeTester, runner: Te
 def test_auth_code_wrong_code_verifier(tester: AuthorizationCodeTester, runner: TestRunner):
     """Test that wrong code_verifier is rejected during token exchange"""
     start = time.time()
-    config = get_client("wagram-web")
+    config = get_client("andy-docs-web")
     redirect_uri = get_redirect_uri_for_env(config, tester.env)
 
     try:
@@ -591,7 +591,7 @@ def run_authorization_code_tests(env: EnvironmentConfig) -> TestRunner:
     tester = AuthorizationCodeTester(client, env)
 
     # Run tests
-    tokens = test_auth_code_flow_public_client(tester, runner, "wagram-web")
+    tokens = test_auth_code_flow_public_client(tester, runner, "andy-docs-web")
     test_auth_code_without_pkce(tester, runner)
     test_auth_code_invalid_redirect_uri(tester, runner)
     test_auth_code_invalid_client_id(tester, runner)
