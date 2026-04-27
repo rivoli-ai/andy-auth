@@ -237,8 +237,8 @@ VITE_API_URL=https://andy-docs-api.rivoli.ai
 ```typescript
 export const environment = {
   authUrl: 'https://auth.rivoli.ai',
-  clientId: 'wagram-web',
-  redirectUri: 'https://wagram.ai/callback'
+  clientId: 'andy-docs-web',
+  redirectUri: 'https://docs.wagram.ai/auth/callback'
 };
 ```
 
