@@ -218,24 +218,36 @@ builder.Services.AddOpenIddict()
         }
         else if (builder.Environment.IsProduction())
         {
-            // Check if running in Railway/Cloud with ephemeral keys flag
+            // Production prefers persisted RSA keys on a mounted volume
+            // (e.g. Railway `/data/keys` per E3-S4) so JWKS `kid` survives
+            // redeploys and every previously-issued JWT keeps validating.
+            // Falls back to ephemeral keys for stateless cloud pods that
+            // explicitly opt in via `OpenIddict:UseEphemeralKeys=true`.
+            var keysPath = builder.Configuration["OpenIddict:SigningKeys:Path"];
             var useEphemeralKeys = builder.Configuration.GetValue<bool>("OpenIddict:UseEphemeralKeys", false);
 
-            if (useEphemeralKeys)
+            if (!string.IsNullOrWhiteSpace(keysPath))
             {
-                // Use ephemeral keys for cloud deployments (Railway, etc.)
-                // WARNING: These keys will change on restart, invalidating all tokens
+                options.AddPersistedDevelopmentKeys(keysPath)
+                       .DisableAccessTokenEncryption();
+            }
+            else if (useEphemeralKeys)
+            {
+                // Stateless deploy — keys rotate on every restart, every
+                // token in flight becomes invalid. Acceptable only when
+                // every consumer can re-auth on demand.
                 options.AddEphemeralEncryptionKey()
                        .AddEphemeralSigningKey()
                        .DisableAccessTokenEncryption();
             }
             else
             {
-                // Production: Load certificates from configuration or key vault
                 throw new InvalidOperationException(
-                    "Production environment detected. Please configure proper signing and encryption certificates " +
-                    "or set OpenIddict:UseEphemeralKeys=true for UAT deployments. " +
-                    "See docs/DEPLOYMENT.md for instructions.");
+                    "Production requires either `OpenIddict:SigningKeys:Path` (recommended — " +
+                    "RSA keypair persisted on a mounted volume so JWKS survives redeploy) " +
+                    "or `OpenIddict:UseEphemeralKeys=true` (rotates keys every restart and " +
+                    "invalidates every issued token; only safe for stateless pods where " +
+                    "every consumer can re-auth on demand).");
             }
         }
 
