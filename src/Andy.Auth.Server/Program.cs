@@ -130,9 +130,22 @@ builder.Services.AddOpenIddict()
     .AddServer(options =>
     {
         // Fix the issuer so it's consistent regardless of how the server is accessed
-        // (localhost vs host.docker.internal). Without this, Docker containers that
-        // access via host.docker.internal get a different issuer than the browser.
-        options.SetIssuer(new Uri("https://localhost:5001/"));
+        // (localhost vs host.docker.internal, or a reverse proxy like Conductor's
+        // unified proxy on port 9100). Read from config so each deployment mode
+        // (Development/Docker/Embedded) can pin the issuer that matches its own
+        // exposure URL. Conductor's embedded mode sets this via the
+        // `OpenIddict__Issuer` env var (see Conductor/Core/ServiceHost/Services/
+        // AuthServiceConfig.swift); standalone `dotnet run` reads it from
+        // appsettings.Development.json.
+        var configuredIssuer = builder.Configuration["OpenIddict:Issuer"];
+        if (string.IsNullOrWhiteSpace(configuredIssuer))
+        {
+            throw new InvalidOperationException(
+                "OpenIddict:Issuer must be configured. Set it in appsettings.<env>.json " +
+                "or via the OpenIddict__Issuer environment variable. See " +
+                "andy-service-template/docs/ports.md for mode-specific issuer URLs.");
+        }
+        options.SetIssuer(new Uri(configuredIssuer));
 
         // Enable the authorization, token, introspection, and revocation endpoints
         // Note: userinfo and logout are handled by custom controller endpoints
@@ -158,9 +171,39 @@ builder.Services.AddOpenIddict()
             .AllowClientCredentialsFlow();
 
         // Register encryption and signing keys
-        // Use ephemeral keys for development and staging/UAT (avoids certificate management complexity)
-        // TODO: For true production, use proper certificates from key vault
-        if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Staging") || builder.Environment.IsEnvironment("UAT"))
+        //
+        // Three deployment shapes, three strategies:
+        //
+        // 1. Embedded (Conductor desktop app) — persisted RSA keys on disk.
+        //    Keys live at `OpenIddict:SigningKeys:Path` (Conductor sets this
+        //    to `~/.conductor/keys`). The JWKS `kid` must be stable across
+        //    process restarts because the desktop app relaunches frequently
+        //    and holds long-lived tokens in the Keychain. Ephemeral keys
+        //    would invalidate every cached token on every relaunch.
+        //
+        // 2. Development / Staging / UAT — ephemeral keys are fine:
+        //    developers re-auth via browser on reload, CI tests mint fresh
+        //    tokens per run, neither cares about cross-restart JWKS.
+        //
+        // 3. Production — X.509 certificates from key vault; ephemeral keys
+        //    can be opted into via `OpenIddict:UseEphemeralKeys` for
+        //    Railway/cloud pods where clients always re-auth.
+        if (builder.Environment.IsEmbedded())
+        {
+            var keysPath = builder.Configuration["OpenIddict:SigningKeys:Path"];
+            if (string.IsNullOrWhiteSpace(keysPath))
+            {
+                throw new InvalidOperationException(
+                    "Embedded mode requires `OpenIddict:SigningKeys:Path` to point at a " +
+                    "writable directory (e.g. `~/.conductor/keys`). Without persisted " +
+                    "keys, JWKS rotates on every process start and every cached JWT " +
+                    "becomes invalid. See Configuration/PersistedDevelopmentKeys.cs.");
+            }
+
+            options.AddPersistedDevelopmentKeys(keysPath)
+                   .DisableAccessTokenEncryption();
+        }
+        else if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Staging") || builder.Environment.IsEnvironment("UAT"))
         {
             options.AddEphemeralEncryptionKey()
                    .AddEphemeralSigningKey()
@@ -192,15 +235,20 @@ builder.Services.AddOpenIddict()
         // Register scopes
         options.RegisterScopes("openid", "profile", "email", "roles", "offline_access", "urn:andy-docs-api");
 
-        // Register MCP resource servers (allows 'resource' parameter in authorization requests)
-        // These are the audience values that clients can request tokens for
-        options.RegisterResources(
-            "https://andy-docs-uat.up.railway.app/mcp",
-            "https://andy-docs-api.rivoli.ai/mcp",
-            "https://localhost:7001/mcp",
-            "https://localhost:5154/mcp",
-            "http://localhost:5154/mcp"
-        );
+        // Register MCP resource servers — the audience values that clients
+        // can request tokens for via the `resource` parameter. Read from
+        // `OpenIddict:Resources` so each deployment mode pins its own set
+        // (Mode 1 uses 5xxx ports, Mode 2 uses 7xxx, Conductor Embedded
+        // uses http://localhost:9100/<service>/mcp, hosted prod uses the
+        // public Railway/rivoli.ai URLs). Config-driven so no mode has to
+        // live in the codebase.
+        var mcpResources = builder.Configuration
+            .GetSection("OpenIddict:Resources")
+            .Get<string[]>() ?? Array.Empty<string>();
+        if (mcpResources.Length > 0)
+        {
+            options.RegisterResources(mcpResources);
+        }
 
         // Use reference tokens for refresh tokens only (stored in database, can be revoked)
         // Access tokens are JWTs so they can be validated by external APIs without introspection
@@ -213,8 +261,10 @@ builder.Services.AddOpenIddict()
             .EnableTokenEndpointPassthrough()
             .EnableStatusCodePagesIntegration();
 
-        // Allow HTTP for local development and testing (CI environment)
-        if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Staging") || builder.Environment.IsEnvironment("UAT"))
+        // Allow HTTP for local development, CI, Docker compose stacks, and
+        // Conductor's embedded mode (all traffic goes through the unified
+        // localhost HTTP proxy on port 9100, so TLS requirement is moot).
+        if (builder.Environment.IsLocalOrEmbedded() || builder.Environment.IsEnvironment("Staging") || builder.Environment.IsEnvironment("UAT"))
         {
             aspNetCoreBuilder.DisableTransportSecurityRequirement();
         }
@@ -305,7 +355,13 @@ else
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Embedded mode proxies plain HTTP through the Conductor unified
+// proxy on port 9100, so HTTPS redirection would trap every request
+// in a redirect loop. Skip it in Embedded; keep it everywhere else.
+if (!app.Environment.IsEmbedded())
+{
+    app.UseHttpsRedirection();
+}
 app.UseDefaultFiles();
 app.UseStaticFiles();
 

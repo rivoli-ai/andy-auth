@@ -62,7 +62,8 @@ public class DynamicClientRegistrationControllerTests : IDisposable
             _applicationManagerMock.Object,
             _tokenManagerMock.Object,
             _context,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            new Mock<Microsoft.Extensions.Configuration.IConfiguration>().Object);
 
         SetupHttpContext();
     }
@@ -501,13 +502,19 @@ public class DynamicClientRegistrationControllerTests : IDisposable
         var settingsOptions = Options.Create(settings);
         var dcrService = new DcrService(_context, settingsOptions, _dcrLoggerMock.Object);
 
+        // Empty configuration is fine here — the MCP resource list ends
+        // up empty, which is the documented no-op path. The existing DCR
+        // tests don't assert on the presence of specific MCP resources.
+        var configuration = new Mock<Microsoft.Extensions.Configuration.IConfiguration>().Object;
+
         var controller = new DynamicClientRegistrationController(
             dcrService,
             settingsOptions,
             _applicationManagerMock.Object,
             _tokenManagerMock.Object,
             _context,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            configuration);
 
         var httpContext = new DefaultHttpContext();
         httpContext.Request.Scheme = "https";

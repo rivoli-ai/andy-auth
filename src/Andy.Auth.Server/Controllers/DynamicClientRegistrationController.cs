@@ -21,6 +21,7 @@ public class DynamicClientRegistrationController : ControllerBase
     private readonly IOpenIddictTokenManager _tokenManager;
     private readonly ApplicationDbContext _context;
     private readonly ILogger<DynamicClientRegistrationController> _logger;
+    private readonly IConfiguration _configuration;
 
     public DynamicClientRegistrationController(
         DcrService dcrService,
@@ -28,7 +29,8 @@ public class DynamicClientRegistrationController : ControllerBase
         IOpenIddictApplicationManager applicationManager,
         IOpenIddictTokenManager tokenManager,
         ApplicationDbContext context,
-        ILogger<DynamicClientRegistrationController> logger)
+        ILogger<DynamicClientRegistrationController> logger,
+        IConfiguration configuration)
     {
         _dcrService = dcrService;
         _settings = settings.Value;
@@ -36,6 +38,7 @@ public class DynamicClientRegistrationController : ControllerBase
         _tokenManager = tokenManager;
         _context = context;
         _logger = logger;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -197,16 +200,15 @@ public class DynamicClientRegistrationController : ControllerBase
             }
         }
 
-        // Add resource/audience permissions for MCP resource servers
-        // This allows DCR clients to use the OAuth 2.0 resource parameter (RFC 8707)
-        var mcpResources = new[]
-        {
-            "https://andy-docs-uat.up.railway.app/mcp",
-            "https://andy-docs-api.rivoli.ai/mcp",
-            "https://localhost:7001/mcp",
-            "https://localhost:5154/mcp",
-            "http://localhost:5154/mcp"
-        };
+        // Add resource/audience permissions for MCP resource servers.
+        // This allows DCR clients to use the OAuth 2.0 resource parameter
+        // (RFC 8707). The resource list is config-driven so each deployment
+        // mode (Development/Docker/Embedded/Production) can pin its own set
+        // — the same `OpenIddict:Resources` list Program.cs registers at
+        // startup. Kept in sync via a single read.
+        var mcpResources = _configuration
+            .GetSection("OpenIddict:Resources")
+            .Get<string[]>() ?? Array.Empty<string>();
         foreach (var resource in mcpResources)
         {
             descriptor.Permissions.Add(OpenIddictConstants.Permissions.Prefixes.Resource + resource);
