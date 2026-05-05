@@ -154,9 +154,13 @@ public class DynamicClientRegistrationController : ControllerBase
             }
         }
 
-        // Set consent type based on DCR settings
+        // Consent type semantics: Explicit prompts the user every time;
+        // Implicit treats consent as already granted. An admin-approved
+        // client has been vetted out-of-band, so it joins the trusted
+        // first-party pool (Implicit, matching DbSeeder's seeded clients).
+        // A self-registered client is untrusted and must keep prompting.
         descriptor.ConsentType = _settings.RequireAdminApproval
-            ? OpenIddictConstants.ConsentTypes.Explicit
+            ? OpenIddictConstants.ConsentTypes.Implicit
             : OpenIddictConstants.ConsentTypes.Explicit;
 
         // Add endpoint permissions

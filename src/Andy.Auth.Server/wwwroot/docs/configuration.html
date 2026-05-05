@@ -215,9 +215,7 @@
         "RequireInitialAccessToken": false,
         "RequireAdminApproval": false,
         "AllowedGrantTypes": ["authorization_code", "refresh_token", "client_credentials"],
-        "AllowedScopes": ["openid", "profile", "email", "offline_access"],
-        "DefaultAccessTokenLifetime": "01:00:00",
-        "DefaultRefreshTokenLifetime": "14.00:00:00"
+        "AllowedScopes": ["openid", "profile", "email", "offline_access"]
     },
     "IpRateLimiting": {
         "EnableEndpointRateLimiting": true,
@@ -452,10 +450,6 @@ export CorsOrigins__AllowedOrigins__1="https://admin.example.com"</code></pre>
             "email",
             "offline_access"
         ],
-
-        // Default token lifetimes
-        "DefaultAccessTokenLifetime": "01:00:00",
-        "DefaultRefreshTokenLifetime": "14.00:00:00",
 
         // Registration access token lifetime (null = never expires)
         "RegistrationAccessTokenLifetime": null,

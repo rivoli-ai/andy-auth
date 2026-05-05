@@ -48,16 +48,6 @@ public class DcrSettings
     };
 
     /// <summary>
-    /// Default access token lifetime for dynamically registered clients.
-    /// </summary>
-    public TimeSpan DefaultAccessTokenLifetime { get; set; } = TimeSpan.FromHours(1);
-
-    /// <summary>
-    /// Default refresh token lifetime for dynamically registered clients.
-    /// </summary>
-    public TimeSpan DefaultRefreshTokenLifetime { get; set; } = TimeSpan.FromDays(14);
-
-    /// <summary>
     /// Registration access token lifetime. Set to null for non-expiring tokens.
     /// </summary>
     public TimeSpan? RegistrationAccessTokenLifetime { get; set; } = null;
