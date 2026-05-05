@@ -2,18 +2,24 @@ using Microsoft.Extensions.Hosting;
 
 namespace Andy.Auth.Server.Configuration;
 
-// Named accessors for the three deployment modes every Andy service
-// supports. See andy-service-template/docs/ports.md for the canonical
-// description of the modes and their port ranges.
+// Named accessors for the three deployment modes andy-auth supports.
+// The canonical description of the contract — modes, port ranges,
+// trust model — lives in `andy-service-template/docs/ports.md`. This
+// file is the andy-auth copy of the runtime predicates only.
 //
 // - Development (ASPNETCORE_ENVIRONMENT=Development): `dotnet run` on
 //   the host. Liberal defaults — Swagger, developer exception pages,
 //   SSL validation bypass, RBAC bypass — intended for a developer
-//   iterating on the service directly in their shell.
+//   iterating on the service directly in their shell. Ephemeral keys.
 //
 // - Docker     (ASPNETCORE_ENVIRONMENT=Docker): docker-compose stack.
 //   Ports offset +2000 from Development so both can coexist on one
-//   machine. Config comes from appsettings.Docker.json + compose env.
+//   machine. Config is env-var driven (no static appsettings.Docker.json
+//   today; compose env vars supply everything Program.cs reads).
+//   Local-development trust model — ephemeral keys, transport security
+//   off — same as Development. Note: docker-compose.yml currently sets
+//   ENV=Development; ENV=Docker is wired up and works (closes #75) but
+//   not yet adopted by the compose file.
 //
 // - Embedded   (ASPNETCORE_ENVIRONMENT=Embedded): bundled inside the
 //   Conductor desktop app behind a unified proxy on port 9100. All
