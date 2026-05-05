@@ -120,6 +120,94 @@ public class PersistedDevelopmentKeysTests : IDisposable
     // the OpenIddict.Server package reference in this test assembly.
 
     [Fact]
+    public void LoadOrCreate_MalformedPem_ThrowsWithFilePathInMessage()
+    {
+        // Pins the corruption contract: a garbage PEM file must not
+        // silently regenerate (regenerate = invalidate every cached
+        // JWT across every downstream service). Hard-fail with the
+        // path in the message so the operator knows what to fix.
+        var path = Path.Combine(_tempDir, "signing.key");
+        File.WriteAllText(path, "-----BEGIN PRIVATE KEY-----\nNOT-A-REAL-KEY\n-----END PRIVATE KEY-----\n");
+
+        var act = () => PersistedDevelopmentKeys.LoadOrCreate(path);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*corrupt or not a valid PKCS#8 PEM*")
+            .WithMessage($"*{path}*");
+    }
+
+    [Fact]
+    public void LoadOrCreate_EmptyFile_ThrowsWithFilePathInMessage()
+    {
+        // First-boot interrupted between File.Create and the actual
+        // PEM write leaves a zero-byte file. Same hard-fail contract
+        // — don't silently regenerate.
+        var path = Path.Combine(_tempDir, "signing.key");
+        File.WriteAllText(path, string.Empty);
+
+        var act = () => PersistedDevelopmentKeys.LoadOrCreate(path);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*corrupt or not a valid PKCS#8 PEM*")
+            .WithMessage($"*{path}*");
+    }
+
+    [Fact]
+    public void LoadOrCreate_TruncatedPem_ThrowsWithFilePathInMessage()
+    {
+        // Write a real key, then truncate it mid-base64 to simulate
+        // a partial fsync or filesystem corruption. The truncated
+        // file is not a valid keypair — must not silently regenerate.
+        var path = Path.Combine(_tempDir, "signing.key");
+        using (var seed = PersistedDevelopmentKeys.LoadOrCreate(path)) { }
+        var full = File.ReadAllText(path);
+        File.WriteAllText(path, full.Substring(0, full.Length / 2));
+
+        var act = () => PersistedDevelopmentKeys.LoadOrCreate(path);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*corrupt or not a valid PKCS#8 PEM*")
+            .WithMessage($"*{path}*");
+    }
+
+    [Fact]
+    public void LoadOrCreate_UnwritableDirectory_PropagatesIoException()
+    {
+        // OpenIddict:SigningKeys:Path pointing at a read-only mount
+        // (or a dir the service account doesn't own). Directory.CreateDirectory
+        // is idempotent for an existing dir, so the failure surfaces at
+        // File.WriteAllText. Skip on Windows — its ACL model differs.
+        if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
+        {
+            return;
+        }
+
+        var roDir = Path.Combine(_tempDir, "readonly");
+        Directory.CreateDirectory(roDir);
+        try
+        {
+            File.SetUnixFileMode(
+                roDir,
+                UnixFileMode.UserRead | UnixFileMode.UserExecute);
+
+            var path = Path.Combine(roDir, "signing.key");
+
+            var act = () => PersistedDevelopmentKeys.LoadOrCreate(path);
+
+            act.Should().Throw<UnauthorizedAccessException>(
+                "a read-only directory must surface as a permission error " +
+                "so the operator can re-mount or chmod, not silently fail");
+        }
+        finally
+        {
+            // Restore write perms so xunit can clean up _tempDir.
+            File.SetUnixFileMode(
+                roDir,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+    }
+
+    [Fact]
     public void LoadOrCreate_FilePermissionsAreOwnerOnlyOnUnix()
     {
         if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
