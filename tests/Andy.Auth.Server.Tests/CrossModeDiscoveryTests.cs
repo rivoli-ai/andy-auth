@@ -44,6 +44,7 @@ public class CrossModeDiscoveryTests : IDisposable
     public static IEnumerable<object[]> Modes => new[]
     {
         new object[] { Mode.Embedded, "http://localhost:9100/auth/" },
+        new object[] { Mode.Docker, "https://localhost:7001/" },
         new object[] { Mode.ProductionPersistedKeys, "https://auth.example.test/" },
         new object[] { Mode.ProductionEphemeralKeys, "https://auth.example.test/" },
     };
@@ -91,6 +92,11 @@ public class CrossModeDiscoveryTests : IDisposable
                 issuer: issuer,
                 keysPath: keysPath),
 
+            Mode.Docker => new EnvironmentWebApplicationFactory(
+                environmentName: HostEnvironmentExtensions.DockerEnvironmentName,
+                dbPath: dbPath,
+                issuer: issuer),
+
             Mode.ProductionPersistedKeys => new EnvironmentWebApplicationFactory(
                 environmentName: "Production",
                 dbPath: dbPath,
@@ -110,10 +116,11 @@ public class CrossModeDiscoveryTests : IDisposable
 
     private static HttpClient ClientFor(WebApplicationFactory<Program> factory, Mode mode)
     {
-        // Embedded calls DisableTransportSecurityRequirement(); HTTP is fine.
-        // Production keeps OpenIddict's HTTPS-only requirement, so the
-        // in-memory client must speak https://. TestServer fakes both.
-        var baseAddress = mode == Mode.Embedded
+        // Embedded + Docker call DisableTransportSecurityRequirement()
+        // (gated on IsLocalOrEmbedded). Production keeps OpenIddict's
+        // HTTPS-only requirement, so its in-memory client must speak
+        // https://. TestServer fakes both schemes — no real handshake.
+        var baseAddress = mode is Mode.Embedded or Mode.Docker
             ? new Uri("http://localhost/")
             : new Uri("https://localhost/");
 
@@ -127,6 +134,7 @@ public class CrossModeDiscoveryTests : IDisposable
     public enum Mode
     {
         Embedded,
+        Docker,
         ProductionPersistedKeys,
         ProductionEphemeralKeys
     }

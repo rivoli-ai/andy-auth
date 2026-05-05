@@ -210,11 +210,18 @@ builder.Services.AddOpenIddict()
             options.AddPersistedDevelopmentKeys(keysPath)
                    .DisableAccessTokenEncryption();
         }
-        else if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Staging") || builder.Environment.IsEnvironment("UAT"))
+        else if (builder.Environment.IsDevelopment()
+                 || builder.Environment.IsDocker()
+                 || builder.Environment.IsEnvironment("Staging")
+                 || builder.Environment.IsEnvironment("UAT"))
         {
+            // Local-development trust model — devs (or compose-stack
+            // consumers) can re-auth on every container respin, so
+            // ephemeral keys are fine. Access tokens stay as signed
+            // JWT (industry standard); ID tokens remain encrypted.
             options.AddEphemeralEncryptionKey()
                    .AddEphemeralSigningKey()
-                   .DisableAccessTokenEncryption();  // Access tokens are signed JWT (industry standard), ID tokens remain encrypted
+                   .DisableAccessTokenEncryption();
         }
         else if (builder.Environment.IsProduction())
         {
