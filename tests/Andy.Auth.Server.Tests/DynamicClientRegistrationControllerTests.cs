@@ -7,6 +7,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -63,7 +64,7 @@ public class DynamicClientRegistrationControllerTests : IDisposable
             _tokenManagerMock.Object,
             _context,
             _loggerMock.Object,
-            new Mock<Microsoft.Extensions.Configuration.IConfiguration>().Object);
+            new ConfigurationBuilder().Build());
 
         SetupHttpContext();
     }
@@ -191,6 +192,74 @@ public class DynamicClientRegistrationControllerTests : IDisposable
         statusResult.StatusCode.Should().Be(201);
         var response = statusResult.Value.Should().BeOfType<ClientRegistrationResponse>().Subject;
         response.ClientSecret.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Register_EmptyOpenIddictResourcesConfig_DoesNotThrowAndAddsNoResourcePermissions()
+    {
+        // Regression for #63: a previous test setup wired this controller
+        // with `Mock<IConfiguration>().Object`, which made GetSection return
+        // null and Get<string[]>() throw ArgumentNullException. The
+        // production code documents `?? Array.Empty<string>()` as the empty
+        // path; this test pins that contract end-to-end.
+        OpenIddictApplicationDescriptor? captured = null;
+        _applicationManagerMock.Setup(x => x.FindByClientIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((object?)null);
+        _applicationManagerMock.Setup(x => x.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), It.IsAny<CancellationToken>()))
+            .Callback<object, CancellationToken>((d, _) => captured = (OpenIddictApplicationDescriptor)d)
+            .Returns(new ValueTask<object>(new object()));
+
+        var request = new ClientRegistrationRequest
+        {
+            ClientName = "Test App",
+            RedirectUris = new List<string> { "https://example.com/callback" },
+            GrantTypes = new List<string> { "authorization_code" },
+            TokenEndpointAuthMethod = "client_secret_basic"
+        };
+
+        var result = await _controller.Register(request);
+
+        result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(201);
+        captured.Should().NotBeNull();
+        captured!.Permissions
+            .Where(p => p.StartsWith(OpenIddictConstants.Permissions.Prefixes.Resource))
+            .Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Register_PopulatedOpenIddictResourcesConfig_AddsResourcePermissions()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["OpenIddict:Resources:0"] = "https://localhost:5101/mcp",
+                ["OpenIddict:Resources:1"] = "https://localhost:5510/mcp",
+            })
+            .Build();
+        var controller = CreateControllerWithSettings(_settings, configuration);
+
+        OpenIddictApplicationDescriptor? captured = null;
+        _applicationManagerMock.Setup(x => x.FindByClientIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((object?)null);
+        _applicationManagerMock.Setup(x => x.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), It.IsAny<CancellationToken>()))
+            .Callback<object, CancellationToken>((d, _) => captured = (OpenIddictApplicationDescriptor)d)
+            .Returns(new ValueTask<object>(new object()));
+
+        var request = new ClientRegistrationRequest
+        {
+            ClientName = "Test App",
+            RedirectUris = new List<string> { "https://example.com/callback" },
+            GrantTypes = new List<string> { "authorization_code" },
+            TokenEndpointAuthMethod = "client_secret_basic"
+        };
+
+        var result = await controller.Register(request);
+
+        result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(201);
+        captured.Should().NotBeNull();
+        var prefix = OpenIddictConstants.Permissions.Prefixes.Resource;
+        captured!.Permissions.Should().Contain(prefix + "https://localhost:5101/mcp");
+        captured.Permissions.Should().Contain(prefix + "https://localhost:5510/mcp");
     }
 
     [Fact]
@@ -497,15 +566,12 @@ public class DynamicClientRegistrationControllerTests : IDisposable
 
     // ==================== Helper Methods ====================
 
-    private DynamicClientRegistrationController CreateControllerWithSettings(DcrSettings settings)
+    private DynamicClientRegistrationController CreateControllerWithSettings(
+        DcrSettings settings,
+        IConfiguration? configuration = null)
     {
         var settingsOptions = Options.Create(settings);
         var dcrService = new DcrService(_context, settingsOptions, _dcrLoggerMock.Object);
-
-        // Empty configuration is fine here — the MCP resource list ends
-        // up empty, which is the documented no-op path. The existing DCR
-        // tests don't assert on the presence of specific MCP resources.
-        var configuration = new Mock<Microsoft.Extensions.Configuration.IConfiguration>().Object;
 
         var controller = new DynamicClientRegistrationController(
             dcrService,
@@ -514,7 +580,7 @@ public class DynamicClientRegistrationControllerTests : IDisposable
             _tokenManagerMock.Object,
             _context,
             _loggerMock.Object,
-            configuration);
+            configuration ?? new ConfigurationBuilder().Build());
 
         var httpContext = new DefaultHttpContext();
         httpContext.Request.Scheme = "https";
