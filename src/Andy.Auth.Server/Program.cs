@@ -165,8 +165,15 @@ builder.Services.AddOpenIddict()
             })
             .SetOrder(OpenIddict.Server.OpenIddictServerHandlers.Discovery.AttachEndpoints.Descriptor.Order + 1));
 
-        // Enable the authorization code flow and refresh token flow
+        // Enable the authorization code flow and refresh token flow.
+        // Require PKCE for every auth-code exchange — public clients
+        // (claude-desktop, conductor-mac, every web SPA) face on-device
+        // code-interception attacks without it, and confidential clients
+        // benefit per OAuth 2.1 / RFC 9700. Only S256 is accepted; the
+        // existing test fixtures and oauth-python helpers already send
+        // it. Closes andy-auth#46.
         options.AllowAuthorizationCodeFlow()
+            .RequireProofKeyForCodeExchange()
             .AllowRefreshTokenFlow()
             .AllowClientCredentialsFlow();
 
