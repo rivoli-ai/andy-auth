@@ -76,8 +76,28 @@ public static class PersistedDevelopmentKeys
         var rsa = RSA.Create(2048);
         if (File.Exists(filePath))
         {
-            rsa.ImportFromPem(File.ReadAllText(filePath));
-            return rsa;
+            try
+            {
+                rsa.ImportFromPem(File.ReadAllText(filePath));
+                return rsa;
+            }
+            catch (Exception inner) when (inner is CryptographicException
+                                       || inner is ArgumentException)
+            {
+                // Corrupt / truncated / empty file. Refuse to regenerate
+                // — auto-regenerate would invalidate every previously
+                // issued JWT held by every downstream service. Surface
+                // a message that names the file and tells the operator
+                // exactly what to do.
+                rsa.Dispose();
+                throw new InvalidOperationException(
+                    $"Persisted signing/encryption key at '{filePath}' is " +
+                    $"corrupt or not a valid PKCS#8 PEM keypair. Refusing " +
+                    $"to regenerate — that would invalidate every issued " +
+                    $"JWT. Restore the file from backup, or delete it " +
+                    $"intentionally to trigger a fresh keypair.",
+                    inner);
+            }
         }
 
         File.WriteAllText(filePath, rsa.ExportPkcs8PrivateKeyPem());
