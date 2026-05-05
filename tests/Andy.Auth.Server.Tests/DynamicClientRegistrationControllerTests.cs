@@ -194,6 +194,51 @@ public class DynamicClientRegistrationControllerTests : IDisposable
         response.ClientSecret.Should().BeNull();
     }
 
+    [Theory]
+    [InlineData(true, OpenIddictConstants.ConsentTypes.Implicit)]
+    [InlineData(false, OpenIddictConstants.ConsentTypes.Explicit)]
+    public async Task Register_ConsentType_TracksRequireAdminApproval(
+        bool requireAdminApproval,
+        string expectedConsentType)
+    {
+        // Pinning the ternary at DynamicClientRegistrationController.cs:158:
+        // admin-approved clients are vetted out-of-band so they join the
+        // first-party Implicit pool; self-registered clients stay Explicit.
+        // Both branches collapsed to Explicit before this fix landed.
+        var settings = new DcrSettings
+        {
+            Enabled = true,
+            RequireInitialAccessToken = false,
+            RequireAdminApproval = requireAdminApproval,
+            AllowedGrantTypes = new List<string> { "authorization_code" },
+            AllowedScopes = new List<string> { "openid" },
+            AllowLocalhostRedirectUris = true,
+            AllowHttpLocalhostRedirectUris = true
+        };
+        var controller = CreateControllerWithSettings(settings);
+
+        OpenIddictApplicationDescriptor? captured = null;
+        _applicationManagerMock.Setup(x => x.FindByClientIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((object?)null);
+        _applicationManagerMock.Setup(x => x.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), It.IsAny<CancellationToken>()))
+            .Callback<object, CancellationToken>((d, _) => captured = (OpenIddictApplicationDescriptor)d)
+            .Returns(new ValueTask<object>(new object()));
+
+        var request = new ClientRegistrationRequest
+        {
+            ClientName = "Test App",
+            RedirectUris = new List<string> { "https://example.com/callback" },
+            GrantTypes = new List<string> { "authorization_code" },
+            TokenEndpointAuthMethod = "client_secret_basic"
+        };
+
+        var result = await controller.Register(request);
+
+        result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(201);
+        captured.Should().NotBeNull();
+        captured!.ConsentType.Should().Be(expectedConsentType);
+    }
+
     [Fact]
     public async Task Register_EmptyOpenIddictResourcesConfig_DoesNotThrowAndAddsNoResourcePermissions()
     {
@@ -269,6 +314,7 @@ public class DynamicClientRegistrationControllerTests : IDisposable
         var strictSettings = new DcrSettings
         {
             Enabled = true,
+            RequireInitialAccessToken = false,
             AllowedGrantTypes = new List<string> { "authorization_code" },
             AllowedScopes = new List<string> { "openid" },
             AllowLocalhostRedirectUris = false
