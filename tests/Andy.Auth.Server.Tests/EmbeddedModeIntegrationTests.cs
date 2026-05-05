@@ -2,9 +2,6 @@ using System.Net;
 using System.Text.Json;
 using Andy.Auth.Server.Configuration;
 using FluentAssertions;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
 
 namespace Andy.Auth.Server.Tests;
 
@@ -52,14 +49,15 @@ public class EmbeddedModeIntegrationTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private EmbeddedWebApplicationFactory CreateFactory(
+    private EnvironmentWebApplicationFactory CreateFactory(
         string? keysPathOverride = null,
         string? issuerOverride = null)
     {
-        return new EmbeddedWebApplicationFactory(
-            keysPath: keysPathOverride ?? _keysDir,
+        return new EnvironmentWebApplicationFactory(
+            environmentName: HostEnvironmentExtensions.EmbeddedEnvironmentName,
             dbPath: _dbPath,
-            issuer: issuerOverride ?? "http://localhost:9100/auth/");
+            issuer: issuerOverride ?? "http://localhost:9100/auth/",
+            keysPath: keysPathOverride ?? _keysDir);
     }
 
     [Fact]
@@ -125,10 +123,11 @@ public class EmbeddedModeIntegrationTests : IDisposable
     [Fact]
     public void EmbeddedBoot_WithoutKeysPath_ThrowsOnStartup()
     {
-        var factory = new EmbeddedWebApplicationFactory(
-            keysPath: null,
+        var factory = new EnvironmentWebApplicationFactory(
+            environmentName: HostEnvironmentExtensions.EmbeddedEnvironmentName,
             dbPath: _dbPath,
-            issuer: "http://localhost:9100/auth/");
+            issuer: "http://localhost:9100/auth/",
+            keysPath: null);
 
         // Forcing CreateClient triggers the host build, which materialises
         // the OpenIddict server options — which is where our guard throws.
@@ -189,56 +188,4 @@ public class EmbeddedModeIntegrationTests : IDisposable
         return keys[0].GetProperty("kid").GetString()!;
     }
 
-    // Program.cs reads `builder.Configuration` during the top-level
-    // `WebApplication.CreateBuilder(args)` call, BEFORE WebApplicationFactory's
-    // `ConfigureAppConfiguration` callbacks run. Overriding the config via
-    // the factory's callback therefore cannot influence Program.cs's direct
-    // reads (e.g. `builder.Configuration["OpenIddict:Issuer"]`).
-    //
-    // The standard workaround for WebApplicationFactory + minimal hosting
-    // is to set environment variables before the factory spins up the host.
-    // ASP.NET Core's default EnvironmentVariablesConfigurationProvider maps
-    // `Key__SubKey=Value` to `Key:SubKey=Value` in config, so env vars are
-    // visible to Program.cs from the very first configuration read.
-    //
-    // Tests in this assembly run serially (xunit.runner.json sets
-    // parallelizeTestCollections=false), so global env-var state is safe
-    // to swap between tests.
-    private sealed class EmbeddedWebApplicationFactory : WebApplicationFactory<Program>
-    {
-        private readonly Dictionary<string, string?> _priorEnvValues = new();
-
-        public EmbeddedWebApplicationFactory(string? keysPath, string dbPath, string issuer)
-        {
-            SetEnv("ASPNETCORE_ENVIRONMENT", HostEnvironmentExtensions.EmbeddedEnvironmentName);
-            SetEnv("OpenIddict__Issuer", issuer);
-            SetEnv("Database__Provider", "Sqlite");
-            SetEnv("ConnectionStrings__Sqlite", $"Data Source={dbPath}");
-            SetEnv("ConnectionStrings__DefaultConnection", $"Data Source={dbPath}");
-            SetEnv("OpenIddict__SigningKeys__Path", keysPath);
-        }
-
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            builder.UseEnvironment(HostEnvironmentExtensions.EmbeddedEnvironmentName);
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                foreach (var (key, value) in _priorEnvValues)
-                {
-                    Environment.SetEnvironmentVariable(key, value);
-                }
-            }
-            base.Dispose(disposing);
-        }
-
-        private void SetEnv(string key, string? value)
-        {
-            _priorEnvValues[key] = Environment.GetEnvironmentVariable(key);
-            Environment.SetEnvironmentVariable(key, value);
-        }
-    }
 }
