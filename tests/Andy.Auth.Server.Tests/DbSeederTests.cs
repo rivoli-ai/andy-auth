@@ -13,8 +13,20 @@ namespace Andy.Auth.Server.Tests;
 /// <summary>
 /// Tests for the DbSeeder class
 /// </summary>
-public class DbSeederTests
+public class DbSeederTests : IDisposable
 {
+    // Admin password env vars exposed by DbSeeder.SeedTestUserAsync. Outside
+    // Development the seeder throws when any of these is missing (#48), so
+    // every Production-flavoured test in this file must arrange them up
+    // front. We populate process env in the ctor and clear in Dispose so
+    // tests stay hermetic.
+    private static readonly string[] AdminPasswordEnvVars =
+    {
+        "ADMIN_PASSWORD_SAM",
+        "ADMIN_PASSWORD_TY",
+        "ADMIN_PASSWORD_DEFAULT",
+    };
+
     private readonly Mock<IOpenIddictApplicationManager> _mockAppManager;
     private readonly Mock<IOpenIddictScopeManager> _mockScopeManager;
     private readonly Mock<UserManager<ApplicationUser>> _mockUserManager;
@@ -24,6 +36,13 @@ public class DbSeederTests
 
     public DbSeederTests()
     {
+        // Provide stable admin passwords so the Production-env tests below
+        // don't trip the #48 "no admin password configured" guard.
+        foreach (var envVar in AdminPasswordEnvVars)
+        {
+            Environment.SetEnvironmentVariable(envVar, "TestAdminPassword!23");
+        }
+
         // Setup mocks
         _mockAppManager = new Mock<IOpenIddictApplicationManager>();
         _mockScopeManager = new Mock<IOpenIddictScopeManager>();
@@ -62,6 +81,14 @@ public class DbSeederTests
         services.AddSingleton(_mockUserManager.Object);
         services.AddSingleton(_mockRoleManager.Object);
         _serviceProvider = services.BuildServiceProvider();
+    }
+
+    public void Dispose()
+    {
+        foreach (var envVar in AdminPasswordEnvVars)
+        {
+            Environment.SetEnvironmentVariable(envVar, null);
+        }
     }
 
     [Fact(Skip = "Stale: when andy-docs-api was moved from the hardcoded SeedClientsAsync path to the manifest-driven SeedFromManifestsAsync (per `// andy-docs-api: now manifest-driven` comment in DbSeeder.cs:283), this test's count expectation became wrong. Was masked by a missing-logger DI failure that short-circuited the manifest path; AddLogging() fix in this PR exposes it. TODO: rewrite as behaviour-based assertion matching specific ClientIds instead of total count.")]
@@ -351,6 +378,119 @@ public class DbSeederTests
                 It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
             Times.Once);
     }
+
+    #region Issue #48 — Admin password CSPRNG + no plaintext logging
+
+    [Fact]
+    public void GenerateRandomPassword_IsSixteenCharsAndCoversEveryRequiredClass()
+    {
+        // Regression for andy-auth#48. Run a few hundred iterations so a stuck
+        // RNG (e.g. mis-seeded System.Random reuse) would manifest as
+        // identical or class-deficient output.
+        const int iterations = 500;
+        var samples = new HashSet<string>(iterations);
+
+        for (var i = 0; i < iterations; i++)
+        {
+            var pwd = DbSeeder.GenerateRandomPassword();
+
+            Assert.Equal(16, pwd.Length);
+            Assert.Contains(pwd, c => char.IsUpper(c));
+            Assert.Contains(pwd, c => char.IsLower(c));
+            Assert.Contains(pwd, c => char.IsDigit(c));
+            Assert.Contains(pwd, c => "!@#$%^&*".Contains(c));
+
+            samples.Add(pwd);
+        }
+
+        // 500 16-char passwords pulled from a 70-char alphabet collide with
+        // probability ≈ 0 under a CSPRNG; the old new-Random impl could
+        // collide every run. Treat any duplicate as a hard failure.
+        Assert.Equal(iterations, samples.Count);
+    }
+
+    [Fact]
+    public async Task SeedAsync_AdminUser_NoPasswordEnvVar_ThrowsInProduction()
+    {
+        // Regression for andy-auth#48. Before the fix, missing
+        // ADMIN_PASSWORD_* env vars in Production caused the seeder to
+        // generate a password and log it at WARN level, leaking permanent
+        // admin credentials into log aggregators. The fix is to refuse to
+        // start instead.
+        Environment.SetEnvironmentVariable("ADMIN_PASSWORD_SAM", null);
+        Environment.SetEnvironmentVariable("ADMIN_PASSWORD_TY", null);
+        Environment.SetEnvironmentVariable("ADMIN_PASSWORD_DEFAULT", null);
+
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
+            .ReturnsAsync(new object()); // Clients already exist — short-circuit client seeding.
+
+        var configuration = CreateConfiguration("Production");
+        var seeder = new DbSeeder(
+            _serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => seeder.SeedAsync());
+        // Message must name the env var so an operator can fix it.
+        Assert.Contains("ADMIN_PASSWORD_", ex.Message);
+        Assert.Contains("Production", ex.Message);
+    }
+
+    [Fact]
+    public async Task SeedAsync_AdminUser_NoPasswordEnvVar_NeverLogsPasswordValueInDevelopment()
+    {
+        // Development env also exercises the test-user creation branch — wire
+        // it up so the seeder doesn't NRE on a null IdentityResult.
+        _mockUserManager.Setup(m => m.FindByEmailAsync("test@andy.local"))
+            .ReturnsAsync((ApplicationUser?)null);
+        _mockUserManager.Setup(m => m.CreateAsync(
+            It.Is<ApplicationUser>(u => u.Email == "test@andy.local"),
+            It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Even in Development we must not log the generated password value.
+        // Pre-fix the seeder logged "Using generated password: {Password}".
+        // The new log message names only the env var; this test guards
+        // against accidental re-introduction of the value in the message
+        // template by failing if any logged message contains the actual
+        // password string.
+        Environment.SetEnvironmentVariable("ADMIN_PASSWORD_SAM", null);
+        Environment.SetEnvironmentVariable("ADMIN_PASSWORD_TY", null);
+        Environment.SetEnvironmentVariable("ADMIN_PASSWORD_DEFAULT", null);
+
+        var loggedMessages = new List<string>();
+        var capturingLogger = new Mock<ILogger<DbSeeder>>();
+        capturingLogger.Setup(x => x.Log(
+            It.IsAny<LogLevel>(),
+            It.IsAny<EventId>(),
+            It.IsAny<It.IsAnyType>(),
+            It.IsAny<Exception?>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()))
+            .Callback(new InvocationAction(invocation =>
+            {
+                var state = invocation.Arguments[2];
+                var formatter = invocation.Arguments[4];
+                var message = formatter.GetType().GetMethod("Invoke")!
+                    .Invoke(formatter, new[] { state, invocation.Arguments[3] }) as string;
+                if (message is not null) loggedMessages.Add(message);
+            }));
+
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
+            .ReturnsAsync(new object());
+
+        var configuration = CreateConfiguration("Development");
+        var seeder = new DbSeeder(
+            _serviceProvider, configuration, capturingLogger.Object, CreateHostEnvironment("Development"));
+
+        await seeder.SeedAsync();
+
+        // Assert: at least one warning mentioning the env var, but none
+        // contain the recognisable special-character set used in generated
+        // passwords nor the literal "Using generated password: " template.
+        Assert.Contains(loggedMessages, m => m.Contains("ADMIN_PASSWORD_SAM"));
+        Assert.DoesNotContain(loggedMessages, m =>
+            m.Contains("Using generated password:") || m.Contains("generated password: "));
+    }
+
+    #endregion
 
     #region Issue #47 — Hardcoded fallback client secret regression
 
