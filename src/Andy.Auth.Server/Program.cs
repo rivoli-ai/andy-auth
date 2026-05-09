@@ -475,7 +475,8 @@ using (var scope = app.Services.CreateScope())
         var seeder = new DbSeeder(
             services,
             app.Configuration,
-            services.GetRequiredService<ILogger<DbSeeder>>());
+            services.GetRequiredService<ILogger<DbSeeder>>(),
+            services.GetRequiredService<IHostEnvironment>());
         await seeder.SeedAsync();
     }
     catch (Exception ex)

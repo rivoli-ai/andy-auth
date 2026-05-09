@@ -23,8 +23,10 @@ public class DcrSettings
 
     /// <summary>
     /// If true, newly registered clients require admin approval before they can be used.
+    /// Defaults to true (closed-by-default) so a missing config value cannot
+    /// silently expose Production to anonymous client onboarding. See andy-auth#49.
     /// </summary>
-    public bool RequireAdminApproval { get; set; } = false;
+    public bool RequireAdminApproval { get; set; } = true;
 
     /// <summary>
     /// Grant types that dynamically registered clients are allowed to use.

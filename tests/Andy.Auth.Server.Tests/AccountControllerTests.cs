@@ -499,6 +499,7 @@ public class AccountControllerTests
 
         var model = new ChangePasswordViewModel
         {
+            CurrentPassword = "CurrentPass123!",
             NewPassword = "CurrentPass123!",
             ConfirmPassword = "CurrentPass123!"
         };
@@ -535,6 +536,7 @@ public class AccountControllerTests
 
         var model = new ChangePasswordViewModel
         {
+            CurrentPassword = "CurrentPass123!",
             NewPassword = "NewPass456!",
             ConfirmPassword = "NewPass456!",
             ReturnUrl = "/"
@@ -548,17 +550,19 @@ public class AccountControllerTests
         _mockUserManager.Setup(m => m.CheckPasswordAsync(user, model.NewPassword))
             .ReturnsAsync(false);
 
-        _mockUserManager.Setup(m => m.GeneratePasswordResetTokenAsync(user))
-            .ReturnsAsync("reset-token");
-
-        _mockUserManager.Setup(m => m.ResetPasswordAsync(user, "reset-token", model.NewPassword))
+        // Post-#45: ChangePasswordAsync replaces the GeneratePasswordResetToken
+        // + ResetPassword pair and verifies the current password atomically.
+        _mockUserManager.Setup(m => m.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword))
             .ReturnsAsync(IdentityResult.Success);
+
+        _mockUserManager.Setup(m => m.GetTwoFactorEnabledAsync(user))
+            .ReturnsAsync(false);
 
         _mockUserManager.Setup(m => m.UpdateAsync(user))
             .ReturnsAsync(IdentityResult.Success);
 
-        _mockUserManager.Setup(m => m.UpdateSecurityStampAsync(user))
-            .ReturnsAsync(IdentityResult.Success);
+        _mockSignInManager.Setup(m => m.RefreshSignInAsync(user))
+            .Returns(Task.CompletedTask);
 
         _mockAuditService.Setup(a => a.LogAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
@@ -587,6 +591,7 @@ public class AccountControllerTests
         // Arrange
         var model = new ChangePasswordViewModel
         {
+            CurrentPassword = "CurrentPass123!",
             NewPassword = "NewPass456!",
             ConfirmPassword = "NewPass456!"
         };
@@ -600,6 +605,78 @@ public class AccountControllerTests
         // Assert
         var redirectResult = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Login", redirectResult.ActionName);
+    }
+
+    [Fact]
+    public async Task ChangePassword_Post_MissingCurrentPassword_FailsModelValidation()
+    {
+        // Regression for andy-auth#45. Pre-fix the view model had no
+        // CurrentPassword field at all and the controller called
+        // ResetPasswordAsync, so a stolen-cookie attacker could change the
+        // password without proving knowledge of the old one. The
+        // [Required] attribute on CurrentPassword is the contract that
+        // must hold. Validate via the framework's metadata-aware
+        // validator so we test the same path MVC executes per request.
+        var model = new ChangePasswordViewModel
+        {
+            CurrentPassword = string.Empty,
+            NewPassword = "NewPass456!",
+            ConfirmPassword = "NewPass456!"
+        };
+
+        var validationContext = new System.ComponentModel.DataAnnotations.ValidationContext(model);
+        var validationResults = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
+        var isValid = System.ComponentModel.DataAnnotations.Validator.TryValidateObject(
+            model, validationContext, validationResults, validateAllProperties: true);
+
+        Assert.False(isValid, "ChangePasswordViewModel must reject empty CurrentPassword");
+        Assert.Contains(validationResults, r =>
+            r.MemberNames.Contains(nameof(ChangePasswordViewModel.CurrentPassword)));
+    }
+
+    [Fact]
+    public async Task ChangePassword_Post_WrongCurrentPassword_RejectsWithoutChangingPassword()
+    {
+        // Regression for andy-auth#45. Identity surfaces a "PasswordMismatch"
+        // error when the supplied current password is wrong; the controller
+        // must surface it and not call ResetPasswordAsync (which would have
+        // bypassed the check entirely under the old code path).
+        var user = new ApplicationUser
+        {
+            Id = "test-user-id",
+            Email = "test@example.com",
+            UserName = "test@example.com",
+        };
+
+        var model = new ChangePasswordViewModel
+        {
+            CurrentPassword = "WrongPassword!",
+            NewPassword = "NewPass456!",
+            ConfirmPassword = "NewPass456!"
+        };
+
+        _mockUserManager.Setup(m => m.GetUserAsync(It.IsAny<System.Security.Claims.ClaimsPrincipal>()))
+            .ReturnsAsync(user);
+        _mockUserManager.Setup(m => m.CheckPasswordAsync(user, model.NewPassword))
+            .ReturnsAsync(false);
+        _mockUserManager.Setup(m => m.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError
+            {
+                Code = "PasswordMismatch",
+                Description = "Incorrect password."
+            }));
+
+        var result = await _controller.ChangePassword(model);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.False(_controller.ModelState.IsValid);
+        // The reset-token APIs must NOT have been called: that's the buggy
+        // pre-fix code path the regression test guards.
+        _mockUserManager.Verify(m => m.GeneratePasswordResetTokenAsync(It.IsAny<ApplicationUser>()), Times.Never);
+        _mockUserManager.Verify(m => m.ResetPasswordAsync(
+            It.IsAny<ApplicationUser>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        // Sign-in must not have been refreshed since the change failed.
+        _mockSignInManager.Verify(m => m.RefreshSignInAsync(It.IsAny<ApplicationUser>()), Times.Never);
     }
 
     #endregion

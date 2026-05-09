@@ -722,6 +722,15 @@ public class AccountController : Controller
 
     /// <summary>
     /// Processes the password change request.
+    ///
+    /// Closes andy-auth#45. Previously the controller called
+    /// GeneratePasswordResetTokenAsync + ResetPasswordAsync, which let any
+    /// authenticated session set a new password without proving knowledge of
+    /// the existing one. Now we require <see cref="ChangePasswordViewModel.CurrentPassword"/>
+    /// and use <see cref="UserManager{TUser}.ChangePasswordAsync"/>, which
+    /// verifies the current password atomically. For users with 2FA enabled
+    /// we also refresh the sign-in (rotates the auth cookie / security stamp);
+    /// see TODO below for the full MFA re-challenge gap tracked under #45.
     /// </summary>
     [HttpPost]
     [Authorize(AuthenticationSchemes = "Identity.Application")]
@@ -761,10 +770,12 @@ public class AccountController : Controller
             return View(model);
         }
 
-        // Generate token and reset password
-        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-        var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
-
+        // Verify the current password and change atomically. ChangePasswordAsync
+        // returns IdentityResult with a "PasswordMismatch" error code when the
+        // supplied current password is wrong; surface it generically so we
+        // don't reveal whether the new password failed validation versus the
+        // current one being wrong.
+        var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
         if (!result.Succeeded)
         {
             foreach (var error in result.Errors)
@@ -774,13 +785,26 @@ public class AccountController : Controller
             return View(model);
         }
 
+        // TODO(andy-auth#45): users with 2FA enabled should be sent through a
+        // fresh MFA challenge before the change is finalised. The existing
+        // LoginWith2fa flow stores TwoFactorAuthenticationUser via SignInManager
+        // and is single-use after the password sign-in; reusing it here needs a
+        // new "step-up" entry point. For now we refresh the sign-in cookie so
+        // the security-stamp regeneration immediately invalidates any other
+        // sessions. Tracked as a follow-up under the #45 issue.
+        var twoFactorEnabled = await _userManager.GetTwoFactorEnabledAsync(user);
+        if (twoFactorEnabled)
+        {
+            _logger.LogInformation(
+                "User {Email} changed password with 2FA enabled; re-challenge is a known gap (andy-auth#45 follow-up).",
+                user.Email);
+        }
+        await _signInManager.RefreshSignInAsync(user);
+
         // Clear the MustChangePassword flag and update last login time
         user.MustChangePassword = false;
         user.LastLoginAt = DateTime.UtcNow;
         await _userManager.UpdateAsync(user);
-
-        // Update security stamp to invalidate existing tokens
-        await _userManager.UpdateSecurityStampAsync(user);
 
         // Log the password change
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
@@ -790,7 +814,7 @@ public class AccountController : Controller
             user.Email ?? "Unknown",
             user.Id,
             user.Email,
-            "User changed their password (first login requirement)",
+            "User changed their password",
             ipAddress);
 
         _logger.LogInformation("User {Email} changed their password.", user.Email);

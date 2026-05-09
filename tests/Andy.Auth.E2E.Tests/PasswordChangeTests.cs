@@ -18,7 +18,8 @@ public class PasswordChangeTests : E2ETestBase
         await NavigateToAsync("/Account/ChangePassword");
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
-        // Verify form elements exist
+        // Verify form elements exist (CurrentPassword added per andy-auth#45).
+        Assert.True(await ElementExistsAsync("input[name='CurrentPassword']"), "Current password field should exist");
         Assert.True(await ElementExistsAsync("input[name='NewPassword']"), "New password field should exist");
         Assert.True(await ElementExistsAsync("input[name='ConfirmPassword']"), "Confirm password field should exist");
         Assert.True(await ElementExistsAsync("button[type='submit']"), "Submit button should exist");
@@ -152,7 +153,9 @@ public class PasswordChangeTests : E2ETestBase
         // Should be on change password page
         Assert.Contains("ChangePassword", Page.Url);
 
-        // Try to use the same password
+        // Try to use the same password — also supply the current password
+        // (andy-auth#45 hardened this endpoint to require it).
+        await Page.FillAsync("input[name='CurrentPassword']", "TempPass123!");
         await Page.FillAsync("input[name='NewPassword']", "TempPass123!");
         await Page.FillAsync("input[name='ConfirmPassword']", "TempPass123!");
 
@@ -186,8 +189,10 @@ public class PasswordChangeTests : E2ETestBase
             return;
         }
 
-        // Use a different password
+        // Use a different password and supply the current one
+        // (andy-auth#45 hardened this endpoint to require it).
         var newPassword = $"NewSecurePass{Guid.NewGuid():N}!";
+        await Page.FillAsync("input[name='CurrentPassword']", "TempPass123!");
         await Page.FillAsync("input[name='NewPassword']", newPassword);
         await Page.FillAsync("input[name='ConfirmPassword']", newPassword);
 

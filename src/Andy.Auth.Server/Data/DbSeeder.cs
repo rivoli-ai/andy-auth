@@ -20,12 +20,18 @@ public class DbSeeder
     private readonly IServiceProvider _serviceProvider;
     private readonly IConfiguration _configuration;
     private readonly ILogger<DbSeeder> _logger;
+    private readonly IHostEnvironment _environment;
 
-    public DbSeeder(IServiceProvider serviceProvider, IConfiguration configuration, ILogger<DbSeeder> logger)
+    public DbSeeder(
+        IServiceProvider serviceProvider,
+        IConfiguration configuration,
+        ILogger<DbSeeder> logger,
+        IHostEnvironment environment)
     {
         _serviceProvider = serviceProvider;
         _configuration = configuration;
         _logger = logger;
+        _environment = environment;
     }
 
     public async Task SeedAsync()
@@ -208,7 +214,21 @@ public class DbSeeder
             var value = Environment.GetEnvironmentVariable(client.ClientSecretEnvVar!);
             if (!string.IsNullOrWhiteSpace(value)) return value;
         }
-        // Dev fallback matches the legacy hardcoded pattern.
+
+        // Outside Development we refuse to fall back to a deterministic
+        // "<clientId>-secret-change-in-production" string — that would ship a
+        // well-known credential to UAT/Staging/Production. See andy-auth#47.
+        if (!_environment.IsDevelopment())
+        {
+            throw new InvalidOperationException(
+                $"Confidential OAuth client '{client.ClientId}' has no secret configured: " +
+                $"set the '{client.ClientSecretEnvVar ?? "<ClientSecretEnvVar>"}' " +
+                $"environment variable in {_environment.EnvironmentName}. " +
+                "The dev-only fallback is disabled outside the Development environment.");
+        }
+
+        // Dev fallback matches the legacy hardcoded pattern. Development only —
+        // every other environment fails fast above.
         return $"{client.ClientId}-secret-change-in-production";
     }
 
@@ -966,33 +986,41 @@ public class DbSeeder
         }
     }
 
-    private static string GenerateRandomPassword()
+    /// <summary>
+    /// Generates a 16-character password meeting Identity's default complexity
+    /// rules (≥1 upper, lower, digit, special) using a cryptographically
+    /// secure RNG. Replaces the prior <see cref="System.Random"/>
+    /// implementation which produced predictable output across processes
+    /// started in the same tick. See andy-auth#48.
+    /// </summary>
+    internal static string GenerateRandomPassword()
     {
         const string upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         const string lowerCase = "abcdefghijklmnopqrstuvwxyz";
         const string digits = "0123456789";
         const string special = "!@#$%^&*";
 
-        var random = new Random();
         var password = new char[16];
 
-        // Ensure at least one of each required character type
-        password[0] = upperCase[random.Next(upperCase.Length)];
-        password[1] = lowerCase[random.Next(lowerCase.Length)];
-        password[2] = digits[random.Next(digits.Length)];
-        password[3] = special[random.Next(special.Length)];
+        // Ensure at least one of each required character type. Each call to
+        // RandomNumberGenerator.GetInt32 reads fresh entropy from the OS CSPRNG.
+        password[0] = upperCase[System.Security.Cryptography.RandomNumberGenerator.GetInt32(upperCase.Length)];
+        password[1] = lowerCase[System.Security.Cryptography.RandomNumberGenerator.GetInt32(lowerCase.Length)];
+        password[2] = digits[System.Security.Cryptography.RandomNumberGenerator.GetInt32(digits.Length)];
+        password[3] = special[System.Security.Cryptography.RandomNumberGenerator.GetInt32(special.Length)];
 
         // Fill the rest with random characters from all types
         var allChars = upperCase + lowerCase + digits + special;
         for (int i = 4; i < password.Length; i++)
         {
-            password[i] = allChars[random.Next(allChars.Length)];
+            password[i] = allChars[System.Security.Cryptography.RandomNumberGenerator.GetInt32(allChars.Length)];
         }
 
-        // Shuffle the password
+        // Fisher-Yates shuffle so the four guaranteed character classes don't
+        // always appear at indexes 0-3.
         for (int i = password.Length - 1; i > 0; i--)
         {
-            int j = random.Next(i + 1);
+            int j = System.Security.Cryptography.RandomNumberGenerator.GetInt32(i + 1);
             (password[i], password[j]) = (password[j], password[i]);
         }
 
@@ -1042,11 +1070,29 @@ public class DbSeeder
 
                 if (!usingEnvVar)
                 {
+                    // Outside Development the seeder must not invent admin
+                    // credentials — historically the generated password was
+                    // logged at WARN level (andy-auth#48), which leaked
+                    // permanent admin access into log aggregators. Fail fast
+                    // so operators set the env var explicitly.
+                    if (!_environment.IsDevelopment())
+                    {
+                        throw new InvalidOperationException(
+                            $"Admin user '{userInfo.Email}' has no password configured: " +
+                            $"set the '{userInfo.PasswordEnvVar}' environment variable in " +
+                            $"{_environment.EnvironmentName}. The dev-only generated-password " +
+                            "fallback is disabled outside the Development environment to avoid " +
+                            "leaking credentials into logs.");
+                    }
+
                     password = userInfo.DefaultPassword;
+                    // NEVER log the password value, even in Development. Tell
+                    // the operator how to override; the password itself only
+                    // exists in process memory until CreateAsync hashes it.
                     _logger.LogWarning(
-                        "No password set for {Email} via {EnvVar}. Using generated password: {Password}. " +
-                        "Set the environment variable to use a specific password.",
-                        userInfo.Email, userInfo.PasswordEnvVar, password);
+                        "No password set for {Email} via {EnvVar}; using a generated password " +
+                        "for this Development run. Set {EnvVar} to choose a stable password.",
+                        userInfo.Email, userInfo.PasswordEnvVar, userInfo.PasswordEnvVar);
                 }
 
                 var adminUser = new ApplicationUser
