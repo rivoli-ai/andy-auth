@@ -2,6 +2,7 @@ using Andy.Auth.Server.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using OpenIddict.Abstractions;
@@ -71,7 +72,7 @@ public class DbSeederTests
             .ReturnsAsync((object?)null);
 
         var configuration = CreateConfiguration("Production");
-        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object);
+        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
 
         // Act
         await seeder.SeedAsync();
@@ -90,7 +91,7 @@ public class DbSeederTests
             .ReturnsAsync(existingClient);
 
         var configuration = CreateConfiguration("Production");
-        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object);
+        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
 
         // Act
         await seeder.SeedAsync();
@@ -120,7 +121,7 @@ public class DbSeederTests
             .Callback<OpenIddictApplicationDescriptor, CancellationToken>((desc, _) => capturedDescriptors.Add(desc))
             .ReturnsAsync(new object());
 
-        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object);
+        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
 
         // Act
         await seeder.SeedAsync();
@@ -151,7 +152,7 @@ public class DbSeederTests
             .Callback<OpenIddictApplicationDescriptor, CancellationToken>((desc, _) => capturedDescriptors.Add(desc))
             .ReturnsAsync(new object());
 
-        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object);
+        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
 
         // Act
         await seeder.SeedAsync();
@@ -190,7 +191,7 @@ public class DbSeederTests
             .ReturnsAsync(existingAndyDocsWebRow);
 
         var configuration = CreateConfiguration("Production");
-        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object);
+        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
 
         // Act
         await seeder.SeedAsync();
@@ -213,7 +214,7 @@ public class DbSeederTests
             .Callback<OpenIddictApplicationDescriptor, CancellationToken>((desc, _) => capturedDescriptors.Add(desc))
             .ReturnsAsync(new object());
 
-        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object);
+        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
 
         // Act
         await seeder.SeedAsync();
@@ -241,7 +242,7 @@ public class DbSeederTests
         _mockUserManager.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>(), "Test123!"))
             .ReturnsAsync(IdentityResult.Success);
 
-        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object);
+        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Development"));
 
         // Act
         await seeder.SeedAsync();
@@ -276,7 +277,7 @@ public class DbSeederTests
             .ReturnsAsync(new object()); // Clients already exist
 
         var configuration = CreateConfiguration("Production");
-        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object);
+        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
 
         // Act
         await seeder.SeedAsync();
@@ -307,7 +308,7 @@ public class DbSeederTests
         _mockUserManager.Setup(m => m.ResetPasswordAsync(existingUser, "reset-token", "Test123!"))
             .ReturnsAsync(IdentityResult.Success);
 
-        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object);
+        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Development"));
 
         // Act
         await seeder.SeedAsync();
@@ -335,7 +336,7 @@ public class DbSeederTests
         _mockUserManager.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>(), "Test123!"))
             .ReturnsAsync(IdentityResult.Failed(error));
 
-        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object);
+        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Development"));
 
         // Act
         await seeder.SeedAsync();
@@ -351,6 +352,171 @@ public class DbSeederTests
             Times.Once);
     }
 
+    #region Issue #47 — Hardcoded fallback client secret regression
+
+    [Fact]
+    public async Task SeedAsync_ConfidentialClient_NoEnvVar_ThrowsInProduction()
+    {
+        // Regression for andy-auth#47. Before the fix, ResolveClientSecret
+        // silently fell back to "<clientId>-secret-change-in-production" — a
+        // well-known credential — when the configured env var was empty in
+        // any environment, including Production. The fix throws outside
+        // Development. This test wires a manifest with a confidential
+        // apiClient whose ClientSecretEnvVar is intentionally not set in the
+        // process environment, then asserts that seeding under Production
+        // throws InvalidOperationException naming both the env var and the
+        // client id so operators can act on the error.
+        using var manifestDir = new TempManifestDirectory();
+        manifestDir.WriteManifest("andy-fortyseven", new
+        {
+            service = new
+            {
+                name = "andy-fortyseven",
+                displayName = "Andy 47 Test",
+                description = "regression manifest for andy-auth#47",
+                embeddedProxyPrefix = "/fortyseven"
+            },
+            auth = new
+            {
+                audience = "urn:andy-fortyseven-api",
+                apiClient = new
+                {
+                    clientId = "andy-fortyseven-api",
+                    clientType = "confidential",
+                    clientSecretEnvVar = "ANDY_FORTYSEVEN_API_SECRET_DOES_NOT_EXIST",
+                    displayName = "Andy 47 API",
+                    grantTypes = new[] { "client_credentials" },
+                    scopes = new[] { "openid" }
+                }
+            }
+        });
+
+        // Belt-and-braces: ensure the env var really is unset.
+        Environment.SetEnvironmentVariable("ANDY_FORTYSEVEN_API_SECRET_DOES_NOT_EXIST", null);
+
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
+            .ReturnsAsync((object?)null);
+
+        var configValues = new Dictionary<string, string?>
+        {
+            { "ASPNETCORE_ENVIRONMENT", "Production" },
+            { "Registrations:ManifestPaths:0", manifestDir.Path }
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configValues)
+            .Build();
+
+        var seeder = new DbSeeder(
+            _serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
+
+        // Act + Assert
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => seeder.SeedAsync());
+        Assert.Contains("ANDY_FORTYSEVEN_API_SECRET_DOES_NOT_EXIST", ex.Message);
+        Assert.Contains("andy-fortyseven-api", ex.Message);
+    }
+
+    [Fact]
+    public async Task SeedAsync_ConfidentialClient_NoEnvVar_FallsBackInDevelopment()
+    {
+        // Companion to the Production guard: Development must still allow the
+        // deterministic fallback so contributors don't need to set env vars
+        // for local-only flows. If this regresses, the guard would lock
+        // Development out too.
+        using var manifestDir = new TempManifestDirectory();
+        manifestDir.WriteManifest("andy-fortyseven-dev", new
+        {
+            service = new
+            {
+                name = "andy-fortyseven-dev",
+                displayName = "Andy 47 Dev Test",
+                description = "regression manifest for andy-auth#47 dev path",
+                embeddedProxyPrefix = "/fortysevendev"
+            },
+            auth = new
+            {
+                audience = "urn:andy-fortyseven-dev-api",
+                apiClient = new
+                {
+                    clientId = "andy-fortyseven-dev-api",
+                    clientType = "confidential",
+                    clientSecretEnvVar = "ANDY_FORTYSEVEN_DEV_SECRET_UNSET",
+                    displayName = "Andy 47 Dev API",
+                    grantTypes = new[] { "client_credentials" },
+                    scopes = new[] { "openid" }
+                }
+            }
+        });
+        Environment.SetEnvironmentVariable("ANDY_FORTYSEVEN_DEV_SECRET_UNSET", null);
+
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
+            .ReturnsAsync((object?)null);
+        _mockAppManager.Setup(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default))
+            .ReturnsAsync(new object());
+        _mockScopeManager.Setup(m => m.FindByNameAsync(It.IsAny<string>(), default))
+            .ReturnsAsync((object?)null);
+        _mockScopeManager.Setup(m => m.CreateAsync(It.IsAny<OpenIddictScopeDescriptor>(), default))
+            .ReturnsAsync(new object());
+        _mockUserManager.Setup(m => m.FindByEmailAsync(It.IsAny<string>()))
+            .ReturnsAsync((ApplicationUser?)null);
+        _mockUserManager.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Success);
+
+        var configValues = new Dictionary<string, string?>
+        {
+            { "ASPNETCORE_ENVIRONMENT", "Development" },
+            { "Registrations:ManifestPaths:0", manifestDir.Path }
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configValues)
+            .Build();
+
+        var seeder = new DbSeeder(
+            _serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Development"));
+
+        // Should not throw; assert the descriptor went out with the dev
+        // fallback secret.
+        await seeder.SeedAsync();
+
+        _mockAppManager.Verify(m => m.CreateAsync(
+            It.Is<OpenIddictApplicationDescriptor>(d =>
+                d.ClientId == "andy-fortyseven-dev-api"
+                && d.ClientSecret == "andy-fortyseven-dev-api-secret-change-in-production"),
+            default),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// Disposable temp directory holding one or more registration.json
+    /// manifest files. Wired into config via "Registrations:ManifestPaths".
+    /// </summary>
+    private sealed class TempManifestDirectory : IDisposable
+    {
+        public string Path { get; }
+
+        public TempManifestDirectory()
+        {
+            Path = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(),
+                "andy-auth-tests-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path);
+        }
+
+        public void WriteManifest(string name, object manifest)
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(
+                manifest,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(System.IO.Path.Combine(Path, name + ".json"), json);
+        }
+
+        public void Dispose()
+        {
+            try { Directory.Delete(Path, recursive: true); } catch { /* best-effort */ }
+        }
+    }
+
+    #endregion
+
     /// <summary>
     /// Helper method to create a real IConfiguration instance
     /// </summary>
@@ -364,6 +530,37 @@ public class DbSeederTests
         return new ConfigurationBuilder()
             .AddInMemoryCollection(configValues)
             .Build();
+    }
+
+    /// <summary>
+    /// Helper to construct an <see cref="IHostEnvironment"/> with the given
+    /// environment name. DbSeeder uses this for the "is this Production?"
+    /// guards in <c>ResolveClientSecret</c> (#47) and admin-password handling
+    /// (#48), so tests must set it explicitly.
+    /// </summary>
+    private static IHostEnvironment CreateHostEnvironment(string environmentName)
+    {
+        return new TestHostEnvironment
+        {
+            EnvironmentName = environmentName,
+            ApplicationName = "Andy.Auth.Server.Tests",
+            ContentRootPath = AppContext.BaseDirectory,
+            ContentRootFileProvider = new Microsoft.Extensions.FileProviders.NullFileProvider()
+        };
+    }
+
+    /// <summary>
+    /// Minimal IHostEnvironment stub. The framework's HostingEnvironment type
+    /// lives in Microsoft.Extensions.Hosting.Internal which is not part of the
+    /// public API surface, so tests roll their own.
+    /// </summary>
+    private sealed class TestHostEnvironment : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = string.Empty;
+        public string ApplicationName { get; set; } = string.Empty;
+        public string ContentRootPath { get; set; } = string.Empty;
+        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; }
+            = new Microsoft.Extensions.FileProviders.NullFileProvider();
     }
 
     /// <summary>

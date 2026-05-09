@@ -20,12 +20,18 @@ public class DbSeeder
     private readonly IServiceProvider _serviceProvider;
     private readonly IConfiguration _configuration;
     private readonly ILogger<DbSeeder> _logger;
+    private readonly IHostEnvironment _environment;
 
-    public DbSeeder(IServiceProvider serviceProvider, IConfiguration configuration, ILogger<DbSeeder> logger)
+    public DbSeeder(
+        IServiceProvider serviceProvider,
+        IConfiguration configuration,
+        ILogger<DbSeeder> logger,
+        IHostEnvironment environment)
     {
         _serviceProvider = serviceProvider;
         _configuration = configuration;
         _logger = logger;
+        _environment = environment;
     }
 
     public async Task SeedAsync()
@@ -208,7 +214,21 @@ public class DbSeeder
             var value = Environment.GetEnvironmentVariable(client.ClientSecretEnvVar!);
             if (!string.IsNullOrWhiteSpace(value)) return value;
         }
-        // Dev fallback matches the legacy hardcoded pattern.
+
+        // Outside Development we refuse to fall back to a deterministic
+        // "<clientId>-secret-change-in-production" string — that would ship a
+        // well-known credential to UAT/Staging/Production. See andy-auth#47.
+        if (!_environment.IsDevelopment())
+        {
+            throw new InvalidOperationException(
+                $"Confidential OAuth client '{client.ClientId}' has no secret configured: " +
+                $"set the '{client.ClientSecretEnvVar ?? "<ClientSecretEnvVar>"}' " +
+                $"environment variable in {_environment.EnvironmentName}. " +
+                "The dev-only fallback is disabled outside the Development environment.");
+        }
+
+        // Dev fallback matches the legacy hardcoded pattern. Development only —
+        // every other environment fails fast above.
         return $"{client.ClientId}-secret-change-in-production";
     }
 
