@@ -64,9 +64,34 @@ public class DynamicClientRegistrationControllerTests : IDisposable
             _tokenManagerMock.Object,
             _context,
             _loggerMock.Object,
-            new ConfigurationBuilder().Build());
+            new ConfigurationBuilder().Build(),
+            CreateHostEnvironment("Development"));
 
         SetupHttpContext();
+    }
+
+    /// <summary>
+    /// Minimal IHostEnvironment for tests. The framework HostingEnvironment
+    /// type is internal; rolling our own keeps the test project's Microsoft
+    /// dependency surface unchanged.
+    /// </summary>
+    private static Microsoft.Extensions.Hosting.IHostEnvironment CreateHostEnvironment(string environmentName)
+    {
+        return new TestHostEnvironment
+        {
+            EnvironmentName = environmentName,
+            ApplicationName = "Andy.Auth.Server.Tests",
+            ContentRootPath = AppContext.BaseDirectory,
+        };
+    }
+
+    private sealed class TestHostEnvironment : Microsoft.Extensions.Hosting.IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = string.Empty;
+        public string ApplicationName { get; set; } = string.Empty;
+        public string ContentRootPath { get; set; } = string.Empty;
+        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; }
+            = new Microsoft.Extensions.FileProviders.NullFileProvider();
     }
 
     private void SetupHttpContext()
@@ -610,11 +635,92 @@ public class DynamicClientRegistrationControllerTests : IDisposable
         _tokenManagerMock.Verify(x => x.TryRevokeAsync(It.IsAny<object>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
+    // ==================== Issue #49 — Closed-by-default DCR ====================
+
+    [Fact]
+    public void DcrSettings_RequireAdminApproval_DefaultsToTrue()
+    {
+        // Regression for andy-auth#49. The C# default for RequireAdminApproval
+        // was false, which meant a missing config key — or a misconfigured
+        // appsettings layer in any environment — silently turned every newly
+        // registered DCR client into a fully-active OAuth client. Closed-by-
+        // default forces operators to opt in to auto-approval.
+        var settings = new DcrSettings();
+        settings.RequireAdminApproval.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Register_NonDevelopment_NoIat_Returns401_EvenWhenSettingSaysNotRequired()
+    {
+        // Regression for andy-auth#49. Defense-in-depth controller guard:
+        // outside Development the IAT requirement is non-negotiable, so a
+        // misconfigured RequireInitialAccessToken=false in (e.g.) UAT or
+        // Staging cannot reopen the endpoint to anonymous registration.
+        var permissiveButProductionEnv = new DcrSettings
+        {
+            Enabled = true,
+            RequireInitialAccessToken = false, // intentionally wrong
+            RequireAdminApproval = true,
+            AllowedGrantTypes = new List<string> { "authorization_code" },
+            AllowedScopes = new List<string> { "openid" }
+        };
+        var controller = CreateControllerWithSettings(
+            permissiveButProductionEnv, environmentName: "Production");
+        var request = new ClientRegistrationRequest
+        {
+            ClientName = "Sneaky App",
+            RedirectUris = new List<string> { "https://example.com/callback" }
+        };
+
+        var result = await controller.Register(request);
+
+        var unauthorized = result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
+        var error = unauthorized.Value.Should().BeOfType<ClientRegistrationError>().Subject;
+        error.Error.Should().Be(DcrErrorCodes.InvalidToken);
+    }
+
+    [Fact]
+    public async Task Register_Development_NoIat_Allowed_WhenSettingSaysNotRequired()
+    {
+        // Companion guard: Development must still allow anonymous DCR for
+        // local plumbing flows when RequireInitialAccessToken=false. If the
+        // controller-level guard regresses to "always require IAT", this
+        // test breaks first.
+        _applicationManagerMock.Setup(x => x.FindByClientIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((object?)null);
+        _applicationManagerMock.Setup(x => x.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), It.IsAny<CancellationToken>()))
+            .Returns(new ValueTask<object>(new object()));
+
+        var devSettings = new DcrSettings
+        {
+            Enabled = true,
+            RequireInitialAccessToken = false,
+            RequireAdminApproval = false,
+            AllowedGrantTypes = new List<string> { "authorization_code" },
+            AllowedScopes = new List<string> { "openid" }
+        };
+        var controller = CreateControllerWithSettings(
+            devSettings, environmentName: "Development");
+        var request = new ClientRegistrationRequest
+        {
+            ClientName = "Local Dev App",
+            RedirectUris = new List<string> { "https://localhost:4200/callback" },
+            GrantTypes = new List<string> { "authorization_code" },
+            Scope = "openid"
+        };
+
+        var result = await controller.Register(request);
+
+        // Anything-other-than-401 is enough to prove the guard didn't trip.
+        result.Should().NotBeOfType<UnauthorizedObjectResult>();
+    }
+
     // ==================== Helper Methods ====================
 
     private DynamicClientRegistrationController CreateControllerWithSettings(
         DcrSettings settings,
-        IConfiguration? configuration = null)
+        IConfiguration? configuration = null,
+        string environmentName = "Development")
     {
         var settingsOptions = Options.Create(settings);
         var dcrService = new DcrService(_context, settingsOptions, _dcrLoggerMock.Object);
@@ -626,7 +732,8 @@ public class DynamicClientRegistrationControllerTests : IDisposable
             _tokenManagerMock.Object,
             _context,
             _loggerMock.Object,
-            configuration ?? new ConfigurationBuilder().Build());
+            configuration ?? new ConfigurationBuilder().Build(),
+            CreateHostEnvironment(environmentName));
 
         var httpContext = new DefaultHttpContext();
         httpContext.Request.Scheme = "https";

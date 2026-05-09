@@ -22,6 +22,7 @@ public class DynamicClientRegistrationController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly ILogger<DynamicClientRegistrationController> _logger;
     private readonly IConfiguration _configuration;
+    private readonly IHostEnvironment _environment;
 
     public DynamicClientRegistrationController(
         DcrService dcrService,
@@ -30,7 +31,8 @@ public class DynamicClientRegistrationController : ControllerBase
         IOpenIddictTokenManager tokenManager,
         ApplicationDbContext context,
         ILogger<DynamicClientRegistrationController> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         _dcrService = dcrService;
         _settings = settings.Value;
@@ -39,6 +41,7 @@ public class DynamicClientRegistrationController : ControllerBase
         _context = context;
         _logger = logger;
         _configuration = configuration;
+        _environment = environment;
     }
 
     /// <summary>
@@ -61,13 +64,27 @@ public class DynamicClientRegistrationController : ControllerBase
             });
         }
 
+        // Defense-in-depth (andy-auth#49): outside Development the IAT
+        // requirement is non-negotiable. If config is misconfigured to
+        // RequireInitialAccessToken=false we still 401 a tokenless request,
+        // so a single appsettings typo cannot reopen DCR to the world.
+        var requireIat = _settings.RequireInitialAccessToken || !_environment.IsDevelopment();
+
         // Validate initial access token if required
         InitialAccessToken? initialAccessToken = null;
-        if (_settings.RequireInitialAccessToken)
+        if (requireIat)
         {
             var authHeader = Request.Headers.Authorization.FirstOrDefault();
             if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             {
+                if (!_settings.RequireInitialAccessToken)
+                {
+                    _logger.LogWarning(
+                        "DCR request denied: no IAT presented. RequireInitialAccessToken " +
+                        "is false in {Environment} but the controller-level guard for " +
+                        "non-Development still requires it. Fix the config.",
+                        _environment.EnvironmentName);
+                }
                 return Unauthorized(new ClientRegistrationError
                 {
                     Error = DcrErrorCodes.InvalidToken,
