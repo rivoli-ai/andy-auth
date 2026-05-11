@@ -43,7 +43,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         {
             { "grant_type", "client_credentials" },
             { "client_id", "andy-docs-api" },
-            { "client_secret", "andy-docs-secret-change-in-production" },
+            { "client_secret", "andy-docs-api-secret-change-in-production" },
             { "scope", "urn:andy-docs-api" }
         });
 
@@ -161,7 +161,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         {
             { "grant_type", "client_credentials" },
             { "client_id", "andy-docs-api" },
-            { "client_secret", "andy-docs-secret-change-in-production" },
+            { "client_secret", "andy-docs-api-secret-change-in-production" },
             { "scope", "urn:andy-docs-api" }
         });
 
@@ -185,7 +185,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         {
             { "token", accessToken! },
             { "client_id", "andy-docs-api" },
-            { "client_secret", "andy-docs-secret-change-in-production" }
+            { "client_secret", "andy-docs-api-secret-change-in-production" }
         });
 
         var introspectResponse = await _client.PostAsync("/connect/introspect", introspectRequest);
@@ -208,7 +208,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         {
             { "token", "invalid-token-value" },
             { "client_id", "andy-docs-api" },
-            { "client_secret", "andy-docs-secret-change-in-production" }
+            { "client_secret", "andy-docs-api-secret-change-in-production" }
         });
 
         // Act
@@ -262,7 +262,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         {
             { "grant_type", "client_credentials" },
             { "client_id", "andy-docs-api" },
-            { "client_secret", "andy-docs-secret-change-in-production" },
+            { "client_secret", "andy-docs-api-secret-change-in-production" },
             { "scope", "urn:andy-docs-api" }
         });
 
@@ -286,7 +286,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         {
             { "token", accessToken! },
             { "client_id", "andy-docs-api" },
-            { "client_secret", "andy-docs-secret-change-in-production" }
+            { "client_secret", "andy-docs-api-secret-change-in-production" }
         });
 
         var revokeResponse = await _client.PostAsync("/connect/revoke", revokeRequest);
@@ -303,7 +303,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         {
             { "token", "invalid-or-already-revoked-token" },
             { "client_id", "andy-docs-api" },
-            { "client_secret", "andy-docs-secret-change-in-production" }
+            { "client_secret", "andy-docs-api-secret-change-in-production" }
         });
 
         // Act
@@ -328,7 +328,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         {
             { "grant_type", "client_credentials" },
             { "client_id", "andy-docs-api" },
-            { "client_secret", "andy-docs-secret-change-in-production" },
+            { "client_secret", "andy-docs-api-secret-change-in-production" },
             { "scope", "urn:andy-docs-api" }
         });
 
@@ -352,7 +352,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         {
             { "token", accessToken! },
             { "client_id", "andy-docs-api" },
-            { "client_secret", "andy-docs-secret-change-in-production" }
+            { "client_secret", "andy-docs-api-secret-change-in-production" }
         });
         await _client.PostAsync("/connect/revoke", revokeRequest);
 
@@ -361,7 +361,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         {
             { "token", accessToken! },
             { "client_id", "andy-docs-api" },
-            { "client_secret", "andy-docs-secret-change-in-production" }
+            { "client_secret", "andy-docs-api-secret-change-in-production" }
         });
         var introspectResponse = await _client.PostAsync("/connect/introspect", introspectRequest);
 
@@ -417,7 +417,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         {
             { "grant_type", "client_credentials" },
             { "client_id", "andy-docs-api" },
-            { "client_secret", "andy-docs-secret-change-in-production" },
+            { "client_secret", "andy-docs-api-secret-change-in-production" },
             { "scope", "urn:andy-docs-api" }
         });
 
