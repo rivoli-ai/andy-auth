@@ -47,6 +47,15 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release --no-restore
 
+    # The Microsoft.Playwright NuGet drops a playwright.ps1 install
+    # script into the test project's bin folder at build time. CI needs
+    # to run it once so the chromium headless_shell binary is present
+    # before the E2E suite spins up a browser. Without this every test
+    # in Andy.Auth.E2E.Tests fails immediately with
+    # `Executable doesn't exist at /home/runner/.cache/ms-playwright/...`.
+    - name: Install Playwright browsers
+      run: pwsh tests/Andy.Auth.E2E.Tests/bin/Release/net8.0/playwright.ps1 install --with-deps chromium
+
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
       env:

@@ -39,6 +39,11 @@ jobs:
     - name: Build
       run: dotnet build --no-restore --configuration Release
 
+    # See build-and-release.yml for the rationale: the chromium binary
+    # has to be installed before the E2E suite runs.
+    - name: Install Playwright browsers
+      run: pwsh tests/Andy.Auth.E2E.Tests/bin/Release/net8.0/playwright.ps1 install --with-deps chromium
+
     - name: Test
       run: dotnet test --no-build --configuration Release --verbosity normal
       env:
