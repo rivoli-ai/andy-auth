@@ -67,13 +67,18 @@
                 <tbody>
                     @foreach (var login in stats.RecentLogins)
                     {
+                        // The controller filters out nulls
+                        // (.Where(u => u.LastLoginAt != null)) before
+                        // projecting, so LastLoginAt is always set
+                        // here. We can't call .HasValue / .Value via
+                        // ViewBag's dynamic dispatch — Nullable<T>
+                        // values are boxed to their underlying T (the
+                        // CLR's nullable-boxing rule), so the dynamic
+                        // binder sees System.DateTime (no .HasValue).
                         <tr>
                             <td>@login.Email</td>
                             <td>
-                                @if (login.LastLoginAt.HasValue)
-                                {
-                                    <span data-utc="@login.LastLoginAt.Value.ToString("o")" data-format="datetime"></span>
-                                }
+                                <span data-utc="@(((DateTime)login.LastLoginAt).ToString("o"))" data-format="datetime"></span>
                             </td>
                         </tr>
                     }
