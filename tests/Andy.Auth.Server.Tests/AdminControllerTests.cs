@@ -103,7 +103,12 @@ public class AdminControllerTests : IDisposable
 
         // Assert
         var viewResult = result.Should().BeOfType<ViewResult>().Subject;
-        _controller.ViewBag.Stats.Should().NotBeNull();
+        // ViewBag is `dynamic`, so calling FluentAssertions' Should()
+        // extension on it goes through the dynamic dispatcher and
+        // throws RuntimeBinderException because extension methods
+        // can't be resolved on `dynamic` at compile time. Cast to
+        // `object?` to pin the type before asserting.
+        ((object?)_controller.ViewBag.Stats).Should().NotBeNull();
     }
 
     // ==================== SuspendUser Tests ====================
