@@ -2,6 +2,7 @@ using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Middleware;
 using Andy.Auth.Server.Services;
 using FluentAssertions;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -393,9 +394,14 @@ public class SessionTrackingMiddlewareTests : IDisposable
 
     // ==================== API Path Detection Tests ====================
 
+    // Note: /connect/* is intentionally absent — SessionTrackingMiddleware
+    // skips it via SkipPaths because OAuth endpoints authenticate via
+    // tokens, not session cookies. A previous version of this Theory
+    // listed "/connect/token" with isApiPath=true, but that case never
+    // reached the revocation branch (the SkipPaths short-circuit fires
+    // first), and the test was failing in CI as a result.
     [Theory]
     [InlineData("/api/users", true)]
-    [InlineData("/connect/token", true)]
     [InlineData("/dashboard", false)]
     [InlineData("/account/login", false)]
     public async Task InvokeAsync_DetectsApiRequests(string path, bool isApiPath)
@@ -441,10 +447,12 @@ public class SessionTrackingMiddlewareTests : IDisposable
     }
 }
 
-// Mock IAuthenticationService for testing sign-out
-public interface IAuthenticationService
-{
-    Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? properties);
-}
+// (Local IAuthenticationService stub removed in this PR. The
+// previous shape shadowed Microsoft.AspNetCore.Authentication.
+// IAuthenticationService — what got registered in DI was a Mock of
+// the local interface, so when the middleware called
+// HttpContext.SignOutAsync(), the real authentication-service
+// resolution found nothing and threw "Unable to find the required
+// 'IAuthenticationService' service". Tests now mock the real type.)
 
 public class AuthenticationProperties { }
