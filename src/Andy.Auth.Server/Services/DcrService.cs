@@ -207,8 +207,12 @@ public class DcrService
             });
         }
 
-        // Check for localhost
-        var isLocalhost = parsedUri.Host == "localhost" || parsedUri.Host == "127.0.0.1" || parsedUri.Host == "::1";
+        // Check for localhost. Uri.IsLoopback is the canonical .NET
+        // check — it handles "localhost", "127.0.0.0/8", and "[::1]"
+        // uniformly. The previous string compare on parsedUri.Host
+        // missed IPv6 because Host returns the bracketed form ("[::1]"),
+        // never the bare "::1" we were comparing against.
+        var isLocalhost = parsedUri.IsLoopback;
 
         // Check for custom URI schemes (native app callbacks like vscode://, cursor://, etc.)
         var isCustomScheme = parsedUri.Scheme != "http" && parsedUri.Scheme != "https";
