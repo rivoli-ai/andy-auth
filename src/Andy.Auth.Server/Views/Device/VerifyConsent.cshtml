@@ -1,0 +1,81 @@
+@model Andy.Auth.Server.Models.DeviceVerifyConsentViewModel
+@{
+    ViewData["Title"] = "Authorize Device";
+}
+
+<style>
+    .device-card { max-width: 480px; padding: 2.5rem; }
+    .device-header { text-align: center; margin-bottom: 1.5rem; }
+    .device-header h2 { font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--text); }
+    .device-header p { color: var(--text-muted); font-size: 0.95rem; }
+    .client-name { font-weight: 600; color: var(--primary); }
+    .code-summary {
+        font-family: 'SF Mono', Menlo, Consolas, monospace;
+        font-size: 1.1rem;
+        letter-spacing: 0.2em;
+        text-align: center;
+        padding: 0.75rem 1rem;
+        background: var(--surface-2);
+        border-radius: 8px;
+        margin: 0.75rem 0 1.5rem;
+        color: var(--text);
+    }
+    .scope-section { margin-bottom: 1.5rem; }
+    .scope-section h3 {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .scope-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .scope-list li {
+        padding: 0.625rem 1rem;
+        background: var(--surface-2);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 0.9rem;
+        font-family: 'SF Mono', Menlo, Consolas, monospace;
+    }
+    .device-actions { display: flex; gap: 1rem; }
+    .device-actions .btn { flex: 1; padding: 0.875rem 1.5rem; }
+</style>
+
+<div class="card device-card">
+    <div class="device-header">
+        <h2>Authorize Device</h2>
+        <p><span class="client-name">@Model.ClientName</span> is requesting access to your account.</p>
+    </div>
+
+    <div class="code-summary">@Model.UserCode</div>
+
+    @if (Model.Scopes.Count > 0)
+    {
+        <div class="scope-section">
+            <h3>Requested permissions</h3>
+            <ul class="scope-list">
+                @foreach (var scope in Model.Scopes)
+                {
+                    <li>@scope</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <form method="post" action="/connect/verify">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="userCode" value="@Model.UserCode" />
+        <div class="device-actions">
+            <button type="submit" name="decision" value="deny" class="btn btn-secondary">Deny</button>
+            <button type="submit" name="decision" value="allow" class="btn btn-primary">Allow</button>
+        </div>
+    </form>
+</div>

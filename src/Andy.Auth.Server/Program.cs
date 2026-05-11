@@ -152,7 +152,15 @@ builder.Services.AddOpenIddict()
         options.SetAuthorizationEndpointUris("connect/authorize")
             .SetTokenEndpointUris("connect/token")
             .SetIntrospectionEndpointUris("connect/introspect")
-            .SetRevocationEndpointUris("connect/revoke");
+            .SetRevocationEndpointUris("connect/revoke")
+            // RFC 8628 device authorization grant. /connect/device starts
+            // the flow (issues device_code/user_code); /connect/verify is
+            // the user-facing endpoint where the operator enters the
+            // user_code, signs in, and authorizes the request. The CLI
+            // polls /connect/token with grant_type=urn:ietf:params:oauth:
+            // grant-type:device_code until the user completes verification.
+            .SetDeviceAuthorizationEndpointUris("connect/device")
+            .SetEndUserVerificationEndpointUris("connect/verify");
 
         // Add registration_endpoint to discovery document for DCR (RFC 7591)
         // OpenIddict doesn't natively support DCR, so we add it via a custom handler
@@ -175,7 +183,11 @@ builder.Services.AddOpenIddict()
         options.AllowAuthorizationCodeFlow()
             .RequireProofKeyForCodeExchange()
             .AllowRefreshTokenFlow()
-            .AllowClientCredentialsFlow();
+            .AllowClientCredentialsFlow()
+            // Device flow for headless CLIs (andy-mcp-proxy stdio bridge,
+            // future IDE plugins). Per-client opt-in: only clients seeded
+            // with the device_code grant can use this flow (see DbSeeder).
+            .AllowDeviceAuthorizationFlow();
 
         // Register encryption and signing keys
         //
@@ -285,6 +297,12 @@ builder.Services.AddOpenIddict()
         var aspNetCoreBuilder = options.UseAspNetCore()
             .EnableAuthorizationEndpointPassthrough()
             .EnableTokenEndpointPassthrough()
+            // /connect/device is handled natively by OpenIddict (it
+            // validates client_id + scopes, mints device_code/user_code,
+            // returns JSON). Only the user-facing verification UI needs
+            // MVC passthrough so we can render the code-entry form and
+            // hook into our existing Identity sign-in flow.
+            .EnableEndUserVerificationEndpointPassthrough()
             .EnableStatusCodePagesIntegration();
 
         // Allow HTTP for local development, CI, Docker compose stacks, and

@@ -235,7 +235,13 @@ public class AuthorizationController : ControllerBase
             request.IsRefreshTokenGrantType(),
             request.IsClientCredentialsGrantType());
 
-        if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType())
+        // The device-code grant follows the same per-user lookup as
+        // authorization_code / refresh_token: OpenIddict has stored a
+        // ClaimsPrincipal against the device_code at the verification
+        // step (DeviceController.VerifyAccept), and we re-issue tokens
+        // from it. Treating the three grants uniformly keeps the
+        // resource-claim and last-login-update logic in one place.
+        if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType() || request.IsDeviceCodeGrantType())
         {
             // Retrieve the claims principal stored in the authorization code/refresh token
             var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
@@ -346,6 +352,13 @@ public class AuthorizationController : ControllerBase
 
         throw new InvalidOperationException("The specified grant type is not supported.");
     }
+
+    // RFC 8628 device authorization:
+    // - /connect/device handled natively by OpenIddict (no controller).
+    // - /connect/verify rendered by DeviceController (UI surface).
+    // - /connect/token IsDeviceCodeGrantType branch lives in Exchange below.
+    // The seed-time grantTypes opt-in (DbSeeder.cs) gates which clients
+    // can use the flow.
 
     [Authorize(AuthenticationSchemes = OpenIddictServerAspNetCoreDefaults.AuthenticationScheme)]
     [HttpGet("~/connect/userinfo"), HttpPost("~/connect/userinfo")]
