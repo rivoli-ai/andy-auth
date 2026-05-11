@@ -1,0 +1,59 @@
+@model Andy.Auth.Server.Models.DeviceVerifyViewModel
+@{
+    ViewData["Title"] = "Authorize Device";
+}
+
+<style>
+    .device-card { max-width: 480px; padding: 2.5rem; }
+    .device-header { text-align: center; margin-bottom: 2rem; }
+    .device-header h2 { font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--text); }
+    .device-header p { color: var(--text-muted); font-size: 0.95rem; }
+    .code-input {
+        font-family: 'SF Mono', Menlo, Consolas, monospace;
+        font-size: 1.4rem;
+        letter-spacing: 0.4em;
+        text-align: center;
+        text-transform: uppercase;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    .device-error {
+        background: rgba(220, 38, 38, 0.08);
+        color: #b91c1c;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+    .device-actions { display: flex; gap: 1rem; margin-top: 1rem; }
+    .device-actions .btn { flex: 1; }
+</style>
+
+<div class="card device-card">
+    <div class="device-header">
+        <h2>Authorize Device</h2>
+        <p>Enter the code shown on the device or terminal that asked you to sign in.</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.Error))
+    {
+        <div class="device-error">@Model.Error</div>
+    }
+
+    <form method="get" action="/connect/verify">
+        <label for="user_code" class="visually-hidden">Code</label>
+        <input
+            type="text"
+            id="user_code"
+            name="user_code"
+            class="form-input code-input"
+            value="@Model.UserCode"
+            placeholder="XXXX-XXXX"
+            autocomplete="off"
+            autocapitalize="characters"
+            required />
+        <div class="device-actions">
+            <button type="submit" class="btn btn-primary">Continue</button>
+        </div>
+    </form>
+</div>
