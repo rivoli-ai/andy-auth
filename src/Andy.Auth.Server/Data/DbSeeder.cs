@@ -814,6 +814,13 @@ public class DbSeeder
                 // conductor#545 sweep.
                 "scp:urn:andy-containers-api",
                 "scp:urn:andy-rbac-api",
+                // Conductor's Andy Tasks surface (Epic T,
+                // rivoli-ai/conductor#584) calls the embedded
+                // andy-tasks service on /tasks/*; without this
+                // permission OpenIddict drops urn:andy-tasks-api
+                // from the token aud claim and andy-tasks rejects
+                // every call with IDX10214. See conductor#607.
+                "scp:urn:andy-tasks-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code
             },
