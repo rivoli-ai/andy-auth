@@ -265,6 +265,8 @@ public class DbSeederTests : IDisposable
 
         _mockUserManager.Setup(m => m.FindByEmailAsync("test@andy.local"))
             .ReturnsAsync((ApplicationUser?)null);
+        _mockUserManager.Setup(m => m.FindByEmailAsync("viewer@andy.local"))
+            .ReturnsAsync((ApplicationUser?)null);
 
         _mockUserManager.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>(), "Test123!"))
             .ReturnsAsync(IdentityResult.Success);
@@ -288,12 +290,58 @@ public class DbSeederTests : IDisposable
     }
 
     [Fact]
+    public async Task SeedAsync_ShouldCreateViewerTestUser_InDevelopmentEnvironment()
+    {
+        // Arrange — companion to SeedAsync_ShouldCreateTestUser_InDevelopmentEnvironment;
+        // viewer@andy.local is the no-special-permissions counterpart to test@andy.local,
+        // used by consumer E2E tests (rivoli-ai/andy-policies#109) that need an
+        // authenticated-but-unauthorized identity for 403 assertions.
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
+            .ReturnsAsync(new object());
+
+        var configuration = CreateConfiguration("Development");
+
+        _mockUserManager.Setup(m => m.FindByEmailAsync("test@andy.local"))
+            .ReturnsAsync((ApplicationUser?)null);
+        _mockUserManager.Setup(m => m.FindByEmailAsync("viewer@andy.local"))
+            .ReturnsAsync((ApplicationUser?)null);
+
+        _mockUserManager.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>(), "Test123!"))
+            .ReturnsAsync(IdentityResult.Success);
+
+        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Development"));
+
+        // Act
+        await seeder.SeedAsync();
+
+        // Assert
+        _mockUserManager.Verify(m => m.CreateAsync(
+            It.Is<ApplicationUser>(u =>
+                u.Id == DbSeeder.ViewerUserWellKnownId &&
+                u.Email == "viewer@andy.local" &&
+                u.UserName == "viewer@andy.local" &&
+                u.EmailConfirmed == true &&
+                u.FullName == "Viewer User" &&
+                u.IsActive == true),
+            "Test123!"),
+            Times.Once);
+    }
+
+    [Fact]
     public void TestUserWellKnownId_IsTheDocumentedConstant()
     {
         // Locks the Id contract so changing it requires a deliberate update —
         // downstream consumers (andy-rbac, andy-policies E2E) hardcode the same
         // string and would silently miss bindings if it drifted.
         Assert.Equal("00000000-0000-0000-0000-000000000001", DbSeeder.TestUserWellKnownId);
+    }
+
+    [Fact]
+    public void ViewerUserWellKnownId_IsTheDocumentedConstant()
+    {
+        // Same contract lock as TestUserWellKnownId — andy-policies E2E #109
+        // hardcodes this string for its 403 assertion.
+        Assert.Equal("00000000-0000-0000-0000-000000000002", DbSeeder.ViewerUserWellKnownId);
     }
 
     [Fact]
@@ -326,13 +374,20 @@ public class DbSeederTests : IDisposable
         var configuration = CreateConfiguration("Development");
 
         var existingUser = new ApplicationUser { Email = "test@andy.local", AccessFailedCount = 0 };
+        var existingViewer = new ApplicationUser { Email = "viewer@andy.local", AccessFailedCount = 0 };
         _mockUserManager.Setup(m => m.FindByEmailAsync("test@andy.local"))
             .ReturnsAsync(existingUser);
+        _mockUserManager.Setup(m => m.FindByEmailAsync("viewer@andy.local"))
+            .ReturnsAsync(existingViewer);
 
         // Mock password reset methods (DbSeeder resets test user password on startup)
         _mockUserManager.Setup(m => m.GeneratePasswordResetTokenAsync(existingUser))
             .ReturnsAsync("reset-token");
         _mockUserManager.Setup(m => m.ResetPasswordAsync(existingUser, "reset-token", "Test123!"))
+            .ReturnsAsync(IdentityResult.Success);
+        _mockUserManager.Setup(m => m.GeneratePasswordResetTokenAsync(existingViewer))
+            .ReturnsAsync("viewer-reset-token");
+        _mockUserManager.Setup(m => m.ResetPasswordAsync(existingViewer, "viewer-reset-token", "Test123!"))
             .ReturnsAsync(IdentityResult.Success);
 
         var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Development"));
@@ -340,10 +395,13 @@ public class DbSeederTests : IDisposable
         // Act
         await seeder.SeedAsync();
 
-        // Assert - test@andy.local should not be created since they already exist
+        // Assert - neither test user should be created since they already exist
         // Note: Admin users (sam@rivoli.ai, ty@rivoli.ai, admin@andy-auth.local) are still created
         _mockUserManager.Verify(m => m.CreateAsync(
             It.Is<ApplicationUser>(u => u.Email == "test@andy.local"),
+            It.IsAny<string>()), Times.Never);
+        _mockUserManager.Verify(m => m.CreateAsync(
+            It.Is<ApplicationUser>(u => u.Email == "viewer@andy.local"),
             It.IsAny<string>()), Times.Never);
     }
 
@@ -357,6 +415,8 @@ public class DbSeederTests : IDisposable
         var configuration = CreateConfiguration("Development");
 
         _mockUserManager.Setup(m => m.FindByEmailAsync("test@andy.local"))
+            .ReturnsAsync((ApplicationUser?)null);
+        _mockUserManager.Setup(m => m.FindByEmailAsync("viewer@andy.local"))
             .ReturnsAsync((ApplicationUser?)null);
 
         var error = new IdentityError { Description = "Password too weak" };
@@ -441,8 +501,10 @@ public class DbSeederTests : IDisposable
         // it up so the seeder doesn't NRE on a null IdentityResult.
         _mockUserManager.Setup(m => m.FindByEmailAsync("test@andy.local"))
             .ReturnsAsync((ApplicationUser?)null);
+        _mockUserManager.Setup(m => m.FindByEmailAsync("viewer@andy.local"))
+            .ReturnsAsync((ApplicationUser?)null);
         _mockUserManager.Setup(m => m.CreateAsync(
-            It.Is<ApplicationUser>(u => u.Email == "test@andy.local"),
+            It.Is<ApplicationUser>(u => u.Email == "test@andy.local" || u.Email == "viewer@andy.local"),
             It.IsAny<string>()))
             .ReturnsAsync(IdentityResult.Success);
 

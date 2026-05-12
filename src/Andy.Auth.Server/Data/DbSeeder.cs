@@ -17,6 +17,17 @@ public class DbSeeder
     /// </summary>
     public const string TestUserWellKnownId = "00000000-0000-0000-0000-000000000001";
 
+    /// <summary>
+    /// Deterministic <c>ApplicationUser.Id</c> for <c>viewer@andy.local</c>, the
+    /// no-special-permissions counterpart to <see cref="TestUserWellKnownId"/>.
+    /// Downstream services that pre-bind roles via manifest <c>testUserRole</c>
+    /// only target <see cref="TestUserWellKnownId"/>; this viewer subject is
+    /// deliberately left unbound so consumer E2E tests have an authenticated-
+    /// but-unauthorized identity for 403 assertions. See
+    /// rivoli-ai/andy-policies#109.
+    /// </summary>
+    public const string ViewerUserWellKnownId = "00000000-0000-0000-0000-000000000002";
+
     private readonly IServiceProvider _serviceProvider;
     private readonly IConfiguration _configuration;
     private readonly ILogger<DbSeeder> _logger;
@@ -1222,6 +1233,71 @@ public class DbSeeder
                     existingTestUser.LockoutEnd = null;
                     await userManager.UpdateAsync(existingTestUser);
                     _logger.LogInformation("Cleared lockout for test user: {Email}", testEmail);
+                }
+            }
+
+            // Companion viewer user — same password as test@andy.local, deterministic Id
+            // ...000000000002, no role bindings from downstream-service manifests. Lets
+            // consumer E2E suites (e.g. rivoli-ai/andy-policies#109) drive the authenticated-
+            // but-unauthorized path without bootstrapping a user dynamically.
+            const string viewerEmail = "viewer@andy.local";
+            var existingViewer = await userManager.FindByEmailAsync(viewerEmail);
+
+            if (existingViewer == null)
+            {
+                var viewerUser = new ApplicationUser
+                {
+                    Id = ViewerUserWellKnownId,
+                    UserName = viewerEmail,
+                    Email = viewerEmail,
+                    EmailConfirmed = true,
+                    FullName = "Viewer User",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var result = await userManager.CreateAsync(viewerUser, "Test123!");
+                if (result.Succeeded)
+                {
+                    // Same Identity "User" role as test@andy.local. The distinction
+                    // (admin on andy-policies vs not) lives in andy-rbac, not in
+                    // andy-auth's Identity roles.
+                    await userManager.AddToRoleAsync(viewerUser, "User");
+                    _logger.LogInformation(
+                        "Created viewer test user: {Email} with deterministic Id {UserId} in {Environment} environment",
+                        viewerEmail, viewerUser.Id, environment);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Failed to create viewer test user: {Errors}",
+                        string.Join(", ", result.Errors.Select(e => e.Description)));
+                }
+            }
+            else
+            {
+                if (existingViewer.Id != ViewerUserWellKnownId)
+                {
+                    _logger.LogWarning(
+                        "Viewer test user {Email} exists with Id {ActualId} rather than the well-known {ExpectedId}. " +
+                        "Downstream services that pre-bind roles by Id (andy-rbac et al) will not match this user. " +
+                        "To reset: delete the user via the admin UI and restart andy-auth.",
+                        viewerEmail, existingViewer.Id, ViewerUserWellKnownId);
+                }
+
+                var viewerToken = await userManager.GeneratePasswordResetTokenAsync(existingViewer);
+                var viewerResetResult = await userManager.ResetPasswordAsync(existingViewer, viewerToken, "Test123!");
+                if (viewerResetResult.Succeeded)
+                {
+                    _logger.LogInformation("Reset password for viewer test user: {Email}", viewerEmail);
+                }
+
+                if (existingViewer.AccessFailedCount > 0 || existingViewer.LockoutEnd != null)
+                {
+                    existingViewer.AccessFailedCount = 0;
+                    existingViewer.LockoutEnd = null;
+                    await userManager.UpdateAsync(existingViewer);
+                    _logger.LogInformation("Cleared lockout for viewer test user: {Email}", viewerEmail);
                 }
             }
         }
