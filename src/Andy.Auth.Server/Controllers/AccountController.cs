@@ -9,7 +9,14 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Andy.Auth.Server.Controllers;
 
-[AllowAnonymous]
+// Default to authenticated. Per-action [AllowAnonymous] opens the
+// pre-login surface (Login, Register, ExternalLogin, AccessDenied,
+// 2FA prompts, recovery code, TestLogin). Actions that REQUIRE an
+// authenticated session — ChangePassword, Logout — were previously
+// no-ops because [AllowAnonymous] at the class level overrode their
+// per-action [Authorize], which let anonymous callers reach those
+// endpoints. The DefaultPolicy in Program.cs already requires
+// authentication, so omitting the class-level attribute is enough.
 public class AccountController : Controller
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
