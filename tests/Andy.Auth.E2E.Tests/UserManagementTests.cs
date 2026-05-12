@@ -78,8 +78,10 @@ public class UserManagementTests : E2ETestBase
         await Page.FillAsync("input[name='Password']", "E2ETest123!");
         await Page.FillAsync("input[name='ConfirmPassword']", "E2ETest123!");
 
-        // Submit form
-        await Page.ClickAsync("button[type='submit']");
+        // Submit form. Match by visible text so we don't accidentally
+        // click the layout's logout button (it's the first
+        // `button[type='submit']` on every page).
+        await Page.ClickAsync("button:has-text('Create User')");
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         // Verify redirected to users list
@@ -111,8 +113,9 @@ public class UserManagementTests : E2ETestBase
         await Page.FillAsync("input[name='Password']", "Password123!");
         await Page.FillAsync("input[name='ConfirmPassword']", "DifferentPassword123!");
 
-        // Submit form
-        await Page.ClickAsync("button[type='submit']");
+        // Submit form. Match by visible text so we don't accidentally
+        // click the layout's logout button.
+        await Page.ClickAsync("button:has-text('Create User')");
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         // Should still be on create page with error
@@ -167,16 +170,12 @@ public class UserManagementTests : E2ETestBase
             // Enter search term
             await searchInput.FillAsync("admin");
 
-            // Submit search (either via button or enter key)
-            var searchButton = await Page.QuerySelectorAsync("button[type='submit']");
-            if (searchButton != null)
-            {
-                await searchButton.ClickAsync();
-            }
-            else
-            {
-                await searchInput.PressAsync("Enter");
-            }
+            // Submit via Enter on the search input itself. A previous
+            // version of this test used `button[type='submit']`, which
+            // matched the layout's Logout button (the first submit
+            // button on the page) and logged the user out instead of
+            // running the search.
+            await searchInput.PressAsync("Enter");
 
             await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 

@@ -104,7 +104,11 @@ public abstract class E2ETestBase : IAsyncLifetime
     /// </summary>
     protected async Task LogoutAsync()
     {
-        await NavigateToAsync("/Account/Logout");
+        // /Account/Logout is [HttpPost] only — a GET wouldn't match
+        // and would leave the user signed in. Submit the layout's
+        // logout form (rendered into every authenticated page's nav)
+        // by clicking its submit button.
+        await Page.ClickAsync("form[action='/Account/Logout'] button[type='submit']");
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
     }
 
