@@ -72,11 +72,15 @@ jobs:
 
         echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-        dotnet pack src/Andy.Auth/Andy.Auth.csproj \
-          --configuration Release \
-          --no-build \
-          --output ./artifacts \
-          -p:PackageVersion=$VERSION
+        for project in \
+          src/Andy.Auth/Andy.Auth.csproj \
+          src/Andy.Auth.M2MClient/Andy.Auth.M2MClient.csproj; do
+          dotnet pack $project \
+            --configuration Release \
+            --no-build \
+            --output ./artifacts \
+            -p:PackageVersion=$VERSION
+        done
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
