@@ -107,7 +107,100 @@ public sealed class ClientCredentialsTokenProvider : IRefreshableServiceTokenPro
         }
     }
 
+    /// <summary>
+    /// Retry schedule used when the token endpoint returns a transient
+    /// failure (502/503/504 / connection refused / DNS / TLS errors).
+    /// Total wall-clock ~7.7s before giving up — long enough to cover
+    /// andy-auth's typical cold-start, short enough to fail fast on
+    /// genuinely-misconfigured deployments.
+    ///
+    /// Cold-start race documented at conductor#XXXX (PV epic): every
+    /// service spawned in the application wave hits andy-auth for an
+    /// M2M token within milliseconds of its own start; if andy-auth
+    /// hasn't bound its listener yet the proxy returns 502 and the
+    /// caller's hosted bootstrapper (e.g.
+    /// <c>PlannerSettingsBootstrapper</c>) calls
+    /// <c>StopApplication</c>. The retry collapses that race onto a
+    /// successful second-or-third attempt without flapping.
+    /// </summary>
+    private static readonly TimeSpan[] RetryBackoffs =
+    {
+        TimeSpan.FromMilliseconds(200),
+        TimeSpan.FromMilliseconds(500),
+        TimeSpan.FromSeconds(1),
+        TimeSpan.FromSeconds(2),
+        TimeSpan.FromSeconds(4),
+    };
+
     private async Task<string> FetchAsync(CancellationToken ct)
+    {
+        Exception? lastTransient = null;
+        for (var attempt = 0; attempt <= RetryBackoffs.Length; attempt++)
+        {
+            try
+            {
+                return await FetchOnceAsync(ct).ConfigureAwait(false);
+            }
+            catch (ServiceTokenException ex) when (IsTransient(ex) && attempt < RetryBackoffs.Length)
+            {
+                lastTransient = ex;
+                _logger.LogDebug(
+                    "M2M token fetch attempt {Attempt}/{Total} failed transiently ({Code}); retrying in {Delay}ms",
+                    attempt + 1,
+                    RetryBackoffs.Length + 1,
+                    ExtractCode(ex),
+                    RetryBackoffs[attempt].TotalMilliseconds);
+                await Task.Delay(RetryBackoffs[attempt], ct).ConfigureAwait(false);
+            }
+        }
+        // All retries exhausted on transient failures — surface the
+        // last error verbatim so the caller logs the same diagnostic
+        // it would have without retry.
+        throw lastTransient
+            ?? new ServiceTokenException("[M2M-TOKEN-RETRY-EXHAUSTED] Token fetch failed after retries.");
+    }
+
+    /// <summary>
+    /// Classifies a <see cref="ServiceTokenException"/> as a transient
+    /// connectivity / cold-start condition that should be retried.
+    /// Pulls the status code out of the message string because the
+    /// exception type doesn't carry it structurally today; matches the
+    /// codes the message wrapper produces.
+    /// </summary>
+    private static bool IsTransient(ServiceTokenException ex)
+    {
+        var msg = ex.Message;
+        // Connection refused / DNS / TLS — every call into FetchOnceAsync
+        // that throws HttpRequestException wraps under this prefix.
+        if (msg.Contains("[M2M-TOKEN-UNREACHABLE]", StringComparison.Ordinal)) return true;
+        // HTTP-status path. Match the gateway-layer codes the proxy
+        // surfaces during cold-start. 502/503/504 are universally
+        // retryable; 408 (Request Timeout) and 429 (Too Many Requests)
+        // are added defensively.
+        if (msg.Contains("returned 502", StringComparison.Ordinal)) return true;
+        if (msg.Contains("returned 503", StringComparison.Ordinal)) return true;
+        if (msg.Contains("returned 504", StringComparison.Ordinal)) return true;
+        if (msg.Contains("returned 408", StringComparison.Ordinal)) return true;
+        if (msg.Contains("returned 429", StringComparison.Ordinal)) return true;
+        return false;
+    }
+
+    private static string ExtractCode(ServiceTokenException ex)
+    {
+        var msg = ex.Message;
+        var start = msg.IndexOf('[');
+        var end = msg.IndexOf(']');
+        if (start >= 0 && end > start) return msg.Substring(start + 1, end - start - 1);
+        return "unknown";
+    }
+
+    /// <summary>
+    /// Single token-fetch attempt. The retry wrapper in
+    /// <see cref="FetchAsync"/> calls this in a loop on transient
+    /// failures; non-transient failures (invalid credentials,
+    /// malformed responses) propagate immediately.
+    /// </summary>
+    private async Task<string> FetchOnceAsync(CancellationToken ct)
     {
         var endpoint = _options.ResolveTokenEndpoint();
         var clientId = _options.ClientId;
