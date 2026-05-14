@@ -821,6 +821,21 @@ public class DbSeeder
                 // from the token aud claim and andy-tasks rejects
                 // every call with IDX10214. See conductor#607.
                 "scp:urn:andy-tasks-api",
+                // PV epic follow-up: Conductor's Models / Policies /
+                // Agents tabs + the planner-config UI + the
+                // andy-settings write path all need their respective
+                // audiences in the conductor-mac token. Missing any
+                // of these surfaces as a 401 from the affected
+                // service (the JWT's `aud` claim lacks the scope so
+                // JwtBearer rejects with IDX10214). Drift between
+                // this list and the actual services Conductor calls
+                // was the root cause of the 2026-05-14 Models-tab
+                // "session expired" regression.
+                "scp:urn:andy-models-api",
+                "scp:urn:andy-settings-api",
+                "scp:urn:andy-agents-api",
+                "scp:urn:andy-policies-api",
+                "scp:urn:andy-mcp-proxy-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code
             },
