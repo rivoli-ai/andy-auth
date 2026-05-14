@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Andy.Auth.Server.Configuration;
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Models;
 using Andy.Auth.Server.Services;
@@ -674,15 +675,20 @@ public class AccountController : Controller
 
     /// <summary>
     /// Test-only login endpoint that bypasses anti-forgery validation.
-    /// Only available in Development environment.
+    /// Available in every non-production deployment shape so the
+    /// Conductor desktop app's `test@andy.local` quick-sign-in path
+    /// works in Embedded mode the same way it works under `dotnet run`.
+    /// Returns 404 in Production so the endpoint cannot be probed.
     /// </summary>
     [HttpPost("~/Account/TestLogin")]
     [IgnoreAntiforgeryToken]
     public async Task<IActionResult> TestLogin([FromForm] string email, [FromForm] string password, [FromForm] string? returnUrl = null)
     {
-        // Only allow in development environment
+        // Available across every local deployment mode (Development,
+        // Docker, Embedded). The 404 keeps the endpoint invisible in
+        // Production.
         var env = HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>();
-        if (!env.IsDevelopment())
+        if (!env.IsLocalOrEmbedded())
         {
             return NotFound();
         }
