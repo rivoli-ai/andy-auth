@@ -229,7 +229,18 @@ public class DbSeeder
         // Outside Development we refuse to fall back to a deterministic
         // "<clientId>-secret-change-in-production" string — that would ship a
         // well-known credential to UAT/Staging/Production. See andy-auth#47.
-        if (!_environment.IsDevelopment())
+        //
+        // PV epic follow-up (2026-05-14): `Embedded` is the environment
+        // Conductor runs andy-auth in when bundled inside the macOS app.
+        // That is by definition a developer's local machine — the same
+        // policy as `Development` applies. Without this branch, the
+        // entire seeder crashes on the FIRST confidential-client
+        // manifest (andy-containers-api) and downstream client edits
+        // (conductor-mac scope grants, etc.) never run; the symptom is
+        // a stale conductor-mac record in the DB and 401 errors on
+        // every newer service Conductor calls.
+        var isEmbedded = string.Equals(_environment.EnvironmentName, "Embedded", StringComparison.OrdinalIgnoreCase);
+        if (!_environment.IsDevelopment() && !isEmbedded)
         {
             throw new InvalidOperationException(
                 $"Confidential OAuth client '{client.ClientId}' has no secret configured: " +
@@ -238,8 +249,8 @@ public class DbSeeder
                 "The dev-only fallback is disabled outside the Development environment.");
         }
 
-        // Dev fallback matches the legacy hardcoded pattern. Development only —
-        // every other environment fails fast above.
+        // Dev / Embedded fallback matches the legacy hardcoded pattern.
+        // Local-dev environments only — UAT/Staging/Production fail fast above.
         return $"{client.ClientId}-secret-change-in-production";
     }
 
@@ -821,6 +832,21 @@ public class DbSeeder
                 // from the token aud claim and andy-tasks rejects
                 // every call with IDX10214. See conductor#607.
                 "scp:urn:andy-tasks-api",
+                // PV epic follow-up: Conductor's Models / Policies /
+                // Agents tabs + the planner-config UI + the
+                // andy-settings write path all need their respective
+                // audiences in the conductor-mac token. Missing any
+                // of these surfaces as a 401 from the affected
+                // service (the JWT's `aud` claim lacks the scope so
+                // JwtBearer rejects with IDX10214). Drift between
+                // this list and the actual services Conductor calls
+                // was the root cause of the 2026-05-14 Models-tab
+                // "session expired" regression.
+                "scp:urn:andy-models-api",
+                "scp:urn:andy-settings-api",
+                "scp:urn:andy-agents-api",
+                "scp:urn:andy-policies-api",
+                "scp:urn:andy-mcp-proxy-api",
 
                 OpenIddictConstants.Permissions.ResponseTypes.Code
             },

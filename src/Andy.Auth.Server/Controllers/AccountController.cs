@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Andy.Auth.Server.Configuration;
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Models;
 using Andy.Auth.Server.Services;
@@ -674,15 +675,23 @@ public class AccountController : Controller
 
     /// <summary>
     /// Test-only login endpoint that bypasses anti-forgery validation.
-    /// Only available in Development environment.
+    /// Available in Development AND Embedded environments. Embedded
+    /// is Conductor's standard environment string (see conductor#1162
+    /// where the switch to `Embedded` was made so OpenIddict signing
+    /// keys persist across launches). Without accepting Embedded
+    /// here, `DevAutoSignIn` in Conductor gets a 404 and the user
+    /// can't sign in to any Conductor feature.
     /// </summary>
     [HttpPost("~/Account/TestLogin")]
     [IgnoreAntiforgeryToken]
     public async Task<IActionResult> TestLogin([FromForm] string email, [FromForm] string password, [FromForm] string? returnUrl = null)
     {
-        // Only allow in development environment
+        // Allow in any non-production environment (Development, Docker,
+        // Embedded). Production deployments must use the real
+        // sign-in flow; this endpoint is for local dev + Conductor's
+        // embedded loopback only.
         var env = HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>();
-        if (!env.IsDevelopment())
+        if (!env.IsLocalOrEmbedded())
         {
             return NotFound();
         }
