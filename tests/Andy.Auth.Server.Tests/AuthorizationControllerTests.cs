@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Security.Claims;
 using Andy.Auth.Server.Controllers;
 using Andy.Auth.Server.Data;
+using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -26,6 +27,8 @@ public class AuthorizationControllerTests
     private readonly Mock<IOpenIddictScopeManager> _mockScopeManager;
     private readonly Mock<SignInManager<ApplicationUser>> _mockSignInManager;
     private readonly Mock<UserManager<ApplicationUser>> _mockUserManager;
+    private readonly Mock<ITokenExchangePolicy> _mockTokenExchangePolicy;
+    private readonly Mock<ISubjectTokenValidator> _mockSubjectTokenValidator;
     private readonly Mock<ILogger<AuthorizationController>> _mockLogger;
     private readonly ApplicationDbContext _dbContext;
     private readonly AuthorizationController _controller;
@@ -38,6 +41,8 @@ public class AuthorizationControllerTests
         _mockScopeManager = new Mock<IOpenIddictScopeManager>();
         _mockUserManager = MockUserManager();
         _mockSignInManager = MockSignInManager(_mockUserManager.Object);
+        _mockTokenExchangePolicy = new Mock<ITokenExchangePolicy>();
+        _mockSubjectTokenValidator = new Mock<ISubjectTokenValidator>();
         _mockLogger = new Mock<ILogger<AuthorizationController>>();
 
         // Create in-memory database for testing
@@ -53,6 +58,8 @@ public class AuthorizationControllerTests
             _mockSignInManager.Object,
             _mockUserManager.Object,
             _dbContext,
+            _mockTokenExchangePolicy.Object,
+            _mockSubjectTokenValidator.Object,
             _mockLogger.Object);
 
         _httpContext = new DefaultHttpContext();

@@ -167,6 +167,17 @@ public class DbSeeder
             descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.DeviceCode);
             descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.DeviceAuthorization);
         }
+        // RFC 8693 token exchange. Manifests opt in via either the short
+        // alias "token_exchange" or the canonical URN. The (actor,
+        // audience) allow-list in TokenExchange:Policies is the real
+        // gate at request time; this permission just lets the client
+        // reach the handler. Drives Epic IDP (rivoli-ai/conductor#1246).
+        if (grantTypes.Contains("token_exchange", StringComparer.OrdinalIgnoreCase)
+            || grantTypes.Contains(Services.TokenExchangeConstants.GrantType, StringComparer.OrdinalIgnoreCase))
+        {
+            descriptor.Permissions.Add(
+                OpenIddictConstants.Permissions.Prefixes.GrantType + Services.TokenExchangeConstants.GrantType);
+        }
         if (isConfidential)
         {
             descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Introspection);

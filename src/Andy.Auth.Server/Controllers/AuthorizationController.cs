@@ -1,14 +1,17 @@
 using Andy.Auth.Server.Data;
+using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using System.Security.Claims;
+using System.Text.Json;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace Andy.Auth.Server.Controllers;
@@ -22,6 +25,8 @@ public class AuthorizationController : ControllerBase
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _dbContext;
+    private readonly ITokenExchangePolicy _tokenExchangePolicy;
+    private readonly ISubjectTokenValidator _subjectTokenValidator;
     private readonly ILogger<AuthorizationController> _logger;
 
     public AuthorizationController(
@@ -31,6 +36,8 @@ public class AuthorizationController : ControllerBase
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager,
         ApplicationDbContext dbContext,
+        ITokenExchangePolicy tokenExchangePolicy,
+        ISubjectTokenValidator subjectTokenValidator,
         ILogger<AuthorizationController> logger)
     {
         _applicationManager = applicationManager;
@@ -39,6 +46,8 @@ public class AuthorizationController : ControllerBase
         _signInManager = signInManager;
         _userManager = userManager;
         _dbContext = dbContext;
+        _tokenExchangePolicy = tokenExchangePolicy;
+        _subjectTokenValidator = subjectTokenValidator;
         _logger = logger;
     }
 
@@ -349,9 +358,153 @@ public class AuthorizationController : ControllerBase
 
             return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
+        else if (string.Equals(request.GrantType, TokenExchangeConstants.GrantType, StringComparison.Ordinal))
+        {
+            return await HandleTokenExchangeAsync(request);
+        }
 
         throw new InvalidOperationException("The specified grant type is not supported.");
     }
+
+    /// <summary>
+    /// Handles the RFC 8693 token-exchange grant. The actor (calling
+    /// service) authenticates via client_credentials at the same
+    /// endpoint — OpenIddict has already validated the client secret
+    /// before this method runs. We then validate the supplied
+    /// <c>subject_token</c> against this server's own signing/encryption
+    /// keys, check the (actor, audience) allow-list in
+    /// <see cref="ITokenExchangePolicy"/>, and issue a new access token
+    /// whose <c>sub</c> is the user and whose <c>act</c> claim names the
+    /// actor (RFC 8693 §4.1). Drives Epic IDP (rivoli-ai/conductor#1246).
+    /// </summary>
+    private async Task<IActionResult> HandleTokenExchangeAsync(OpenIddictRequest request)
+    {
+        var actorClientId = request.ClientId ?? string.Empty;
+        _logger.LogInformation(
+            "Token-exchange requested. Actor: {ActorClientId}, Audience: {Audience}",
+            actorClientId,
+            string.Join(" ", request.GetResources()));
+
+        // 1. Parameter shape per RFC 8693 §2.1. subject_token is
+        //    mandatory; subject_token_type, if present, must name an
+        //    access token (we don't accept SAML or refresh tokens).
+        var subjectToken = (string?)request["subject_token"];
+        var subjectTokenType = (string?)request["subject_token_type"];
+
+        if (string.IsNullOrWhiteSpace(subjectToken))
+        {
+            return TokenExchangeError(Errors.InvalidRequest,
+                "subject_token parameter is required.");
+        }
+        if (!string.IsNullOrWhiteSpace(subjectTokenType)
+            && !string.Equals(subjectTokenType, TokenExchangeConstants.AccessTokenType, StringComparison.Ordinal))
+        {
+            return TokenExchangeError(Errors.InvalidRequest,
+                "subject_token_type must be urn:ietf:params:oauth:token-type:access_token.");
+        }
+
+        // 2. RFC 8693 allows 0..n audiences; we require exactly one for
+        //    now. The audience names the downstream service the actor
+        //    wants to call (e.g. urn:andy-models-api) and gates the
+        //    policy check.
+        var requestedAudiences = request.GetResources().ToList();
+        if (requestedAudiences.Count != 1)
+        {
+            return TokenExchangeError(Errors.InvalidTarget,
+                "exactly one resource (audience) must be requested.");
+        }
+        var audience = requestedAudiences[0];
+
+        // 3. Policy gate. An empty allow-list or a (actor, audience)
+        //    pair not on it is denied. The actor's identity comes from
+        //    OpenIddict's already-completed client_credentials check on
+        //    this endpoint — we don't trust the form field on its own.
+        if (!_tokenExchangePolicy.IsAllowed(actorClientId, audience))
+        {
+            _logger.LogWarning(
+                "Token-exchange denied by policy. Actor: {ActorClientId}, Audience: {Audience}",
+                actorClientId, audience);
+            return TokenExchangeError(Errors.UnauthorizedClient,
+                "the actor is not permitted to exchange tokens for this audience.");
+        }
+
+        // 4. Validate the supplied subject_token. Must be a user
+        //    access token issued by this same server; we don't accept
+        //    tokens from other issuers.
+        var validation = await _subjectTokenValidator.ValidateAsync(subjectToken);
+        if (!validation.IsValid || string.IsNullOrWhiteSpace(validation.Subject))
+        {
+            _logger.LogWarning(
+                "Token-exchange rejected: {Reason} (actor {ActorClientId})",
+                validation.FailureReason, actorClientId);
+            return TokenExchangeError(Errors.InvalidGrant,
+                "subject_token is not a valid access token issued by this server.");
+        }
+
+        // 5. Scope handling. If the policy has an explicit AllowedScopes
+        //    list, the requested scopes (or, if none requested, the
+        //    subject token's scopes) must be a subset of that list.
+        //    Otherwise, the subject token's scopes pass through.
+        var requestedScopes = request.GetScopes().ToList();
+        var effectiveScopes = requestedScopes.Count > 0
+            ? requestedScopes
+            : validation.Scopes.ToList();
+
+        var allowedScopes = _tokenExchangePolicy.AllowedScopes(actorClientId, audience);
+        if (allowedScopes.Count > 0)
+        {
+            var disallowed = effectiveScopes
+                .Where(s => !allowedScopes.Contains(s, StringComparer.Ordinal))
+                .ToList();
+            if (disallowed.Count > 0)
+            {
+                return TokenExchangeError(Errors.InvalidScope,
+                    $"requested scope(s) not allowed for this actor/audience: {string.Join(" ", disallowed)}");
+            }
+        }
+
+        // 6. Build the exchanged principal. The user is the subject;
+        //    the actor is recorded in the `act` claim as a JSON object
+        //    per RFC 8693 §4.1. Resources/audience drive OpenIddict's
+        //    `aud` claim on the issued token.
+        var identity = new ClaimsIdentity(
+            authenticationType: TokenValidationParameters.DefaultAuthenticationType,
+            nameType: Claims.Name,
+            roleType: Claims.Role);
+
+        identity.AddClaim(new Claim(Claims.Subject, validation.Subject)
+            .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+
+        // RFC 8693 §4.1: the act claim is a JSON object {"sub": "<actor>"}.
+        // OpenIddict serializes claims of type JSON into structured
+        // JSON on the wire when the value is tagged with the JSON
+        // value type.
+        var actClaimValue = JsonSerializer.Serialize(new { sub = actorClientId });
+        identity.AddClaim(new Claim("act", actClaimValue, JsonClaimValueTypes.Json)
+            .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+
+        var principal = new ClaimsPrincipal(identity);
+        if (effectiveScopes.Count > 0)
+        {
+            principal.SetScopes(effectiveScopes);
+        }
+        principal.SetResources(audience);
+
+        _logger.LogInformation(
+            "Token-exchange issued. Subject: {Subject}, Actor: {ActorClientId}, Audience: {Audience}, Scopes: {Scopes}",
+            validation.Subject, actorClientId, audience, string.Join(" ", effectiveScopes));
+
+        return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+    }
+
+    private IActionResult TokenExchangeError(string error, string description) =>
+        Forbid(
+            authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+            properties: new AuthenticationProperties(new Dictionary<string, string?>
+            {
+                [OpenIddictServerAspNetCoreConstants.Properties.Error] = error,
+                [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = description,
+            }));
 
     // RFC 8628 device authorization:
     // - /connect/device handled natively by OpenIddict (no controller).
