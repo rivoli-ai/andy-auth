@@ -39,6 +39,13 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ClientCredentialsTokenProvider>());
         services.TryAddSingleton<IRefreshableServiceTokenProvider>(sp =>
             sp.GetRequiredService<ClientCredentialsTokenProvider>());
+        // RFC 8693 OBO provider — sibling of ClientCredentialsTokenProvider.
+        // Shares the same named HttpClient ("AndyAuthM2M"); per-(subject,
+        // audience) cache keeps the fast path lock-free.
+        // Drives Epic IDP (rivoli-ai/conductor#1246).
+        services.TryAddSingleton<TokenExchangeDelegatedTokenProvider>();
+        services.TryAddSingleton<IDelegatedTokenProvider>(sp =>
+            sp.GetRequiredService<TokenExchangeDelegatedTokenProvider>());
         services.TryAddTransient<ServiceBearerHandler>();
         services.AddHttpClient(ClientCredentialsTokenProvider.HttpClientName);
 
