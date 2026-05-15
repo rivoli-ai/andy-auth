@@ -187,7 +187,18 @@ builder.Services.AddOpenIddict()
             // Device flow for headless CLIs (andy-mcp-proxy stdio bridge,
             // future IDE plugins). Per-client opt-in: only clients seeded
             // with the device_code grant can use this flow (see DbSeeder).
-            .AllowDeviceAuthorizationFlow();
+            .AllowDeviceAuthorizationFlow()
+            // RFC 8693 OAuth 2.0 Token Exchange. The platform's primitive
+            // for cross-service identity propagation: when a service
+            // receives a user request and calls a downstream service, it
+            // exchanges (user JWT + its own M2M credential) for a new
+            // token whose `sub` is the user, whose `act` is the calling
+            // service, and whose `aud` is the downstream service.
+            // Per-client opt-in lives in each consumer's manifest
+            // (registration.json); the (actor, audience) allow-list lives
+            // in TokenExchange:Policies in config (see TokenExchangeSettings).
+            // Drives Epic IDP (rivoli-ai/conductor#1246).
+            .AllowCustomFlow(TokenExchangeConstants.GrantType);
 
         // Register encryption and signing keys
         //
@@ -338,6 +349,15 @@ builder.Services.AddScoped<IAuditService, AuditService>();
 // Register Dynamic Client Registration (RFC 7591)
 builder.Services.Configure<DcrSettings>(builder.Configuration.GetSection(DcrSettings.SectionName));
 builder.Services.AddScoped<DcrService>();
+
+// Register RFC 8693 Token Exchange policy (Epic IDP — rivoli-ai/conductor#1246).
+// The TokenExchange:Policies allow-list gates which actor client_ids may
+// act on behalf of users for which audiences. See TokenExchangeSettings
+// for the full design context.
+builder.Services.Configure<TokenExchangeSettings>(
+    builder.Configuration.GetSection(TokenExchangeSettings.SectionName));
+builder.Services.AddSingleton<ITokenExchangePolicy, TokenExchangePolicy>();
+builder.Services.AddSingleton<ISubjectTokenValidator, InProcessSubjectTokenValidator>();
 
 // Register token cleanup background service
 builder.Services.AddHostedService<TokenCleanupService>();
