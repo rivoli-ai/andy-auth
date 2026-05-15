@@ -552,6 +552,73 @@ public class DbSeederTests : IDisposable
             m.Contains("Using generated password:") || m.Contains("generated password: "));
     }
 
+    [Fact]
+    public async Task SeedAsync_AdminUser_NoPasswordEnvVar_DoesNotThrowInEmbedded()
+    {
+        // Regression for rivoli-ai/andy-auth#100. Conductor runs andy-auth with
+        // ASPNETCORE_ENVIRONMENT=Embedded. Before this fix, missing
+        // ADMIN_PASSWORD_* env vars made the seeder throw on the FIRST admin
+        // user (sam@rivoli.ai) — aborting before SeedTestUserAsync ever reached
+        // its test@andy.local / viewer@andy.local creation block. The embedded
+        // auth DB then booted with roles + OIDC clients but zero users, and
+        // every Conductor panel surfaced "Failed to sign in with
+        // test@andy.local via TestLogin" forever. Treat Embedded like
+        // Development for this carveout — symmetric with the OAuth client
+        // secret seeding at DbSeeder.cs:243.
+        _mockUserManager.Setup(m => m.FindByEmailAsync("test@andy.local"))
+            .ReturnsAsync((ApplicationUser?)null);
+        _mockUserManager.Setup(m => m.FindByEmailAsync("viewer@andy.local"))
+            .ReturnsAsync((ApplicationUser?)null);
+        _mockUserManager.Setup(m => m.CreateAsync(
+            It.Is<ApplicationUser>(u => u.Email == "test@andy.local" || u.Email == "viewer@andy.local"),
+            It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Success);
+
+        Environment.SetEnvironmentVariable("ADMIN_PASSWORD_SAM", null);
+        Environment.SetEnvironmentVariable("ADMIN_PASSWORD_TY", null);
+        Environment.SetEnvironmentVariable("ADMIN_PASSWORD_DEFAULT", null);
+
+        var loggedMessages = new List<string>();
+        var capturingLogger = new Mock<ILogger<DbSeeder>>();
+        capturingLogger.Setup(x => x.Log(
+            It.IsAny<LogLevel>(),
+            It.IsAny<EventId>(),
+            It.IsAny<It.IsAnyType>(),
+            It.IsAny<Exception?>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()))
+            .Callback(new InvocationAction(invocation =>
+            {
+                var state = invocation.Arguments[2];
+                var formatter = invocation.Arguments[4];
+                var message = formatter.GetType().GetMethod("Invoke")!
+                    .Invoke(formatter, new[] { state, invocation.Arguments[3] }) as string;
+                if (message is not null) loggedMessages.Add(message);
+            }));
+
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
+            .ReturnsAsync(new object());
+
+        var configuration = CreateConfiguration("Embedded");
+        var seeder = new DbSeeder(
+            _serviceProvider, configuration, capturingLogger.Object, CreateHostEnvironment("Embedded"));
+
+        // Must NOT throw — the throw was the symptom that aborted user seeding.
+        await seeder.SeedAsync();
+
+        // Test user creation must have been reached and invoked.
+        _mockUserManager.Verify(m => m.CreateAsync(
+            It.Is<ApplicationUser>(u => u.Email == "test@andy.local"),
+            It.IsAny<string>()), Times.Once);
+
+        // The dev-fallback warning must name the env var and the Embedded
+        // environment — operators need a breadcrumb to set a stable password
+        // without having to grep the source.
+        Assert.Contains(loggedMessages, m => m.Contains("ADMIN_PASSWORD_SAM"));
+        Assert.Contains(loggedMessages, m => m.Contains("Embedded"));
+        Assert.DoesNotContain(loggedMessages, m =>
+            m.Contains("Using generated password:") || m.Contains("generated password: "));
+    }
+
     #endregion
 
     #region Issue #47 — Hardcoded fallback client secret regression

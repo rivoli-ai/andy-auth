@@ -1119,14 +1119,25 @@ public class DbSeeder
                     // logged at WARN level (andy-auth#48), which leaked
                     // permanent admin access into log aggregators. Fail fast
                     // so operators set the env var explicitly.
-                    if (!_environment.IsDevelopment())
+                    //
+                    // `Embedded` (the environment Conductor uses when bundling
+                    // andy-auth inside the macOS app) is treated the same as
+                    // Development for this carveout — same policy as the OAuth
+                    // client secret seeding at line 243. Without this, the
+                    // entire seeder throws on the first admin user and
+                    // SeedTestUserAsync never reaches the test@andy.local /
+                    // viewer@andy.local creation block below, leaving the
+                    // embedded auth DB with roles + OIDC clients but zero
+                    // users. See rivoli-ai/andy-auth#100.
+                    var isEmbedded = string.Equals(_environment.EnvironmentName, "Embedded", StringComparison.OrdinalIgnoreCase);
+                    if (!_environment.IsDevelopment() && !isEmbedded)
                     {
                         throw new InvalidOperationException(
                             $"Admin user '{userInfo.Email}' has no password configured: " +
                             $"set the '{userInfo.PasswordEnvVar}' environment variable in " +
                             $"{_environment.EnvironmentName}. The dev-only generated-password " +
-                            "fallback is disabled outside the Development environment to avoid " +
-                            "leaking credentials into logs.");
+                            "fallback is disabled outside the Development/Embedded environments " +
+                            "to avoid leaking credentials into logs.");
                     }
 
                     password = userInfo.DefaultPassword;
@@ -1135,8 +1146,8 @@ public class DbSeeder
                     // exists in process memory until CreateAsync hashes it.
                     _logger.LogWarning(
                         "No password set for {Email} via {EnvVar}; using a generated password " +
-                        "for this Development run. Set {EnvVar} to choose a stable password.",
-                        userInfo.Email, userInfo.PasswordEnvVar, userInfo.PasswordEnvVar);
+                        "for this {Environment} run. Set {EnvVar} to choose a stable password.",
+                        userInfo.Email, userInfo.PasswordEnvVar, _environment.EnvironmentName, userInfo.PasswordEnvVar);
                 }
 
                 var adminUser = new ApplicationUser
