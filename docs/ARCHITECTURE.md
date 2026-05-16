@@ -265,7 +265,7 @@ Layer 6: Application
 │  localhost                           │
 ├─────────────────────────────────────┤
 │  Andy.Auth.Server                    │
-│  https://localhost:7088              │
+│  https://localhost:5001              │
 │  ├─ Ephemeral signing keys           │
 │  └─ Local PostgreSQL                 │
 │     (docker-compose)                 │

@@ -5,7 +5,7 @@ This example demonstrates how to integrate Andy Auth with a Python Flask applica
 ## Prerequisites
 
 - Python 3.10+
-- Andy Auth server running (default: https://localhost:7088)
+- Andy Auth server running (default: https://localhost:5001)
 
 ## Setup
 
@@ -28,7 +28,7 @@ pip install -r requirements.txt
 4. Set environment variables (optional):
 
 ```bash
-export ANDY_AUTH_SERVER=https://localhost:7088
+export ANDY_AUTH_SERVER=https://localhost:5001
 export CLIENT_ID=my-python-app
 export REDIRECT_URI=http://localhost:5000/callback
 export SECRET_KEY=your-secret-key

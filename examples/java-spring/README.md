@@ -6,7 +6,7 @@ This example demonstrates how to integrate Andy Auth with a Spring Boot applicat
 
 - Java 17+
 - Maven 3.8+
-- Andy Auth server running (default: https://localhost:7088)
+- Andy Auth server running (default: https://localhost:5001)
 
 ## Setup
 
@@ -15,7 +15,7 @@ This example demonstrates how to integrate Andy Auth with a Spring Boot applicat
 2. Set environment variables (optional):
 
 ```bash
-export ANDY_AUTH_SERVER=https://localhost:7088
+export ANDY_AUTH_SERVER=https://localhost:5001
 export CLIENT_ID=my-java-app
 export CLIENT_SECRET=your-client-secret
 ```

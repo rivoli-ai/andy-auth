@@ -5,7 +5,7 @@ This example demonstrates how to integrate Andy Auth with a .NET 8 web applicati
 ## Prerequisites
 
 - .NET 8 SDK
-- Andy Auth server running (default: https://localhost:7088)
+- Andy Auth server running (default: https://localhost:5001)
 
 ## Setup
 
@@ -15,7 +15,7 @@ This example demonstrates how to integrate Andy Auth with a .NET 8 web applicati
 ```json
 {
   "AndyAuth": {
-    "Authority": "https://localhost:7088",
+    "Authority": "https://localhost:5001",
     "ClientId": "my-csharp-app",
     "ClientSecret": "your-client-secret"
   }

@@ -309,7 +309,7 @@ Change providers by updating configuration:
 {
   "AndyAuth": {
     "Provider": "AndyAuth",
-    "Authority": "https://localhost:7088"
+    "Authority": "https://localhost:5001"
   }
 }
 ```
@@ -546,7 +546,7 @@ builder.Services.AddAndyAuth(options =>
 ```json
 {
   "AndyAuth": {
-    "Authority": "https://localhost:7088",
+    "Authority": "https://localhost:5001",
     "RequireHttpsMetadata": false
   }
 }
@@ -716,7 +716,7 @@ var app = builder.Build();
 
 ### Complete Andy Docs Integration
 
-See `examples/Andy DocsIntegration/` for a working example showing:
+See `examples/AndyDocsIntegration/` for a working example showing:
 - Andy.Auth library setup
 - ICurrentUserService usage
 - Role-based authorization

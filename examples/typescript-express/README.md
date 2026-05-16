@@ -5,7 +5,7 @@ This example demonstrates how to integrate Andy Auth with a Node.js Express appl
 ## Prerequisites
 
 - Node.js 18+
-- Andy Auth server running (default: https://localhost:7088)
+- Andy Auth server running (default: https://localhost:5001)
 
 ## Setup
 
@@ -21,7 +21,7 @@ npm install
 3. Set environment variables (optional):
 
 ```bash
-export ANDY_AUTH_SERVER=https://localhost:7088
+export ANDY_AUTH_SERVER=https://localhost:5001
 export CLIENT_ID=my-ts-app
 export REDIRECT_URI=http://localhost:3000/callback
 ```

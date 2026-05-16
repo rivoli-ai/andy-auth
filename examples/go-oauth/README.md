@@ -5,7 +5,7 @@ This example demonstrates how to integrate Andy Auth with a Go application using
 ## Prerequisites
 
 - Go 1.21+
-- Andy Auth server running (default: https://localhost:7088)
+- Andy Auth server running (default: https://localhost:5001)
 
 ## Setup
 
@@ -14,7 +14,7 @@ This example demonstrates how to integrate Andy Auth with a Go application using
 2. Set environment variables (optional):
 
 ```bash
-export ANDY_AUTH_SERVER=https://localhost:7088
+export ANDY_AUTH_SERVER=https://localhost:5001
 export CLIENT_ID=my-go-app
 export CLIENT_SECRET=your-client-secret
 export REDIRECT_URL=http://localhost:8080/callback

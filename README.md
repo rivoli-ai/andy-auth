@@ -46,7 +46,7 @@ cd src/Andy.Auth.Server
 dotnet run
 ```
 
-Server runs at: **https://localhost:7088**
+Server runs at: **https://localhost:5001**
 
 **Test credentials:**
 - Email: `test@andy.local`
@@ -174,7 +174,7 @@ Run all examples tests:
 | [SECURITY.md](./docs/SECURITY.md) | Security features |
 | [ADMIN.md](./docs/ADMIN.md) | Admin UI documentation |
 | [DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Production deployment |
-| [TESTING.md](./docs/TESTING.md) | Testing guide |
+| [testing.md](./docs/testing.md) | Testing guide |
 | [LIBRARY.md](./docs/LIBRARY.md) | Client library documentation |
 | [ASSISTANT-INTEGRATION.md](./docs/ASSISTANT-INTEGRATION.md) | AI assistant setup |
 
@@ -190,11 +190,9 @@ cd tests/oauth-python
 ANDY_AUTH_TEST_PASSWORD="Test123!" python3 run_all_tests.py --env uat
 ```
 
-**Current Status:**
-- .NET unit tests: 54/54 passed (100%)
-- Python OAuth tests: 42/42 passed (100%)
+**Current Status:** See [docs/testing.md](./docs/testing.md) for the latest test counts and pass rates.
 
-See [docs/TESTING.md](./docs/TESTING.md) for testing guide.
+See [docs/testing.md](./docs/testing.md) for testing guide.
 
 ## Contributing
 
