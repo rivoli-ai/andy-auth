@@ -6,7 +6,7 @@ Admin dashboard documentation for managing users, OAuth clients, and audit logs.
 
 The admin dashboard provides a web-based interface for managing Andy Auth Server. Access it at:
 
-**Development:** https://localhost:7088/Admin
+**Development:** https://localhost:5001/Admin
 **Production:** https://auth.rivoli.ai/Admin
 
 ## Features

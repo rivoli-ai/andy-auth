@@ -5,7 +5,7 @@ This example demonstrates how to integrate Andy Auth with a Rust application usi
 ## Prerequisites
 
 - Rust 1.70+
-- Andy Auth server running (default: https://localhost:7088)
+- Andy Auth server running (default: https://localhost:5001)
 
 ## Setup
 
@@ -14,7 +14,7 @@ This example demonstrates how to integrate Andy Auth with a Rust application usi
 2. Set environment variables (optional):
 
 ```bash
-export ANDY_AUTH_SERVER=https://localhost:7088
+export ANDY_AUTH_SERVER=https://localhost:5001
 export CLIENT_ID=my-rust-app
 export CLIENT_SECRET=your-client-secret
 export REDIRECT_URL=http://localhost:3000/callback

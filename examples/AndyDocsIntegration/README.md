@@ -33,7 +33,7 @@ dotnet add package Andy.Auth
 {
   "AndyAuth": {
     "Provider": "AndyAuth",
-    "Authority": "https://localhost:7088",
+    "Authority": "https://localhost:5001",
     "Audience": "andy-docs-api",
     "RequireHttpsMetadata": false
   }
@@ -65,14 +65,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        options.Authority = "https://localhost:7088";
+        options.Authority = "https://localhost:5001";
         options.Audience = "andy-docs-api";
         options.RequireHttpsMetadata = false;
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = "https://localhost:7088",
+            ValidIssuer = "https://localhost:5001",
             ValidateAudience = true,
             ValidAudience = "andy-docs-api",
             ValidateLifetime = true,
@@ -495,7 +495,7 @@ app.Run();
   },
   "AndyAuth": {
     "Provider": "AndyAuth",
-    "Authority": "https://localhost:7088",
+    "Authority": "https://localhost:5001",
     "Audience": "andy-docs-api",
     "RequireHttpsMetadata": false
   },
@@ -529,7 +529,7 @@ app.Run();
 ```bash
 cd ../andy-auth/src/Andy.Auth.Server
 dotnet run
-# Server runs at https://localhost:7088
+# Server runs at https://localhost:5001
 ```
 
 ### 2. Start Andy Docs API
@@ -543,7 +543,7 @@ dotnet run
 ### 3. Get Access Token
 
 Visit Andy.Auth.Server and login:
-- URL: https://localhost:7088/Account/Login
+- URL: https://localhost:5001/Account/Login
 - Email: test@andy.local
 - Password: Test123!
 
@@ -551,7 +551,7 @@ Or use OAuth flow:
 
 ```bash
 # Authorization Code Flow (with PKCE)
-curl -X POST "https://localhost:7088/connect/token" \
+curl -X POST "https://localhost:5001/connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=authorization_code" \
   -d "code=YOUR_AUTH_CODE" \
@@ -626,7 +626,7 @@ No code changes required!
 ```json
 {
   "AndyAuth": {
-    "Authority": "https://localhost:7088"
+    "Authority": "https://localhost:5001"
   }
 }
 ```

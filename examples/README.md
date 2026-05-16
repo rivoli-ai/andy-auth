@@ -18,7 +18,7 @@ This directory contains example applications demonstrating how to integrate Andy
 
 All examples require:
 
-1. Andy Auth server running (default: https://localhost:7088)
+1. Andy Auth server running (default: https://localhost:5001)
 2. A registered OAuth client (or use Dynamic Client Registration)
 
 ## Quick Start
@@ -29,7 +29,7 @@ Before running any example, register an OAuth client in Andy Auth:
 
 **Option A: Using Dynamic Client Registration (DCR)**
 ```bash
-curl -X POST https://localhost:7088/connect/register \
+curl -X POST https://localhost:5001/connect/register \
   -H "Content-Type: application/json" \
   -d '{
     "client_name": "My Example App",
@@ -41,7 +41,7 @@ curl -X POST https://localhost:7088/connect/register \
 ```
 
 **Option B: Using the Admin Dashboard**
-1. Go to https://localhost:7088/admin/clients
+1. Go to https://localhost:5001/admin/clients
 2. Click "Add Client"
 3. Configure redirect URIs and grant types
 
@@ -50,7 +50,7 @@ curl -X POST https://localhost:7088/connect/register \
 Each example uses environment variables for configuration:
 
 ```bash
-export ANDY_AUTH_SERVER=https://localhost:7088
+export ANDY_AUTH_SERVER=https://localhost:5001
 export CLIENT_ID=your-client-id
 export CLIENT_SECRET=your-client-secret
 ```
