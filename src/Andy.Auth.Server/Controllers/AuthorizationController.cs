@@ -1,5 +1,6 @@
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Services;
+using Andy.Auth.Server.Telemetry;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -10,6 +11,7 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
+using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Json;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -217,6 +219,38 @@ public class AuthorizationController : ControllerBase
 
     [HttpPost("~/connect/token")]
     public async Task<IActionResult> Exchange()
+    {
+        // OT4 (rivoli-ai/conductor#1262) — token mint is the security-
+        // critical operation we most want to observe. Open a span around
+        // the entire grant-type dispatch so every successful or failed
+        // mint surfaces in the APM waterfall, then increment the
+        // tokens-minted counter on the way out keyed by outcome.
+        var grantType = HttpContext.Request.Form["grant_type"].ToString();
+        var clientId = HttpContext.Request.Form["client_id"].ToString();
+
+        using var activity = AuthTelemetry.ActivitySource.StartActivity(
+            "TokenMint", ActivityKind.Server);
+        activity?.SetTag("auth.grant_type", grantType);
+        activity?.SetTag("auth.client_id", clientId);
+
+        var result = await ExchangeCoreAsync();
+
+        // OpenIddict returns SignInResult on success and ForbidResult on
+        // failure (the framework translates these to the OAuth response
+        // payload). Tag both the span and the counter accordingly so the
+        // APM waterfall and the metrics dashboards agree on outcome.
+        var outcome = result is Microsoft.AspNetCore.Mvc.SignInResult ? "success" : "failure";
+        activity?.SetTag("auth.outcome", outcome);
+        activity?.SetStatus(outcome == "success" ? ActivityStatusCode.Ok : ActivityStatusCode.Error);
+        AuthTelemetry.TokensMinted.Add(
+            1,
+            new KeyValuePair<string, object?>("auth.grant_type", grantType),
+            new KeyValuePair<string, object?>("auth.outcome", outcome));
+
+        return result;
+    }
+
+    private async Task<IActionResult> ExchangeCoreAsync()
     {
         _logger.LogInformation("Token exchange requested. Grant type: {GrantType}, Client: {ClientId}",
             HttpContext.Request.Form["grant_type"].ToString(),
