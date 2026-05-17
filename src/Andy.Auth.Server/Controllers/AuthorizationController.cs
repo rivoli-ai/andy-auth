@@ -230,8 +230,14 @@ public class AuthorizationController : ControllerBase
 
         using var activity = AuthTelemetry.ActivitySource.StartActivity(
             "TokenMint", ActivityKind.Server);
-        activity?.SetTag("auth.grant_type", grantType);
-        activity?.SetTag("auth.client_id", clientId);
+        // OT7 (rivoli-ai/conductor#1265). Attributes renamed under the
+        // `andy.auth.*` namespace per docs/semconv-compliance.md. The
+        // legacy `auth.*` names emit alongside for one release per the
+        // OT1 dual-emit precedent so existing dashboards keep working.
+        activity?.SetTag("andy.auth.grant_type", grantType);
+        activity?.SetTag("andy.auth.client_id", clientId);
+        activity?.SetTag("auth.grant_type", grantType);        // deprecated; removed in Andy.Telemetry 0.3.0
+        activity?.SetTag("auth.client_id", clientId);          // deprecated; removed in Andy.Telemetry 0.3.0
 
         var result = await ExchangeCoreAsync();
 
@@ -240,12 +246,13 @@ public class AuthorizationController : ControllerBase
         // payload). Tag both the span and the counter accordingly so the
         // APM waterfall and the metrics dashboards agree on outcome.
         var outcome = result is Microsoft.AspNetCore.Mvc.SignInResult ? "success" : "failure";
-        activity?.SetTag("auth.outcome", outcome);
+        activity?.SetTag("andy.auth.outcome", outcome);
+        activity?.SetTag("auth.outcome", outcome);             // deprecated; removed in Andy.Telemetry 0.3.0
         activity?.SetStatus(outcome == "success" ? ActivityStatusCode.Ok : ActivityStatusCode.Error);
         AuthTelemetry.TokensMinted.Add(
             1,
-            new KeyValuePair<string, object?>("auth.grant_type", grantType),
-            new KeyValuePair<string, object?>("auth.outcome", outcome));
+            new KeyValuePair<string, object?>("andy.auth.grant_type", grantType),
+            new KeyValuePair<string, object?>("andy.auth.outcome", outcome));
 
         return result;
     }

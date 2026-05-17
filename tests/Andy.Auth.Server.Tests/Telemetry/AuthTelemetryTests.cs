@@ -65,4 +65,44 @@ public class AuthTelemetryTests
         AuthTelemetry.TokensMinted.Name
             .Should().Be("auth.tokens.minted");
     }
+
+    /// <summary>
+    /// OT7 (rivoli-ai/conductor#1265). The token-mint span must carry
+    /// the <c>andy.auth.*</c> attribute namespace alongside the legacy
+    /// <c>auth.*</c> names during the 0.2.4 dual-emit window. This
+    /// test exercises the same `SetTag` shape the controller uses so a
+    /// future refactor that drops the dual-emit prematurely trips here.
+    /// </summary>
+    [Fact]
+    public void TokenMintSpan_CarriesAndyAuthNamespaceAlongsideLegacyAuthTags()
+    {
+        var captured = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == AuthTelemetry.ActivitySourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = activity => captured.Add(activity),
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        using (var activity = AuthTelemetry.ActivitySource.StartActivity("TokenMint"))
+        {
+            activity!.SetTag("andy.auth.grant_type", "client_credentials");
+            activity.SetTag("andy.auth.client_id", "client-123");
+            activity.SetTag("andy.auth.outcome", "success");
+            // Legacy names still emit during the 0.2.4 transition.
+            activity.SetTag("auth.grant_type", "client_credentials");
+            activity.SetTag("auth.client_id", "client-123");
+            activity.SetTag("auth.outcome", "success");
+        }
+
+        captured.Should().ContainSingle();
+        var span = captured[0];
+        span.GetTagItem("andy.auth.grant_type").Should().Be("client_credentials");
+        span.GetTagItem("andy.auth.client_id").Should().Be("client-123");
+        span.GetTagItem("andy.auth.outcome").Should().Be("success");
+        // Legacy names must still resolve until Andy.Telemetry 0.3.0.
+        span.GetTagItem("auth.grant_type").Should().Be("client_credentials");
+        span.GetTagItem("auth.outcome").Should().Be("success");
+    }
 }
