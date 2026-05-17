@@ -3,11 +3,14 @@ using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Mcp;
 using Andy.Auth.Server.Middleware;
 using Andy.Auth.Server.Services;
+using Andy.Auth.Server.Telemetry;
+using Andy.Telemetry;
 using AspNetCoreRateLimit;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Validation.AspNetCore;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -370,6 +373,36 @@ builder.Services
 
 builder.Services.AddScoped<AuthMcpTools>();
 
+// --- OpenTelemetry (via Andy.Telemetry) ---
+// OT4 (rivoli-ai/conductor#1262): andy-auth ships zero OTel DLLs today.
+// Wire OTLP export to Conductor's local receiver at :4318. The Conductor
+// embedded launcher sets OTEL_EXPORTER_OTLP_ENDPOINT/_PROTOCOL/_SERVICE_NAME
+// (see Conductor/Core/ServiceHost/Services/AuthServiceConfig.swift); the
+// AndyTelemetry config block under appsettings.Embedded.json is the
+// fallback for non-Conductor embedded launches.
+//
+// Conductor's UnifiedProxy already emits server-side request spans, so
+// EnableAspNetCoreInstrumentation stays off here to avoid double-counting.
+builder.Services.AddAndyTelemetry(builder.Configuration, o =>
+{
+    if (string.IsNullOrWhiteSpace(o.ServiceName))
+        o.ServiceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? "andy-auth";
+    if (string.IsNullOrWhiteSpace(o.OtlpEndpoint))
+        o.OtlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
+    if (string.IsNullOrWhiteSpace(o.Protocol) || o.Protocol == "grpc")
+    {
+        var envProtocol = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_PROTOCOL");
+        if (!string.IsNullOrWhiteSpace(envProtocol))
+            o.Protocol = envProtocol;
+    }
+    o.ActivitySources.Add(AuthTelemetry.ActivitySourceName);
+    o.Meters.Add(AuthTelemetry.MeterName);
+    o.EnableAspNetCoreInstrumentation = false;
+});
+// EF Core tracing is service-specific (not bundled in Andy.Telemetry).
+builder.Services.AddOpenTelemetry()
+    .WithTracing(t => t.AddEntityFrameworkCoreInstrumentation());
+
 // Configure CORS to allow frontend applications
 var allowedOrigins = builder.Configuration.GetSection("CorsOrigins:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 
@@ -480,6 +513,11 @@ if (app.Environment.IsDevelopment())
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// --- Prometheus metrics scraping (via Andy.Telemetry) ---
+// OT4 (rivoli-ai/conductor#1262). Exposes /metrics for the Conductor
+// scraper; OTLP push is independent.
+app.MapAndyTelemetry();
 
 // Map MCP Server endpoint at /mcp with permissive CORS for MCP clients
 // Require authorization so clients (e.g., Claude Desktop) receive an OAuth challenge

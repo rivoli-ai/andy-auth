@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Andy.Telemetry" Version="0.2.1" />
     <PackageReference Include="AspNetCoreRateLimit" Version="5.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="8.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0" />
@@ -24,6 +25,8 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
     <PackageReference Include="OpenIddict.AspNetCore" Version="7.2.0" />
     <PackageReference Include="OpenIddict.EntityFrameworkCore" Version="7.2.0" />
+    <!-- OT4 (rivoli-ai/conductor#1262) — service-specific EF Core tracing; not bundled in Andy.Telemetry. -->
+    <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.0.0-beta.12" />
     <PackageReference Include="QRCoder" Version="1.4.3" />
   </ItemGroup>
 
