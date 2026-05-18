@@ -302,6 +302,29 @@ builder.Services.AddOpenIddict()
             options.RegisterResources(mcpResources);
         }
 
+        // Register API audience resources sourced from the same registration
+        // manifests the DbSeeder consumes. OpenIddict's resource validator
+        // (event 6273 / OpenIddict-error ID2190) rejects any `resource`
+        // parameter not in the static allow-list set here — including the
+        // RFC 8693 token-exchange flow where the actor is asking for a
+        // downstream service audience like `urn:andy-models-api`. Driving
+        // this from the manifests keeps the allow-list aligned with what
+        // ships in the bundle without per-environment config drift.
+        var manifestLoaderLogger = LoggerFactory.Create(b => b.AddConsole())
+            .CreateLogger<RegistrationManifestLoader>();
+        var manifestLoader = new RegistrationManifestLoader(
+            builder.Configuration, manifestLoaderLogger);
+        var manifestAudiences = manifestLoader.LoadAll()
+            .Select(m => m.Auth?.Audience)
+            .Where(a => !string.IsNullOrWhiteSpace(a))
+            .Cast<string>()
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (manifestAudiences.Length > 0)
+        {
+            options.RegisterResources(manifestAudiences);
+        }
+
         // Use reference tokens for refresh tokens only (stored in database, can be revoked)
         // Access tokens are JWTs so they can be validated by external APIs without introspection
         options.UseReferenceRefreshTokens();
