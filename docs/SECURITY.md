@@ -188,7 +188,7 @@ Before deploying to production, verify:
 - [ ] Security headers are verified using tools like securityheaders.com
 - [ ] Application is behind a reverse proxy (nginx, Caddy, etc.)
 - [ ] PostgreSQL is not exposed to the public internet
-- [ ] Admin accounts use strong passwords and 2FA (when implemented)
+- [ ] Admin accounts use strong passwords and 2FA (TOTP, via `TwoFactorController`)
 
 ## Security Testing
 

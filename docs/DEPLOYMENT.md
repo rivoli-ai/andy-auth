@@ -225,7 +225,11 @@ AndyAuth__Audience=andy-docs-api
 AndyAuth__RequireHttpsMetadata=true
 ```
 
-### Wagram Frontend (Vercel)
+### Andy Docs SPA (Vercel)
+
+> Historically referred to as the "Wagram frontend"; the `andy-docs-web` client
+> still keeps `docs.wagram.ai` / `docs.uat.wagram.ai` in its redirect-URI
+> allow-list (see `DbSeeder.cs`) until the public domain migration lands.
 
 **Environment Variables:**
 ```bash
@@ -389,7 +393,7 @@ railway variables --json > env-backup.json
 
 ### Client Integration
 - [ ] Andy Docs API updated
-- [ ] Wagram frontend updated
+- [ ] Andy Docs SPA (`andy-docs-web`) updated
 - [ ] Claude Desktop tested
 - [ ] All OAuth clients working
 

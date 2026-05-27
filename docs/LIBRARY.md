@@ -825,7 +825,7 @@ builder.Services.AddAndyAuth(options =>
 
 ## Support
 
-- **Documentation**: [docs/](../docs/)
+- **Documentation**: [docs/](./)
 - **Issues**: [GitHub Issues](https://github.com/rivoli-ai/andy-auth/issues)
 - **Server Docs**: [Andy.Auth.Server Documentation](./DEPLOYMENT.md)
 
