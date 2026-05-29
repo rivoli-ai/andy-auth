@@ -108,49 +108,73 @@ public sealed class ClientCredentialsTokenProvider : IRefreshableServiceTokenPro
     }
 
     /// <summary>
-    /// Retry schedule used when the token endpoint returns a transient
-    /// failure (502/503/504 / connection refused / DNS / TLS errors).
-    /// Total wall-clock ~7.7s before giving up — long enough to cover
-    /// andy-auth's typical cold-start, short enough to fail fast on
-    /// genuinely-misconfigured deployments.
-    ///
-    /// Cold-start race documented at conductor#XXXX (PV epic): every
-    /// service spawned in the application wave hits andy-auth for an
-    /// M2M token within milliseconds of its own start; if andy-auth
-    /// hasn't bound its listener yet the proxy returns 502 and the
-    /// caller's hosted bootstrapper (e.g.
-    /// <c>PlannerSettingsBootstrapper</c>) calls
-    /// <c>StopApplication</c>. The retry collapses that race onto a
-    /// successful second-or-third attempt without flapping.
+    /// Capped exponential backoff for transient token-endpoint failures
+    /// (502/503/504/408/429 / connection refused / DNS / TLS errors).
+    /// The number of attempts is bounded by
+    /// <see cref="AndyAuthM2MOptions.StartupRetryBudget"/> rather than a
+    /// fixed count, so the same schedule covers both a fast standalone
+    /// restart and a slow embedded full-fleet cold start (conductor#1902)
+    /// without flapping. Steps cap at 5s so a long budget doesn't sit
+    /// idle between probes.
     /// </summary>
-    private static readonly TimeSpan[] RetryBackoffs =
+    private static TimeSpan BackoffFor(int attempt) => attempt switch
     {
-        TimeSpan.FromMilliseconds(200),
-        TimeSpan.FromMilliseconds(500),
-        TimeSpan.FromSeconds(1),
-        TimeSpan.FromSeconds(2),
-        TimeSpan.FromSeconds(4),
+        0 => TimeSpan.FromMilliseconds(200),
+        1 => TimeSpan.FromMilliseconds(500),
+        2 => TimeSpan.FromSeconds(1),
+        3 => TimeSpan.FromSeconds(2),
+        4 => TimeSpan.FromSeconds(4),
+        _ => TimeSpan.FromSeconds(5),
     };
 
     private async Task<string> FetchAsync(CancellationToken ct)
     {
-        Exception? lastTransient = null;
-        for (var attempt = 0; attempt <= RetryBackoffs.Length; attempt++)
+        // Retry transient failures until the *planned* cumulative delay
+        // would exceed the configured budget. We sum planned delays
+        // rather than read a clock so the decision is deterministic and
+        // unit-testable (a tiny budget => fail fast; a generous one =>
+        // ride out a cold start). conductor#1902.
+        var budget = _options.StartupRetryBudget;
+        ServiceTokenException? lastTransient = null;
+        var planned = TimeSpan.Zero;
+        var attempt = 0;
+        while (true)
         {
             try
             {
                 return await FetchOnceAsync(ct).ConfigureAwait(false);
             }
-            catch (ServiceTokenException ex) when (IsTransient(ex) && attempt < RetryBackoffs.Length)
+            catch (ServiceTokenException ex) when (IsTransient(ex))
             {
                 lastTransient = ex;
-                _logger.LogDebug(
-                    "M2M token fetch attempt {Attempt}/{Total} failed transiently ({Code}); retrying in {Delay}ms",
-                    attempt + 1,
-                    RetryBackoffs.Length + 1,
-                    ExtractCode(ex),
-                    RetryBackoffs[attempt].TotalMilliseconds);
-                await Task.Delay(RetryBackoffs[attempt], ct).ConfigureAwait(false);
+                var delay = BackoffFor(attempt);
+                if (planned + delay > budget)
+                {
+                    // Budget exhausted (or retries disabled, budget == 0):
+                    // stop and surface the last error below.
+                    break;
+                }
+
+                if (attempt == 0)
+                {
+                    // ONE friendly line on the first miss instead of a
+                    // full exception stack per attempt — this is the
+                    // expected cold-start path, not an error yet.
+                    _logger.LogInformation(
+                        "[M2M-TOKEN-UNREACHABLE] {Code} on first token fetch from {Endpoint}; " +
+                        "retrying up to {Budget:0.#}s (likely cold start).",
+                        ExtractCode(ex), _options.ResolveTokenEndpoint(), budget.TotalSeconds);
+                }
+                else
+                {
+                    _logger.LogDebug(
+                        "M2M token fetch retry {Attempt} failed transiently ({Code}); next in {Delay}ms",
+                        attempt + 1, ExtractCode(ex), delay.TotalMilliseconds);
+                }
+
+                await Task.Delay(delay, ct).ConfigureAwait(false);
+                planned += delay;
+                attempt++;
             }
         }
         // All retries exhausted on transient failures — surface the

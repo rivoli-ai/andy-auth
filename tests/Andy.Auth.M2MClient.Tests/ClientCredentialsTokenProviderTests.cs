@@ -135,12 +135,68 @@ public sealed class ClientCredentialsTokenProviderTests
     {
         var handler = new StubHandler((_, _) =>
             Task.FromException<HttpResponseMessage>(new HttpRequestException("connect failed")));
-        using var provider = NewProvider(handler, new FakeTimeProvider());
+        // Budget zero => retries disabled, first failure propagates
+        // immediately (keeps this test fast and asserts the give-up path).
+        using var provider = NewProvider(handler, new FakeTimeProvider(),
+            startupRetryBudget: TimeSpan.Zero);
 
         var ex = await Assert.ThrowsAsync<ServiceTokenException>(() =>
             provider.GetTokenAsync(CancellationToken.None));
         Assert.Contains("[M2M-TOKEN-UNREACHABLE]", ex.Message);
         Assert.IsType<HttpRequestException>(ex.InnerException);
+    }
+
+    [Fact]
+    public async Task GetTokenAsync_RetriesTransientFailure_ThenSucceeds()
+    {
+        // conductor#1902: under the embedded daemon the proxy route to
+        // andy-auth is connection-refused for the first few probes after
+        // this service starts. With a budget the provider must ride that
+        // out and succeed on a later attempt rather than throwing.
+        var calls = 0;
+        var handler = new StubHandler((_, _) =>
+        {
+            calls++;
+            if (calls < 3)
+            {
+                return Task.FromException<HttpResponseMessage>(
+                    new HttpRequestException("Connection refused (localhost:9100)"));
+            }
+            return Task.FromResult(TokenResponse("late", expiresIn: 3600));
+        });
+        // Generous budget; the first two backoffs (200ms + 500ms) are
+        // well within it, so this completes in <1s of real time.
+        using var provider = NewProvider(handler, new FakeTimeProvider(),
+            startupRetryBudget: TimeSpan.FromSeconds(30));
+
+        var token = await provider.GetTokenAsync(CancellationToken.None);
+
+        Assert.Equal("late", token);
+        Assert.Equal(3, calls);
+    }
+
+    [Fact]
+    public async Task GetTokenAsync_ExhaustsBudget_ThenThrowsLastTransient()
+    {
+        // Always-refused with a tiny budget: exactly the first backoff
+        // (200ms) fits, so one retry happens, then the budget is exceeded
+        // and the last [M2M-TOKEN-UNREACHABLE] surfaces.
+        var calls = 0;
+        var handler = new StubHandler((_, _) =>
+        {
+            calls++;
+            return Task.FromException<HttpResponseMessage>(
+                new HttpRequestException("Connection refused"));
+        });
+        using var provider = NewProvider(handler, new FakeTimeProvider(),
+            startupRetryBudget: TimeSpan.FromMilliseconds(300));
+
+        var ex = await Assert.ThrowsAsync<ServiceTokenException>(() =>
+            provider.GetTokenAsync(CancellationToken.None));
+        Assert.Contains("[M2M-TOKEN-UNREACHABLE]", ex.Message);
+        // Initial attempt + one retry (200ms <= 300ms budget); the next
+        // backoff (500ms) would exceed the budget, so we stop at 2 calls.
+        Assert.Equal(2, calls);
     }
 
     [Fact]
@@ -250,7 +306,8 @@ public sealed class ClientCredentialsTokenProviderTests
     }
 
     private static ClientCredentialsTokenProvider NewProvider(
-        HttpMessageHandler handler, TimeProvider time, string? scope = null)
+        HttpMessageHandler handler, TimeProvider time, string? scope = null,
+        TimeSpan? startupRetryBudget = null)
     {
         var http = new HttpClient(handler);
         var factory = new SingleClientFactory(http);
@@ -260,6 +317,9 @@ public sealed class ClientCredentialsTokenProviderTests
             ClientId = ClientId,
             ClientSecretEnvVar = EnvVar,
             Scope = scope,
+            // Default to no-retry in tests so the happy-path / error-path
+            // cases stay fast; retry-specific tests opt into a budget.
+            StartupRetryBudget = startupRetryBudget ?? TimeSpan.Zero,
         });
         return new ClientCredentialsTokenProvider(
             factory, options, time, NullLogger<ClientCredentialsTokenProvider>.Instance);

@@ -46,6 +46,32 @@ public sealed class AndyAuthM2MOptions
     /// </summary>
     public string? Scope { get; set; }
 
+    /// <summary>
+    /// Maximum total wall-clock the token provider keeps retrying
+    /// <em>transient</em> token-endpoint failures (connection-refused /
+    /// DNS / TLS, and gateway 502/503/504/408/429) before giving up and
+    /// surfacing the last error.
+    ///
+    /// Covers the embedded full-fleet cold start (conductor#1902): every
+    /// service spawned in the application wave dials andy-auth for an M2M
+    /// token within milliseconds of its own start, but the route to
+    /// andy-auth through Conductor's UnifiedProxy (e.g.
+    /// <c>http://localhost:9100/auth/connect/token</c>) may not be live
+    /// for tens of seconds after this service starts (postgres + zot +
+    /// nats + andy-auth migration all have to complete first). With the
+    /// budget set generously the fetch succeeds on a later attempt
+    /// instead of exhausting — so the caller never sees an exception to
+    /// log, and the planner gets its real settings rather than degrading.
+    ///
+    /// Bounded so a genuinely-misconfigured deployment (wrong endpoint,
+    /// auth permanently down) still fails fast-ish rather than hanging
+    /// forever. The success path returns as soon as auth is reachable
+    /// (typically a few seconds), so this is only the worst-case wait.
+    /// Set to <see cref="TimeSpan.Zero"/> to disable retries entirely
+    /// (first failure propagates immediately).
+    /// </summary>
+    public TimeSpan StartupRetryBudget { get; set; } = TimeSpan.FromSeconds(30);
+
     /// <summary>True when M2M outbound auth is configured.</summary>
     public bool IsEnabled =>
         !string.IsNullOrWhiteSpace(ClientId) &&
