@@ -76,7 +76,17 @@ public class InProcessSubjectTokenValidator : ISubjectTokenValidator
         var validationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = options.Issuer.ToString().TrimEnd('/'),
+            // Accept the issuer both with and without a trailing slash. OpenIddict
+            // issues the `iss` claim verbatim from the configured issuer URI, which
+            // carries a trailing slash (e.g. "http://localhost:9100/auth/"), while a
+            // single trimmed ValidIssuer ("…/auth") is an exact-match miss → the
+            // subject_token is rejected and the whole OBO exchange fails with
+            // invalid_grant (rivoli-ai/conductor#1973). List both normalized forms.
+            ValidIssuers = new[]
+            {
+                options.Issuer.ToString(),
+                options.Issuer.ToString().TrimEnd('/'),
+            },
             ValidateAudience = false,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
