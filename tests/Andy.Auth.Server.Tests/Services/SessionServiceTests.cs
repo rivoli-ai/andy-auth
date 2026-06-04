@@ -715,4 +715,149 @@ public class SessionServiceTests : IDisposable
         serviceWithDefaults.SessionTimeout.Should().Be(TimeSpan.FromDays(30));
         serviceWithDefaults.InactivityTimeout.Should().Be(TimeSpan.FromDays(7));
     }
+
+    // ==================== ResolveSessionTruthAsync Tests (SM.2.1) ====================
+    // The single place that decides active / revoked / expired / none. Every
+    // branch is exercised so the 200/410 mapping downstream is well-grounded.
+
+    private async Task<UserSession> SeedSessionAsync(
+        string userId,
+        string sessionId,
+        bool revoked = false,
+        DateTime? expiresAt = null,
+        DateTime? revokedAt = null,
+        DateTime? lastActivity = null,
+        string? reason = null)
+    {
+        var session = new UserSession
+        {
+            UserId = userId,
+            SessionId = sessionId,
+            CreatedAt = DateTime.UtcNow.AddHours(-1),
+            LastActivity = lastActivity ?? DateTime.UtcNow,
+            ExpiresAt = expiresAt ?? DateTime.UtcNow.AddDays(30),
+            IsRevoked = revoked,
+            RevokedAt = revoked ? (revokedAt ?? DateTime.UtcNow) : null,
+            RevocationReason = revoked ? (reason ?? "Test revocation") : null
+        };
+        _context.UserSessions.Add(session);
+        await _context.SaveChangesAsync();
+        return session;
+    }
+
+    [Fact]
+    public async Task ResolveSessionTruth_LiveSession_ReturnsActive()
+    {
+        await SeedSessionAsync("user-1", "sess-live", expiresAt: DateTime.UtcNow.AddDays(5));
+
+        var truth = await _service.ResolveSessionTruthAsync("user-1");
+
+        truth.Kind.Should().Be(SessionTruthKind.Active);
+        truth.IsAuthenticated.Should().BeTrue();
+        truth.IsRevoked.Should().BeFalse();
+        truth.Subject.Should().Be("user-1");
+        truth.SessionId.Should().Be("sess-live");
+        truth.ExpiresAt.Should().BeCloseTo(DateTime.UtcNow.AddDays(5), TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task ResolveSessionTruth_RevokedSession_ReturnsRevoked()
+    {
+        var revokedAt = DateTime.UtcNow.AddMinutes(-2);
+        await SeedSessionAsync("user-2", "sess-revoked", revoked: true,
+            revokedAt: revokedAt, reason: "Admin force-logout");
+
+        var truth = await _service.ResolveSessionTruthAsync("user-2");
+
+        truth.Kind.Should().Be(SessionTruthKind.Revoked);
+        truth.IsRevoked.Should().BeTrue();
+        truth.IsAuthenticated.Should().BeFalse();
+        truth.RevokedAt.Should().BeCloseTo(revokedAt, TimeSpan.FromSeconds(5));
+        truth.Reason.Should().Be("Admin force-logout");
+    }
+
+    [Fact]
+    public async Task ResolveSessionTruth_ExpiredSession_ReturnsExpired()
+    {
+        await SeedSessionAsync("user-3", "sess-expired",
+            expiresAt: DateTime.UtcNow.AddDays(-1));
+
+        var truth = await _service.ResolveSessionTruthAsync("user-3");
+
+        truth.Kind.Should().Be(SessionTruthKind.Expired);
+        truth.IsAuthenticated.Should().BeFalse();
+        truth.IsRevoked.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ResolveSessionTruth_NoSession_ReturnsNone_NeverThrows()
+    {
+        var truth = await _service.ResolveSessionTruthAsync("user-nobody");
+
+        truth.Kind.Should().Be(SessionTruthKind.None);
+        truth.IsAuthenticated.Should().BeFalse();
+        truth.IsRevoked.Should().BeFalse();
+        truth.SessionId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ResolveSessionTruth_LiveSessionWinsOverRevokedSibling()
+    {
+        // A revoked old session plus a live new one for the same subject:
+        // the subject is still authenticated.
+        await SeedSessionAsync("user-4", "sess-old", revoked: true,
+            revokedAt: DateTime.UtcNow.AddHours(-3));
+        await SeedSessionAsync("user-4", "sess-new",
+            expiresAt: DateTime.UtcNow.AddDays(10),
+            lastActivity: DateTime.UtcNow);
+
+        var truth = await _service.ResolveSessionTruthAsync("user-4");
+
+        truth.Kind.Should().Be(SessionTruthKind.Active);
+        truth.SessionId.Should().Be("sess-new");
+    }
+
+    [Fact]
+    public async Task ResolveSessionTruth_ExplicitSessionId_RevokedTakesPrecedenceOverLiveSibling()
+    {
+        // Asking about the specific revoked session must report Revoked even
+        // though the subject has another live session.
+        await SeedSessionAsync("user-5", "sess-revoked", revoked: true,
+            reason: "session_revoked");
+        await SeedSessionAsync("user-5", "sess-live",
+            expiresAt: DateTime.UtcNow.AddDays(10));
+
+        var truth = await _service.ResolveSessionTruthAsync("user-5", "sess-revoked");
+
+        truth.Kind.Should().Be(SessionTruthKind.Revoked);
+        truth.SessionId.Should().Be("sess-revoked");
+    }
+
+    [Fact]
+    public async Task ResolveSessionTruth_LatestRevocationIsWatermark()
+    {
+        // Two revoked sessions; the latest RevokedAt is the watermark a client
+        // reconciles a stale read against.
+        var older = DateTime.UtcNow.AddHours(-2);
+        var newer = DateTime.UtcNow.AddMinutes(-1);
+        await SeedSessionAsync("user-6", "sess-a", revoked: true, revokedAt: older);
+        await SeedSessionAsync("user-6", "sess-b", revoked: true, revokedAt: newer);
+
+        var truth = await _service.ResolveSessionTruthAsync("user-6");
+
+        truth.Kind.Should().Be(SessionTruthKind.Revoked);
+        truth.RevokedAt.Should().BeCloseTo(newer, TimeSpan.FromSeconds(5));
+        truth.SessionId.Should().Be("sess-b");
+    }
+
+    [Fact]
+    public async Task ResolveSessionTruth_ExplicitSessionId_NotFound_ReturnsNone()
+    {
+        await SeedSessionAsync("user-7", "sess-exists",
+            expiresAt: DateTime.UtcNow.AddDays(5));
+
+        var truth = await _service.ResolveSessionTruthAsync("user-7", "sess-missing");
+
+        truth.Kind.Should().Be(SessionTruthKind.None);
+    }
 }
