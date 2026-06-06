@@ -250,6 +250,119 @@ public class SessionService
     }
 
     /// <summary>
+    /// Resolves the authoritative session truth for a subject (and optional
+    /// session id), classifying it as active / revoked / expired / none.
+    /// <para>
+    /// SM.2.1 (rivoli-ai/conductor#2003): this is the single place that decides
+    /// whether a session is genuinely revoked (permanent → sign out) versus
+    /// merely live. It NEVER throws on "no session" — it returns a
+    /// <see cref="SessionTruth"/> with <c>Kind = None</c> so the caller can map
+    /// that to a clean 200/410 instead of a generic 500. Transient
+    /// infrastructure failures are surfaced by the caller as 503; they never
+    /// reach this method as a revocation.
+    /// </para>
+    /// <para>
+    /// Selection rule: prefer the explicitly-named <paramref name="sessionId"/>
+    /// when supplied; otherwise pick the most-recently-active session for the
+    /// subject. If the chosen/most-recent session is revoked we report Revoked,
+    /// using the highest <c>RevokedAt</c> as the watermark, so a client can
+    /// reconcile a stale status read against a newer revocation.
+    /// </para>
+    /// </summary>
+    public async Task<SessionTruth> ResolveSessionTruthAsync(string subject, string? sessionId = null)
+    {
+        var now = DateTime.UtcNow;
+
+        // Explicit session id wins when provided.
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            var named = await _dbContext.UserSessions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.SessionId == sessionId && s.UserId == subject);
+
+            if (named == null)
+            {
+                return SessionTruth.None(subject);
+            }
+
+            return ClassifySession(named, now);
+        }
+
+        // No explicit session id: look at all of the subject's sessions.
+        var sessions = await _dbContext.UserSessions
+            .AsNoTracking()
+            .Where(s => s.UserId == subject)
+            .ToListAsync();
+
+        if (sessions.Count == 0)
+        {
+            return SessionTruth.None(subject);
+        }
+
+        // A live (non-revoked, non-expired) session wins — the subject is active.
+        var live = sessions
+            .Where(s => !s.IsRevoked && s.ExpiresAt > now)
+            .OrderByDescending(s => s.LastActivity)
+            .FirstOrDefault();
+
+        if (live != null)
+        {
+            return ClassifySession(live, now);
+        }
+
+        // No live session. If any session was explicitly revoked, that is the
+        // authoritative permanent signal; use the latest revocation as watermark.
+        var revoked = sessions
+            .Where(s => s.IsRevoked)
+            .OrderByDescending(s => s.RevokedAt ?? DateTime.MinValue)
+            .FirstOrDefault();
+
+        if (revoked != null)
+        {
+            return ClassifySession(revoked, now);
+        }
+
+        // All sessions are expired (not revoked) — treat as Expired, not None.
+        var latest = sessions.OrderByDescending(s => s.ExpiresAt).First();
+        return ClassifySession(latest, now);
+    }
+
+    private static SessionTruth ClassifySession(UserSession session, DateTime now)
+    {
+        if (session.IsRevoked)
+        {
+            return new SessionTruth
+            {
+                Kind = SessionTruthKind.Revoked,
+                Subject = session.UserId,
+                SessionId = session.SessionId,
+                ExpiresAt = session.ExpiresAt,
+                RevokedAt = session.RevokedAt,
+                Reason = session.RevocationReason
+            };
+        }
+
+        if (session.ExpiresAt <= now)
+        {
+            return new SessionTruth
+            {
+                Kind = SessionTruthKind.Expired,
+                Subject = session.UserId,
+                SessionId = session.SessionId,
+                ExpiresAt = session.ExpiresAt
+            };
+        }
+
+        return new SessionTruth
+        {
+            Kind = SessionTruthKind.Active,
+            Subject = session.UserId,
+            SessionId = session.SessionId,
+            ExpiresAt = session.ExpiresAt
+        };
+    }
+
+    /// <summary>
     /// Cleans up expired sessions from the database.
     /// </summary>
     public async Task<int> CleanupExpiredSessionsAsync()
@@ -357,4 +470,46 @@ public class SessionStats
     public int ActiveSessions { get; set; }
     public int RevokedSessions { get; set; }
     public int ExpiredSessions { get; set; }
+}
+
+/// <summary>
+/// Authoritative classification of a session, computed by
+/// <see cref="SessionService.ResolveSessionTruthAsync"/>. SM.2.1.
+/// </summary>
+public enum SessionTruthKind
+{
+    /// <summary>No session exists for the subject.</summary>
+    None,
+
+    /// <summary>A live, non-revoked, non-expired session exists.</summary>
+    Active,
+
+    /// <summary>The session lapsed past its expiry without an explicit revoke.</summary>
+    Expired,
+
+    /// <summary>The session was explicitly revoked (permanent sign-out signal).</summary>
+    Revoked
+}
+
+/// <summary>
+/// Backend session truth: the source of record the API surface maps onto the
+/// <c>GET /auth/session</c> response and the revocation taxonomy. SM.2.1.
+/// </summary>
+public class SessionTruth
+{
+    public SessionTruthKind Kind { get; init; }
+    public string? Subject { get; init; }
+    public string? SessionId { get; init; }
+    public DateTime? ExpiresAt { get; init; }
+    public DateTime? RevokedAt { get; init; }
+    public string? Reason { get; init; }
+
+    public bool IsAuthenticated => Kind == SessionTruthKind.Active;
+    public bool IsRevoked => Kind == SessionTruthKind.Revoked;
+
+    public static SessionTruth None(string? subject) => new()
+    {
+        Kind = SessionTruthKind.None,
+        Subject = subject
+    };
 }

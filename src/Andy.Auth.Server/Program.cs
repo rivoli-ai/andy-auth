@@ -388,6 +388,11 @@ builder.Services.AddSingleton<ISubjectTokenValidator, InProcessSubjectTokenValid
 // Register token cleanup background service
 builder.Services.AddHostedService<TokenCleanupService>();
 
+// SM.2.2 (rivoli-ai/conductor#2004) — OAuth broker authorization service.
+// Owns lifecycle of OAuthAuthorization records: creation, callback classification,
+// state transitions, and crash-reconciliation status queries.
+builder.Services.AddScoped<OAuthAuthorizationService>();
+
 // Add MCP Server for AI assistant integration with group management
 builder.Services
     .AddMcpServer()

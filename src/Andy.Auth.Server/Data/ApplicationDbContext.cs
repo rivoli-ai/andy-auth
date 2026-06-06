@@ -54,6 +54,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     /// </summary>
     public DbSet<UserGroup> UserGroups { get; set; }
 
+    /// <summary>
+    /// SM.2.2 (rivoli-ai/conductor#2004) — in-flight and terminal OAuth broker
+    /// authorizations. Persisted so that a crashed client can reconcile its
+    /// OAuthFlowState on relaunch via GET /auth/oauth/authorizations/{id}.
+    /// </summary>
+    public DbSet<OAuthAuthorization> OAuthAuthorizations { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -149,6 +156,18 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .WithMany(g => g.UserGroups)
                 .HasForeignKey(ug => ug.GroupId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure OAuthAuthorization entity (SM.2.2)
+        builder.Entity<OAuthAuthorization>(entity =>
+        {
+            entity.HasIndex(a => a.AuthorizationId).IsUnique();
+            entity.HasIndex(a => new { a.State, a.ExpiresAt }); // cleanup + expiry queries
+            entity.Property(a => a.Provider).HasMaxLength(100).IsRequired();
+            entity.Property(a => a.SubjectId).HasMaxLength(450);
+            entity.Property(a => a.StateTokenHash).HasMaxLength(128);
+            entity.Property(a => a.FailureDetail).HasMaxLength(500);
+            entity.Property(a => a.ConnectionId).HasMaxLength(450);
         });
     }
 }
