@@ -1,4 +1,6 @@
+using Andy.Auth.Server.Configuration;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using OpenIddict.Abstractions;
 
 namespace Andy.Auth.Server.Data;
@@ -177,6 +179,20 @@ public class DbSeeder
         {
             descriptor.Permissions.Add(
                 OpenIddictConstants.Permissions.Prefixes.GrantType + Services.TokenExchangeConstants.GrantType);
+
+            // OpenIddict additionally enforces a per-client `rsr:<audience>`
+            // permission when the request carries a `resource` parameter
+            // (ID2192: "This client application is not allowed to use the
+            // specified resource(s)"). For token-exchange actors the set of
+            // downstream audiences they may target is already declared in
+            // TokenExchange:Policies, so derive the resource permissions
+            // from that single source of truth rather than introducing a
+            // parallel manifest field. See rivoli-ai/conductor#943.
+            foreach (var audience in GetTokenExchangeAudiencesFor(client.ClientId))
+            {
+                descriptor.Permissions.Add(
+                    OpenIddictConstants.Permissions.Prefixes.Resource + audience);
+            }
         }
         if (isConfidential)
         {
@@ -209,6 +225,35 @@ public class DbSeeder
         await appManager.CreateAsync(descriptor);
         _logger.LogInformation("[manifest] Created OAuth client: {ClientId} ({Type})",
             client.ClientId, isConfidential ? "confidential" : "public");
+    }
+
+    private List<TokenExchangePolicyEntry>? _tokenExchangePoliciesCache;
+
+    /// <summary>
+    /// Returns the downstream audiences this client is permitted to target
+    /// via RFC 8693 token exchange, as declared in
+    /// <c>TokenExchange:Policies</c>. The list is loaded from
+    /// <see cref="IConfiguration"/> once per seeder instance and cached.
+    /// Matching is case-insensitive on the actor client id.
+    /// </summary>
+    private IEnumerable<string> GetTokenExchangeAudiencesFor(string clientId)
+    {
+        if (_tokenExchangePoliciesCache is null)
+        {
+            var settings = _configuration
+                .GetSection(TokenExchangeSettings.SectionName)
+                .Get<TokenExchangeSettings>();
+            _tokenExchangePoliciesCache = settings?.Policies ?? new List<TokenExchangePolicyEntry>();
+        }
+
+        foreach (var entry in _tokenExchangePoliciesCache)
+        {
+            if (string.Equals(entry.ActorClientId, clientId, StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(entry.Audience))
+            {
+                yield return entry.Audience;
+            }
+        }
     }
 
     private static IEnumerable<string> CollectRedirectUris(

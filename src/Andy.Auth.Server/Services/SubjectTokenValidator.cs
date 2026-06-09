@@ -110,9 +110,15 @@ public class InProcessSubjectTokenValidator : ISubjectTokenValidator
 
         if (!result.IsValid)
         {
-            _logger.LogDebug(result.Exception, "subject_token rejected: {Reason}", result.Exception?.Message);
+            // Surface the concrete reason (IDX10223 expired, IDX10205 issuer,
+            // signature, etc.) in the returned FailureReason — the token-exchange
+            // handler logs it at Warning, so operators can tell an expired user
+            // token from a real config problem without a debug build
+            // (conductor#1973). The token itself is never logged.
+            var detail = result.Exception?.Message ?? "unknown validation failure";
+            _logger.LogWarning(result.Exception, "subject_token rejected: {Reason}", detail);
             return new SubjectTokenValidationResult(false, null, Array.Empty<string>(),
-                "subject_token rejected");
+                $"subject_token rejected: {detail}");
         }
 
         var sub = result.ClaimsIdentity?.FindFirst("sub")?.Value;

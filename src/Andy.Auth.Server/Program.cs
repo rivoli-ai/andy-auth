@@ -385,6 +385,13 @@ builder.Services.Configure<TokenExchangeSettings>(
 builder.Services.AddSingleton<ITokenExchangePolicy, TokenExchangePolicy>();
 builder.Services.AddSingleton<ISubjectTokenValidator, InProcessSubjectTokenValidator>();
 
+// Role → permission claim projection. Downstream services authorize on a
+// flat `permission` claim (e.g. andy-tasks tasks:approvePlan); this maps
+// the signed-in user's role bindings onto those strings at token issuance.
+builder.Services.Configure<RolePermissionOptions>(
+    builder.Configuration.GetSection(RolePermissionOptions.SectionName));
+builder.Services.AddScoped<RolePermissionResolver>();
+
 // Register token cleanup background service
 builder.Services.AddHostedService<TokenCleanupService>();
 

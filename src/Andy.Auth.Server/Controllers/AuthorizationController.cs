@@ -29,6 +29,7 @@ public class AuthorizationController : ControllerBase
     private readonly ApplicationDbContext _dbContext;
     private readonly ITokenExchangePolicy _tokenExchangePolicy;
     private readonly ISubjectTokenValidator _subjectTokenValidator;
+    private readonly RolePermissionResolver _rolePermissionResolver;
     private readonly ILogger<AuthorizationController> _logger;
 
     public AuthorizationController(
@@ -40,6 +41,7 @@ public class AuthorizationController : ControllerBase
         ApplicationDbContext dbContext,
         ITokenExchangePolicy tokenExchangePolicy,
         ISubjectTokenValidator subjectTokenValidator,
+        RolePermissionResolver rolePermissionResolver,
         ILogger<AuthorizationController> logger)
     {
         _applicationManager = applicationManager;
@@ -50,6 +52,7 @@ public class AuthorizationController : ControllerBase
         _dbContext = dbContext;
         _tokenExchangePolicy = tokenExchangePolicy;
         _subjectTokenValidator = subjectTokenValidator;
+        _rolePermissionResolver = rolePermissionResolver;
         _logger = logger;
     }
 
@@ -644,6 +647,19 @@ public class AuthorizationController : ControllerBase
             identity.AddClaim(new Claim("groups", groupCode).SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
         }
 
+        // Add permission claims for RBAC integration. Downstream services
+        // authorize on a flat `permission` claim — e.g. andy-tasks'
+        // `tasks:approvePlan` / `tasks:editPlan` policies do
+        // RequireClaim("permission", …). Project the principal's role
+        // bindings onto the permission strings granted by those roles
+        // (Authorization:RolePermissions config). Interim until the full
+        // AL-rbac roll-out sources effective permissions from andy-rbac.
+        var roles = await _userManager.GetRolesAsync(user);
+        foreach (var permission in _rolePermissionResolver.Resolve(roles))
+        {
+            identity.AddClaim(new Claim("permission", permission).SetDestinations(Destinations.AccessToken));
+        }
+
         // Set the list of scopes granted to the client application
         principal.SetScopes(scopes);
 
@@ -724,6 +740,13 @@ public class AuthorizationController : ControllerBase
             case "groups":
                 yield return Destinations.AccessToken;
                 yield return Destinations.IdentityToken;
+                yield break;
+
+            // Permission claim for RBAC integration — access token only
+            // (downstream service policies read it; it has no place in the
+            // identity token, which is for the client/UI).
+            case "permission":
+                yield return Destinations.AccessToken;
                 yield break;
 
             // Never include the security stamp in the access and identity tokens, as it's a secret value

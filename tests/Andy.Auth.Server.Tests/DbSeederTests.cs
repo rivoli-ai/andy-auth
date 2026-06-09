@@ -754,6 +754,169 @@ public class DbSeederTests : IDisposable
             Times.Once);
     }
 
+    [Fact]
+    public async Task SeedAsync_TokenExchangeActor_GetsResourcePermissionForEachAudience()
+    {
+        // Regression for rivoli-ai/conductor#943. OpenIddict rejects token-
+        // exchange requests carrying a `resource` parameter with
+        // ID2192 ("This client application is not allowed to use the
+        // specified resource(s)") unless the client has a per-resource
+        // permission (`rsr:<audience>`) seeded. The seeder used to add the
+        // token-exchange grant-type permission but never the matching
+        // resource permissions — the symptom was every container create
+        // returning HTTP 500 with the andy-models OBO exchange failing at
+        // the andy-auth token endpoint with HTTP 400.
+        //
+        // This test wires a manifest with a token-exchange-capable client
+        // and two TokenExchange:Policies entries naming that client as
+        // ActorClientId, then asserts both resource permissions land on
+        // the captured descriptor.
+        using var manifestDir = new TempManifestDirectory();
+        manifestDir.WriteManifest("actor", new
+        {
+            service = new
+            {
+                name = "actor-service",
+                displayName = "Actor Service",
+                description = "regression manifest for conductor#943",
+                embeddedProxyPrefix = "/actor"
+            },
+            auth = new
+            {
+                audience = "urn:actor-api",
+                apiClient = new
+                {
+                    clientId = "actor-api",
+                    clientType = "confidential",
+                    clientSecretEnvVar = "ACTOR_API_SECRET",
+                    displayName = "Actor API",
+                    grantTypes = new[] { "client_credentials", "token_exchange" },
+                    scopes = new[] { "openid" }
+                }
+            }
+        });
+        Environment.SetEnvironmentVariable("ACTOR_API_SECRET", "test-secret");
+
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
+            .ReturnsAsync((object?)null);
+
+        var capturedDescriptors = new List<OpenIddictApplicationDescriptor>();
+        _mockAppManager.Setup(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default))
+            .Callback<OpenIddictApplicationDescriptor, CancellationToken>((desc, _) => capturedDescriptors.Add(desc))
+            .ReturnsAsync(new object());
+
+        var configValues = new Dictionary<string, string?>
+        {
+            { "ASPNETCORE_ENVIRONMENT", "Production" },
+            { "Registrations:ManifestPaths:0", manifestDir.Path },
+            { "TokenExchange:Policies:0:ActorClientId", "actor-api" },
+            { "TokenExchange:Policies:0:Audience", "urn:downstream-one-api" },
+            { "TokenExchange:Policies:1:ActorClientId", "actor-api" },
+            { "TokenExchange:Policies:1:Audience", "urn:downstream-two-api" },
+            // Decoy: a policy for a different actor must NOT leak resource
+            // permissions onto our client.
+            { "TokenExchange:Policies:2:ActorClientId", "some-other-api" },
+            { "TokenExchange:Policies:2:Audience", "urn:should-not-leak-api" }
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configValues)
+            .Build();
+
+        var seeder = new DbSeeder(
+            _serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
+
+        await seeder.SeedAsync();
+
+        var actor = capturedDescriptors.FirstOrDefault(d => d.ClientId == "actor-api");
+        Assert.NotNull(actor);
+        Assert.Contains(
+            OpenIddictConstants.Permissions.Prefixes.GrantType + Andy.Auth.Server.Services.TokenExchangeConstants.GrantType,
+            actor!.Permissions);
+        Assert.Contains(
+            OpenIddictConstants.Permissions.Prefixes.Resource + "urn:downstream-one-api",
+            actor.Permissions);
+        Assert.Contains(
+            OpenIddictConstants.Permissions.Prefixes.Resource + "urn:downstream-two-api",
+            actor.Permissions);
+        Assert.DoesNotContain(
+            OpenIddictConstants.Permissions.Prefixes.Resource + "urn:should-not-leak-api",
+            actor.Permissions);
+
+        Environment.SetEnvironmentVariable("ACTOR_API_SECRET", null);
+    }
+
+    [Fact]
+    public async Task SeedAsync_NonTokenExchangeClient_DoesNotGetResourcePermissions()
+    {
+        // Companion to the test above: a client that doesn't declare
+        // token_exchange in its grantTypes must not get `rsr:` permissions
+        // even if a (mis-configured) TokenExchange:Policies entry names it
+        // as ActorClientId. OpenIddict's resource enforcement only kicks
+        // in for requests that carry a `resource` parameter, and we want
+        // to keep the principle of least privilege: no token-exchange
+        // grant => no resource permissions.
+        using var manifestDir = new TempManifestDirectory();
+        manifestDir.WriteManifest("plain", new
+        {
+            service = new
+            {
+                name = "plain-service",
+                displayName = "Plain Service",
+                description = "plain client_credentials, no token_exchange",
+                embeddedProxyPrefix = "/plain"
+            },
+            auth = new
+            {
+                audience = "urn:plain-api",
+                apiClient = new
+                {
+                    clientId = "plain-api",
+                    clientType = "confidential",
+                    clientSecretEnvVar = "PLAIN_API_SECRET",
+                    displayName = "Plain API",
+                    grantTypes = new[] { "client_credentials" },
+                    scopes = new[] { "openid" }
+                }
+            }
+        });
+        Environment.SetEnvironmentVariable("PLAIN_API_SECRET", "test-secret");
+
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
+            .ReturnsAsync((object?)null);
+
+        var capturedDescriptors = new List<OpenIddictApplicationDescriptor>();
+        _mockAppManager.Setup(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default))
+            .Callback<OpenIddictApplicationDescriptor, CancellationToken>((desc, _) => capturedDescriptors.Add(desc))
+            .ReturnsAsync(new object());
+
+        var configValues = new Dictionary<string, string?>
+        {
+            { "ASPNETCORE_ENVIRONMENT", "Production" },
+            { "Registrations:ManifestPaths:0", manifestDir.Path },
+            { "TokenExchange:Policies:0:ActorClientId", "plain-api" },
+            { "TokenExchange:Policies:0:Audience", "urn:must-not-appear-api" }
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configValues)
+            .Build();
+
+        var seeder = new DbSeeder(
+            _serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
+
+        await seeder.SeedAsync();
+
+        var plain = capturedDescriptors.FirstOrDefault(d => d.ClientId == "plain-api");
+        Assert.NotNull(plain);
+        Assert.DoesNotContain(
+            OpenIddictConstants.Permissions.Prefixes.Resource + "urn:must-not-appear-api",
+            plain!.Permissions);
+        Assert.DoesNotContain(
+            OpenIddictConstants.Permissions.Prefixes.GrantType + Andy.Auth.Server.Services.TokenExchangeConstants.GrantType,
+            plain.Permissions);
+
+        Environment.SetEnvironmentVariable("PLAIN_API_SECRET", null);
+    }
+
     /// <summary>
     /// Disposable temp directory holding one or more registration.json
     /// manifest files. Wired into config via "Registrations:ManifestPaths".
