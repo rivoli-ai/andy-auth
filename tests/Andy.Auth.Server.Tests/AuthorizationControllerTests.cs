@@ -60,6 +60,8 @@ public class AuthorizationControllerTests
             _dbContext,
             _mockTokenExchangePolicy.Object,
             _mockSubjectTokenValidator.Object,
+            new RolePermissionResolver(
+                Microsoft.Extensions.Options.Options.Create(new RolePermissionOptions())),
             _mockLogger.Object);
 
         _httpContext = new DefaultHttpContext();
