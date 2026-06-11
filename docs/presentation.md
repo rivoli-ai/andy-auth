@@ -65,9 +65,9 @@ andy-auth/
 ├── tests/
 │   ├── Andy.Auth.Server.Tests/    ← unit (54 tests)
 │   ├── Andy.Auth.Tests/           ← client lib tests
-│   └── Andy.Auth.E2E.Tests/       ← Playwright
-├── examples/csharp-web/           ← reference integration
-└── oauth-python/                  ← 42-test external suite
+│   ├── Andy.Auth.E2E.Tests/       ← Playwright
+│   └── oauth-python/              ← 42-test external suite
+└── examples/csharp-web/           ← reference integration
 ```
 
 6 `.csproj` in total. The client library is the integration contract.
@@ -282,9 +282,12 @@ MCP endpoint at `POST /mcp` (`Program.cs:366–368`) requires OAuth; tools provi
 
 | Port | Purpose |
 |------|---------|
-| 5001 | OAuth server HTTPS (dev) |
-| 5002 | OAuth server HTTP (dev) |
-| 5435 | PostgreSQL (docker-compose) |
+| 5001 | OAuth server HTTPS (dotnet local) |
+| 5002 | OAuth server HTTP (dotnet local) |
+| 7001 | OAuth server HTTPS (docker-compose, mapped to container 5001) |
+| 7002 | OAuth server HTTP (docker-compose, mapped to container 5000) |
+| 7435 | PostgreSQL (docker-compose, mapped to container 5432) |
+| 9100 | Conductor embedded proxy (`/auth` prefix) |
 
 Key settings:
 
@@ -306,9 +309,10 @@ Multi-stage Dockerfile:
 
 `docker-compose.yml`:
 
-- `postgres:16-alpine` with healthcheck
-- `adminer` for DB inspection
-- Auth server on `5001:5001` (HTTPS) / `5002:5000` (HTTP)
+- `postgres:16-alpine` with healthcheck (host `7435` → container `5432`)
+- `adminer` for DB inspection on `8080`
+- Auth server on `7001:5001` (HTTPS) / `7002:5000` (HTTP)
+- Sibling-service registration manifests mounted read-only at `/monorepo` so the auth seeder can auto-discover their OAuth clients + scopes.
 
 Railway production deployment supported via `PORT` env var.
 

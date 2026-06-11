@@ -95,7 +95,7 @@ Access at: **/Admin**
 | Client | Type | Use Case |
 |--------|------|----------|
 | `andy-docs-api` | Confidential | Server-to-server communication |
-| `wagram-web` | Public SPA | Angular/React web applications |
+| `andy-docs-web` | Public SPA | Angular/React web applications (renamed from `wagram-web` per andy-auth#25) |
 | `claude-desktop` | Public | Claude Desktop MCP integration |
 | `chatgpt` | Public | ChatGPT MCP integration |
 | `cline` | Public | Cline VS Code extension |

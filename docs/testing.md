@@ -165,7 +165,7 @@ ANDY_AUTH_TEST_PASSWORD="Test123!" python3 run_all_tests.py --env uat --html rep
 
 **OAuth Clients:**
 - `andy-docs-api` - Confidential client with secret
-- `wagram-web` - Public SPA client
+- `andy-docs-web` - Public SPA client *(renamed from `wagram-web` per andy-auth#25)*
 - `claude-desktop` - Public desktop client
 
 ## Environment Configuration

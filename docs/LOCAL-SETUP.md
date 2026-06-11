@@ -15,7 +15,7 @@ docker-compose up -d
 ```
 
 This starts:
-- PostgreSQL on port 5432
+- PostgreSQL on host port 7435 (mapped to container port 5432)
 - Adminer (database UI) on http://localhost:8080
 
 ### 2. Run Andy.Auth.Server
@@ -27,7 +27,7 @@ dotnet run
 
 The server will:
 - Run migrations automatically
-- Seed OAuth clients (andy-docs-api, wagram-web, claude-desktop)
+- Seed OAuth clients (andy-docs-api, andy-docs-web, claude-desktop, chatgpt, cline, roo, continue-dev, and the manifest-driven sibling-service clients)
 - Create test user: `test@andy.local` / `Test123!`
 - Start on https://localhost:5001
 
@@ -60,17 +60,21 @@ Edit `src/Andy.Auth.Server/appsettings.Development.json`:
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Database=andy_auth_dev;Username=postgres;Password=postgres"
+    "DefaultConnection": "Host=localhost;Port=7435;Database=andy_auth_dev;Username=andy_auth;Password=andy_auth_dev_password"
   }
 }
 ```
 
+> The committed `appsettings.Development.json` already targets the docker-compose pg on host port 7435 with the `andy_auth` role.
+
 ### OAuth Clients
 
-Clients are automatically seeded on startup. Edit `src/Andy.Auth.Server/Data/DbSeeder.cs` to modify:
+Clients are automatically seeded on startup. Edit `src/Andy.Auth.Server/Data/DbSeeder.cs` to modify the hardcoded clients:
 - `andy-docs-api` - Confidential client for Andy Docs API
-- `wagram-web` - Public client for Angular frontend
+- `andy-docs-web` - Public client for the Andy Docs SPA *(renamed from `wagram-web` per andy-auth#25)*
 - `claude-desktop` - Public client for Claude Desktop MCP
+
+Additional clients (and their OAuth scopes) are auto-discovered from each sibling service's `config/registration.json` manifest at startup; only CORS allow-list origins and `OpenIddict:Resources` remain manual in `appsettings.Development.json`.
 
 ### Security Keys
 
@@ -274,7 +278,7 @@ dotnet run
 - [ ] Test with Claude Desktop MCP
 - [ ] Test with ChatGPT/Roo
 - [ ] Deploy to Railway UAT
-- [ ] Update Wagram frontend to use Andy Auth
+- [ ] Update the Andy Docs SPA (`andy-docs-web`) to use Andy Auth
 
 ## Resources
 

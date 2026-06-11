@@ -353,5 +353,5 @@ To add support for a new AI assistant:
 ## Related Documentation
 
 - [Andy.Auth Architecture](./ARCHITECTURE.md)
-- [Azure AD Integration](./AZURE-AD.md)
+- [Andy.Auth Client Library (incl. Azure AD provider config)](./LIBRARY.md)
 - [Security Guide](./SECURITY.md)
