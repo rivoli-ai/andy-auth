@@ -537,6 +537,23 @@ app.UseAuthentication();
 app.UseSessionTracking();
 app.UseAuthorization();
 
+// --- Health check ---
+// Anonymous, dependency-free liveness probe for parity with sibling andy-*
+// services (rivoli-ai/andy-auth#116). Conductor's UnifiedProxy probes this via
+// 9100/auth/health (the /auth prefix is stripped before it reaches us), so we
+// map /health — NOT /auth/health. Must answer without a token and must not
+// touch the DB, OpenIddict, or the session store. /health is already in the
+// SessionTrackingMiddleware bypass set, so no session cookie is issued.
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "healthy",
+    service = "andy-auth",
+    timestamp = DateTime.UtcNow
+}))
+    .AllowAnonymous()
+    .WithName("HealthCheck")
+    .ExcludeFromDescription();
+
 // Static test endpoint to debug Safari crash (dev only)
 if (app.Environment.IsDevelopment())
 {
