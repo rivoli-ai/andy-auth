@@ -104,16 +104,56 @@ public class DbSeeder
     private async Task CreateOrUpdateScopeAsync(IOpenIddictScopeManager scopeManager, RegistrationManifest manifest)
     {
         var audience = manifest.Auth!.Audience;
-        var existing = await scopeManager.FindByNameAsync(audience);
-        if (existing is not null) return;
 
-        await scopeManager.CreateAsync(new OpenIddictScopeDescriptor
+        // Tokens carrying this scope get every entry below as an `aud` claim.
+        // Besides the audience URN itself, include the service's API client id:
+        // RFC 8693 token exchange (OBO) requires the subject token to name the
+        // exchanging CLIENT among its audiences or presenters — OpenIddict
+        // rejects the exchange with ID2187 otherwise. The URN alone never
+        // matches the client id, which silently broke every service-initiated
+        // OBO exchange (andy-containers → andy-models) and forced the M2M
+        // fallback that mislabels the acting user.
+        var resources = new List<string> { audience };
+        var apiClientId = manifest.Auth.ApiClient?.ClientId;
+        if (!string.IsNullOrWhiteSpace(apiClientId) && !resources.Contains(apiClientId))
         {
-            Name = audience,
-            DisplayName = $"{manifest.Service.DisplayName} API",
-            Resources = { audience },
-        });
-        _logger.LogInformation("[manifest] Created API resource scope: {Audience}", audience);
+            resources.Add(apiClientId);
+        }
+
+        var existing = await scopeManager.FindByNameAsync(audience);
+        if (existing is null)
+        {
+            var descriptor = new OpenIddictScopeDescriptor
+            {
+                Name = audience,
+                DisplayName = $"{manifest.Service.DisplayName} API",
+            };
+            foreach (var resource in resources)
+            {
+                descriptor.Resources.Add(resource);
+            }
+            await scopeManager.CreateAsync(descriptor);
+            _logger.LogInformation("[manifest] Created API resource scope: {Audience}", audience);
+            return;
+        }
+
+        // Reconcile an existing scope's resources so already-seeded databases
+        // pick up manifest changes (the previous early-return meant they never
+        // did — deployed environments were stuck with creation-time resources).
+        var currentResources = await scopeManager.GetResourcesAsync(existing);
+        var missing = resources.Where(r => !currentResources.Contains(r, StringComparer.Ordinal)).ToList();
+        if (missing.Count == 0) return;
+
+        var updateDescriptor = new OpenIddictScopeDescriptor();
+        await scopeManager.PopulateAsync(updateDescriptor, existing);
+        foreach (var resource in missing)
+        {
+            updateDescriptor.Resources.Add(resource);
+        }
+        await scopeManager.UpdateAsync(existing, updateDescriptor);
+        _logger.LogInformation(
+            "[manifest] Updated API resource scope {Audience}: added resources {Resources}",
+            audience, string.Join(", ", missing));
     }
 
     private async Task CreateOrUpdateClientAsync(

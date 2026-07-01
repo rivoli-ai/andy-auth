@@ -917,6 +917,153 @@ public class DbSeederTests : IDisposable
         Environment.SetEnvironmentVariable("PLAIN_API_SECRET", null);
     }
 
+    [Fact]
+    public async Task SeedAsync_ManifestScope_IncludesApiClientIdResource_OnCreate()
+    {
+        // Regression for the OBO exchange ID2187 failure. OpenIddict only
+        // lets a client exchange a subject token (RFC 8693) when the token
+        // names that CLIENT among its audiences or presenters. User tokens
+        // get their `aud` from the scope's Resources, which used to contain
+        // only the audience URN (`urn:<svc>-api`) — never the api client id
+        // (`<svc>-api`) — so every service-initiated OBO exchange died with
+        // "The specified subject token cannot be used by this client
+        // application" and fell back to a mislabelled M2M identity.
+        using var manifestDir = new TempManifestDirectory();
+        manifestDir.WriteManifest("obo", new
+        {
+            service = new
+            {
+                name = "obo-service",
+                displayName = "OBO Service",
+                description = "regression manifest for the ID2187 OBO failure",
+                embeddedProxyPrefix = "/obo"
+            },
+            auth = new
+            {
+                audience = "urn:obo-api",
+                apiClient = new
+                {
+                    clientId = "obo-api",
+                    clientType = "confidential",
+                    clientSecretEnvVar = "OBO_API_SECRET",
+                    displayName = "OBO API",
+                    grantTypes = new[] { "client_credentials" },
+                    scopes = new[] { "openid" }
+                }
+            }
+        });
+        Environment.SetEnvironmentVariable("OBO_API_SECRET", "test-secret");
+
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
+            .ReturnsAsync((object?)null);
+        _mockScopeManager.Setup(m => m.FindByNameAsync(It.IsAny<string>(), default))
+            .ReturnsAsync((object?)null);
+
+        var capturedScopes = new List<OpenIddictScopeDescriptor>();
+        _mockScopeManager.Setup(m => m.CreateAsync(It.IsAny<OpenIddictScopeDescriptor>(), default))
+            .Callback<OpenIddictScopeDescriptor, CancellationToken>((desc, _) => capturedScopes.Add(desc))
+            .ReturnsAsync(new object());
+
+        var configValues = new Dictionary<string, string?>
+        {
+            { "ASPNETCORE_ENVIRONMENT", "Production" },
+            { "Registrations:ManifestPaths:0", manifestDir.Path }
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configValues)
+            .Build();
+
+        var seeder = new DbSeeder(
+            _serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
+
+        await seeder.SeedAsync();
+
+        var scope = capturedScopes.FirstOrDefault(d => d.Name == "urn:obo-api");
+        Assert.NotNull(scope);
+        Assert.Contains("urn:obo-api", scope!.Resources);
+        Assert.Contains("obo-api", scope.Resources);
+
+        Environment.SetEnvironmentVariable("OBO_API_SECRET", null);
+    }
+
+    [Fact]
+    public async Task SeedAsync_ManifestScope_AddsMissingClientIdResource_OnExistingScope()
+    {
+        // Companion to the create-path test: already-seeded databases must be
+        // reconciled. The old seeder early-returned when the scope existed, so
+        // a deployed environment could never pick up new scope resources
+        // without dropping the auth database. The seeder now compares the
+        // existing scope's resources against the manifest-derived set and
+        // updates when anything is missing.
+        using var manifestDir = new TempManifestDirectory();
+        manifestDir.WriteManifest("obo-existing", new
+        {
+            service = new
+            {
+                name = "obo-existing-service",
+                displayName = "OBO Existing Service",
+                description = "update-path regression for the ID2187 OBO failure",
+                embeddedProxyPrefix = "/obo-existing"
+            },
+            auth = new
+            {
+                audience = "urn:obo-existing-api",
+                apiClient = new
+                {
+                    clientId = "obo-existing-api",
+                    clientType = "confidential",
+                    clientSecretEnvVar = "OBO_EXISTING_API_SECRET",
+                    displayName = "OBO Existing API",
+                    grantTypes = new[] { "client_credentials" },
+                    scopes = new[] { "openid" }
+                }
+            }
+        });
+        Environment.SetEnvironmentVariable("OBO_EXISTING_API_SECRET", "test-secret");
+
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
+            .ReturnsAsync((object?)null);
+
+        var existingScope = new object();
+        _mockScopeManager.Setup(m => m.FindByNameAsync("urn:obo-existing-api", default))
+            .ReturnsAsync(existingScope);
+        // Existing scope has only the audience URN — the pre-fix state.
+        _mockScopeManager.Setup(m => m.GetResourcesAsync(existingScope, default))
+            .ReturnsAsync(System.Collections.Immutable.ImmutableArray.Create("urn:obo-existing-api"));
+        _mockScopeManager.Setup(m => m.PopulateAsync(It.IsAny<OpenIddictScopeDescriptor>(), existingScope, default))
+            .Callback<OpenIddictScopeDescriptor, object, CancellationToken>((desc, _, _) =>
+            {
+                desc.Name = "urn:obo-existing-api";
+                desc.Resources.Add("urn:obo-existing-api");
+            })
+            .Returns(ValueTask.CompletedTask);
+
+        OpenIddictScopeDescriptor? updatedDescriptor = null;
+        _mockScopeManager.Setup(m => m.UpdateAsync(existingScope, It.IsAny<OpenIddictScopeDescriptor>(), default))
+            .Callback<object, OpenIddictScopeDescriptor, CancellationToken>((_, desc, _) => updatedDescriptor = desc)
+            .Returns(ValueTask.CompletedTask);
+
+        var configValues = new Dictionary<string, string?>
+        {
+            { "ASPNETCORE_ENVIRONMENT", "Production" },
+            { "Registrations:ManifestPaths:0", manifestDir.Path }
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configValues)
+            .Build();
+
+        var seeder = new DbSeeder(
+            _serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
+
+        await seeder.SeedAsync();
+
+        Assert.NotNull(updatedDescriptor);
+        Assert.Contains("urn:obo-existing-api", updatedDescriptor!.Resources);
+        Assert.Contains("obo-existing-api", updatedDescriptor.Resources);
+
+        Environment.SetEnvironmentVariable("OBO_EXISTING_API_SECRET", null);
+    }
+
     /// <summary>
     /// Disposable temp directory holding one or more registration.json
     /// manifest files. Wired into config via "Registrations:ManifestPaths".
