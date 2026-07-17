@@ -545,16 +545,14 @@ public class AccountController : Controller
         if (!string.IsNullOrEmpty(remoteError))
         {
             _logger.LogWarning("External login error: {Error}", remoteError);
-            ModelState.AddModelError(string.Empty, $"Error from external provider: {remoteError}");
-            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+            return await RejectExternalAsync(returnUrl, $"Error from external provider: {remoteError}");
         }
 
         var info = await _signInManager.GetExternalLoginInfoAsync();
         if (info == null)
         {
             _logger.LogWarning("External login info not available");
-            ModelState.AddModelError(string.Empty, "Error loading external login information.");
-            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+            return await RejectExternalAsync(returnUrl, "Error loading external login information.");
         }
 
         // === Outcome 1: the external login is ALREADY linked to a local account. ===
@@ -569,8 +567,7 @@ public class AccountController : Controller
                     "UserLoginExternalRejected",
                     linkedUser.Id, linkedUser.Email ?? "Unknown", linkedUser.Id, linkedUser.Email,
                     $"Login via {info.LoginProvider} rejected: {blockedReason}", ipAddress);
-                ModelState.AddModelError(string.Empty, blockedReason);
-                return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+                return await RejectExternalAsync(returnUrl, blockedReason);
             }
 
             // Do NOT silently bypass local 2FA. The policy is explicit and
@@ -598,6 +595,8 @@ public class AccountController : Controller
 
             if (signInResult.RequiresTwoFactor)
             {
+                // Not a rejection: the external cookie is consumed by the 2FA
+                // flow, so we deliberately do NOT sign the external scheme out.
                 _logger.LogInformation("External login for user {UserId} requires local 2FA.", linkedUser.Id);
                 return RedirectToAction(nameof(LoginWith2fa), new { returnUrl });
             }
@@ -609,16 +608,14 @@ public class AccountController : Controller
                     "UserLoginExternalRejected",
                     linkedUser.Id, linkedUser.Email ?? "Unknown", linkedUser.Id, linkedUser.Email,
                     $"Login via {info.LoginProvider} rejected: account locked out", ipAddress);
-                ModelState.AddModelError(string.Empty, "This account has been locked out. Please try again later.");
-                return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+                return await RejectExternalAsync(returnUrl, "This account has been locked out. Please try again later.");
             }
 
             await _auditService.LogAsync(
                 "UserLoginExternalRejected",
                 linkedUser.Id, linkedUser.Email ?? "Unknown", linkedUser.Id, linkedUser.Email,
                 $"Login via {info.LoginProvider} rejected: sign-in not allowed", ipAddress);
-            ModelState.AddModelError(string.Empty, "Unable to sign in with this provider.");
-            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+            return await RejectExternalAsync(returnUrl, "Unable to sign in with this provider.");
         }
 
         // === The external login is NOT yet linked to any account. ===
@@ -630,8 +627,7 @@ public class AccountController : Controller
         if (string.IsNullOrEmpty(email))
         {
             _logger.LogWarning("External login did not provide an email address");
-            ModelState.AddModelError(string.Empty, "Email address is required from the external provider.");
-            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+            return await RejectExternalAsync(returnUrl, "Email address is required from the external provider.");
         }
 
         // Verified-email requirement (explicit). Applies to both provisioning a
@@ -643,9 +639,8 @@ public class AccountController : Controller
                 "ExternalLinkRejected",
                 email, email, null, email,
                 $"Provider {info.LoginProvider} did not assert a verified email (email_verified)", ipAddress);
-            ModelState.AddModelError(string.Empty,
+            return await RejectExternalAsync(returnUrl,
                 "Your email address must be verified by the identity provider before you can sign in.");
-            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
         }
 
         // Tenant / issuer allow-list (explicit).
@@ -657,9 +652,8 @@ public class AccountController : Controller
                 "ExternalLinkRejected",
                 email, email, null, email,
                 $"{info.LoginProvider}: {tenantIssuerReason}", ipAddress);
-            ModelState.AddModelError(string.Empty,
+            return await RejectExternalAsync(returnUrl,
                 "Your organization is not permitted to sign in to this application.");
-            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
         }
 
         var existingByEmail = await _userManager.FindByEmailAsync(email);
@@ -692,14 +686,25 @@ public class AccountController : Controller
                 {
                     ModelState.AddModelError(string.Empty, error.Description);
                 }
+                await SignOutExternalAsync();
                 return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
             }
 
             var addLoginResult = await _userManager.AddLoginAsync(newUser, info);
             if (!addLoginResult.Succeeded)
             {
-                _logger.LogWarning("Failed to add external login for new user {Email}: {Errors}",
+                // The account was just created and has no password; without the
+                // external login it would be an orphaned, unauthenticatable
+                // account. Roll it back rather than signing in.
+                _logger.LogWarning("Failed to add external login for new user {Email}: {Errors}; rolling back the account.",
                     email, string.Join(", ", addLoginResult.Errors.Select(e => e.Description)));
+                await _userManager.DeleteAsync(newUser);
+                await _auditService.LogAsync(
+                    "ExternalLinkRejected",
+                    newUser.Id, newUser.Email ?? email, newUser.Id, newUser.Email,
+                    $"Provisioning via {info.LoginProvider} rolled back: could not attach external login", ipAddress);
+                return await RejectExternalAsync(returnUrl,
+                    "Could not complete sign-in with the external provider. Please try again.");
             }
 
             _logger.LogInformation("Created new user {Email} via {Provider} external login.", email, info.LoginProvider);
@@ -735,9 +740,8 @@ public class AccountController : Controller
                 existingByEmail.Id, existingByEmail.Email ?? email, existingByEmail.Id, existingByEmail.Email,
                 $"Auto-link of {info.LoginProvider} refused: email matches an existing account but no authenticated session for that user",
                 ipAddress);
-            ModelState.AddModelError(string.Empty,
+            return await RejectExternalAsync(returnUrl,
                 "An account with this email already exists. Sign in with your existing credentials first, then link this provider from your account settings.");
-            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
         }
 
         // Authenticated as the SAME user. Enforce user-state, then require an
@@ -749,10 +753,14 @@ public class AccountController : Controller
                 "ExternalLinkRejected",
                 existingByEmail.Id, existingByEmail.Email ?? email, existingByEmail.Id, existingByEmail.Email,
                 $"Link of {info.LoginProvider} rejected: {linkBlockedReason}", ipAddress);
-            ModelState.AddModelError(string.Empty, linkBlockedReason);
-            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+            return await RejectExternalAsync(returnUrl, linkBlockedReason);
         }
 
+        // The external identity is trusted (verified email + allowed
+        // tenant/issuer, checked above) and belongs to the signed-in user. Hand
+        // off to the explicit reauthentication step. The link POST re-runs these
+        // same trust gates so a rejected identity can never be linked, even if
+        // the transient cookie were replayed.
         await _auditService.LogAsync(
             "ExternalLinkRequested",
             existingByEmail.Id, existingByEmail.Email ?? email, existingByEmail.Id, existingByEmail.Email,
@@ -837,6 +845,37 @@ public class AccountController : Controller
                 user.Id, user.Email ?? "Unknown", user.Id, user.Email,
                 $"Link of {info.LoginProvider} rejected: provider email does not match the signed-in account", ipAddress);
             ModelState.AddModelError(string.Empty, "This external account's email does not match your account.");
+            return View(model);
+        }
+
+        // Re-run the SAME trust gates enforced in the callback. This endpoint is
+        // the one that actually calls AddLoginAsync, so it must not rely on the
+        // callback having already vetted the identity: a rejected callback does
+        // not necessarily sign the external cookie out before this point in
+        // every provider/proxy configuration, and the already-linked sign-in
+        // path never re-checks these gates. Without this, an unverified-email or
+        // disallowed-tenant identity could be linked by replaying the cookie
+        // straight into this flow, permanently bypassing the allow-list.
+        if (_externalLoginOptions.RequireVerifiedEmail && !IsEmailVerified(info.Principal))
+        {
+            await _auditService.LogAsync(
+                "ExternalLinkRejected",
+                user.Id, user.Email ?? "Unknown", user.Id, user.Email,
+                $"Link of {info.LoginProvider} rejected: provider did not assert a verified email (email_verified)", ipAddress);
+            ModelState.AddModelError(string.Empty,
+                "Your email address must be verified by the identity provider before you can link it.");
+            return View(model);
+        }
+
+        var linkTenantIssuerReason = GetTenantIssuerRejection(info.Principal);
+        if (linkTenantIssuerReason != null)
+        {
+            await _auditService.LogAsync(
+                "ExternalLinkRejected",
+                user.Id, user.Email ?? "Unknown", user.Id, user.Email,
+                $"Link of {info.LoginProvider} rejected: {linkTenantIssuerReason}", ipAddress);
+            ModelState.AddModelError(string.Empty,
+                "Your organization is not permitted to link this provider.");
             return View(model);
         }
 
@@ -966,6 +1005,27 @@ public class AccountController : Controller
             return Redirect(returnUrl);
         }
         return RedirectToAction("Index", "Home");
+    }
+
+    /// <summary>
+    /// Signs out the transient external authentication cookie. Called on every
+    /// external-login rejection so a rejected <see cref="ExternalLoginInfo"/>
+    /// cannot be replayed (e.g. directly into the account-link flow). The
+    /// legitimate link flow does NOT sign out here — it needs the cookie to
+    /// persist through the reauthentication step.
+    /// </summary>
+    private Task SignOutExternalAsync()
+        => HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+
+    /// <summary>
+    /// Standard rejection for the external-login callback: drops the external
+    /// cookie, records the model error, and re-renders the login page.
+    /// </summary>
+    private async Task<IActionResult> RejectExternalAsync(string? returnUrl, string message)
+    {
+        await SignOutExternalAsync();
+        ModelState.AddModelError(string.Empty, message);
+        return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
     }
 
     /// <summary>

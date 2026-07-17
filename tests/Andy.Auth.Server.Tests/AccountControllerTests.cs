@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -31,6 +32,7 @@ public class AccountControllerTests
     private readonly SessionService _sessionService;
     private readonly Mock<ILogger<AccountController>> _mockLogger;
     private readonly AccountController _controller;
+    private Mock<IAuthenticationService> _mockAuthService = new();
 
     public AccountControllerTests()
     {
@@ -59,6 +61,18 @@ public class AccountControllerTests
 
         // Setup controller context for URL helper
         var httpContext = new DefaultHttpContext();
+
+        // HttpContext.SignOutAsync(IdentityConstants.ExternalScheme) resolves
+        // IAuthenticationService from RequestServices; wire a mock so the
+        // external-scheme sign-out on rejection paths works under unit test.
+        _mockAuthService = new Mock<IAuthenticationService>();
+        _mockAuthService
+            .Setup(a => a.SignOutAsync(It.IsAny<HttpContext>(), It.IsAny<string>(), It.IsAny<AuthenticationProperties>()))
+            .Returns(Task.CompletedTask);
+        var services = new ServiceCollection();
+        services.AddSingleton(_mockAuthService.Object);
+        httpContext.RequestServices = services.BuildServiceProvider();
+
         var mockUrlHelper = new Mock<IUrlHelper>();
         mockUrlHelper
             .Setup(x => x.IsLocalUrl(It.IsAny<string>()))
@@ -1044,6 +1058,114 @@ public class AccountControllerTests
         Assert.False(_controller.ModelState.IsValid);
         _mockUserManager.Verify(m => m.AddLoginAsync(It.IsAny<ApplicationUser>(), It.IsAny<ExternalLoginInfo>()), Times.Never);
         _mockSignInManager.Verify(m => m.RefreshSignInAsync(It.IsAny<ApplicationUser>()), Times.Never);
+        _mockAuditService.Verify(a => a.LogAsync("ExternalLinkRejected",
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExternalLoginCallback_ExistingEmail_NoSession_SignsOutExternalScheme()
+    {
+        // A rejected ExternalLoginInfo must not remain replayable into the link
+        // flow: the external scheme cookie is dropped on rejection.
+        var existing = new ApplicationUser { Id = "victim", Email = "victim@example.com", IsActive = true };
+        var info = BuildExternalLoginInfo("victim@example.com", providerKey: "pk-signout", extraClaims: VerifiedEmail());
+
+        _mockSignInManager.Setup(m => m.GetExternalLoginInfoAsync(null)).ReturnsAsync(info);
+        _mockUserManager.Setup(m => m.FindByLoginAsync(info.LoginProvider, info.ProviderKey))
+            .ReturnsAsync((ApplicationUser?)null);
+        _mockUserManager.Setup(m => m.FindByEmailAsync("victim@example.com")).ReturnsAsync(existing);
+
+        await _controller.ExternalLoginCallback(returnUrl: null);
+
+        _mockAuthService.Verify(a => a.SignOutAsync(
+            It.IsAny<HttpContext>(), IdentityConstants.ExternalScheme, It.IsAny<AuthenticationProperties>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExternalLoginCallback_UnverifiedEmail_SignsOutExternalScheme()
+    {
+        var info = BuildExternalLoginInfo("unverified@example.com", providerKey: "pk-unverified-signout");
+        _mockSignInManager.Setup(m => m.GetExternalLoginInfoAsync(null)).ReturnsAsync(info);
+        _mockUserManager.Setup(m => m.FindByLoginAsync(info.LoginProvider, info.ProviderKey))
+            .ReturnsAsync((ApplicationUser?)null);
+
+        await _controller.ExternalLoginCallback(returnUrl: null);
+
+        _mockAuthService.Verify(a => a.SignOutAsync(
+            It.IsAny<HttpContext>(), IdentityConstants.ExternalScheme, It.IsAny<AuthenticationProperties>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExternalLoginCallback_NoExistingAccount_AddLoginFails_RollsBackAndDoesNotSignIn()
+    {
+        var info = BuildExternalLoginInfo("orphan@example.com", providerKey: "pk-orphan", extraClaims: VerifiedEmail());
+        _mockSignInManager.Setup(m => m.GetExternalLoginInfoAsync(null)).ReturnsAsync(info);
+        _mockUserManager.Setup(m => m.FindByLoginAsync(info.LoginProvider, info.ProviderKey))
+            .ReturnsAsync((ApplicationUser?)null);
+        _mockUserManager.Setup(m => m.FindByEmailAsync("orphan@example.com")).ReturnsAsync((ApplicationUser?)null);
+        _mockUserManager.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(IdentityResult.Success);
+        _mockUserManager.Setup(m => m.AddLoginAsync(It.IsAny<ApplicationUser>(), info))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "login exists" }));
+        _mockUserManager.Setup(m => m.DeleteAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(IdentityResult.Success);
+
+        var result = await _controller.ExternalLoginCallback(returnUrl: null);
+
+        var viewResult = Assert.IsType<ViewResult>(result);
+        Assert.Equal("Login", viewResult.ViewName);
+        // The orphaned passwordless account must be rolled back and nobody signed in.
+        _mockUserManager.Verify(m => m.DeleteAsync(It.IsAny<ApplicationUser>()), Times.Once);
+        _mockSignInManager.Verify(m => m.SignInAsync(It.IsAny<ApplicationUser>(), It.IsAny<bool>(), It.IsAny<string>()), Times.Never);
+        _mockAuthService.Verify(a => a.SignOutAsync(
+            It.IsAny<HttpContext>(), IdentityConstants.ExternalScheme, It.IsAny<AuthenticationProperties>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task LinkExternalLogin_Post_UnverifiedEmail_RejectsWithoutLinking()
+    {
+        // Replay-into-link defense: even with a valid session, matching email and
+        // correct password, an unverified external email must not be linked.
+        var user = new ApplicationUser { Id = "owner", Email = "owner@example.com", IsActive = true };
+        var info = BuildExternalLoginInfo("owner@example.com", providerKey: "pk-link-unverified"); // no email_verified
+        var model = new LinkExternalLoginViewModel { Password = "CorrectPass123!", Provider = "Microsoft" };
+
+        _mockUserManager.Setup(m => m.GetUserAsync(It.IsAny<ClaimsPrincipal>())).ReturnsAsync(user);
+        _mockSignInManager.Setup(m => m.GetExternalLoginInfoAsync(null)).ReturnsAsync(info);
+        _mockUserManager.Setup(m => m.CheckPasswordAsync(user, model.Password)).ReturnsAsync(true);
+
+        SignInSession(_controller, "owner");
+
+        var result = await _controller.LinkExternalLogin(model);
+
+        Assert.IsType<ViewResult>(result);
+        _mockUserManager.Verify(m => m.AddLoginAsync(It.IsAny<ApplicationUser>(), It.IsAny<ExternalLoginInfo>()), Times.Never);
+        _mockAuditService.Verify(a => a.LogAsync("ExternalLinkRejected",
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task LinkExternalLogin_Post_DisallowedTenant_RejectsWithoutLinking()
+    {
+        var controller = BuildController(new ExternalLoginOptions
+        {
+            AllowedTenantIds = new List<string> { "allowed-tenant" }
+        });
+        var user = new ApplicationUser { Id = "owner", Email = "owner@example.com", IsActive = true };
+        var info = BuildExternalLoginInfo("owner@example.com", providerKey: "pk-link-tenant",
+            extraClaims: new[] { VerifiedEmail(), new Claim("tid", "some-other-tenant") });
+        var model = new LinkExternalLoginViewModel { Password = "CorrectPass123!", Provider = "Microsoft" };
+
+        _mockUserManager.Setup(m => m.GetUserAsync(It.IsAny<ClaimsPrincipal>())).ReturnsAsync(user);
+        _mockSignInManager.Setup(m => m.GetExternalLoginInfoAsync(null)).ReturnsAsync(info);
+        _mockUserManager.Setup(m => m.CheckPasswordAsync(user, model.Password)).ReturnsAsync(true);
+
+        SignInSession(controller, "owner");
+
+        var result = await controller.LinkExternalLogin(model);
+
+        Assert.IsType<ViewResult>(result);
+        _mockUserManager.Verify(m => m.AddLoginAsync(It.IsAny<ApplicationUser>(), It.IsAny<ExternalLoginInfo>()), Times.Never);
         _mockAuditService.Verify(a => a.LogAsync("ExternalLinkRejected",
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
             It.IsAny<string>(), It.IsAny<string>()), Times.Once);
