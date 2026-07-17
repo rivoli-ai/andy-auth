@@ -76,13 +76,6 @@ public class DeviceFlowTests : IClassFixture<CustomWebApplicationFactory>
 
         var response = await _client.PostAsync("/connect/device", request);
 
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-        {
-            // CI / no DB — same skip pattern OAuthIntegrationTests uses.
-            Assert.True(true, "Skipping - server returned 500 (database may not be available)");
-            return;
-        }
-
         var body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.BadRequest ||
@@ -106,12 +99,6 @@ public class DeviceFlowTests : IClassFixture<CustomWebApplicationFactory>
         });
 
         var response = await _client.PostAsync("/connect/token", request);
-
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-        {
-            Assert.True(true, "Skipping - server returned 500 (database may not be available)");
-            return;
-        }
 
         var body = await response.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

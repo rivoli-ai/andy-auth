@@ -91,73 +91,140 @@ public class DbSeederTests : IDisposable
         }
     }
 
-    [Fact(Skip = "Stale: when andy-docs-api was moved from the hardcoded SeedClientsAsync path to the manifest-driven SeedFromManifestsAsync (per `// andy-docs-api: now manifest-driven` comment in DbSeeder.cs:283), this test's count expectation became wrong. Was masked by a missing-logger DI failure that short-circuited the manifest path; AddLogging() fix in this PR exposes it. TODO: rewrite as behaviour-based assertion matching specific ClientIds instead of total count.")]
-    public async Task SeedAsync_ShouldSeedClients_WhenClientsDoNotExist()
+    [Fact]
+    public async Task SeedAsync_SeedsHardcodedClients_WhenClientsDoNotExist()
     {
-        // Arrange - All clients don't exist
+        // Arrange - no client exists yet, and no registration manifests are
+        // configured, so the legacy hardcoded SeedClientsAsync path is what
+        // runs here. andy-docs-api is deliberately NOT asserted: it moved to
+        // the manifest-driven SeedFromManifestsAsync path (see the
+        // `// andy-docs-api: now manifest-driven` comment in DbSeeder), so it
+        // is never created by the hardcoded path a manifest-less run exercises.
         _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
             .ReturnsAsync((object?)null);
-
-        var configuration = CreateConfiguration("Production");
-        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
-
-        // Act
-        await seeder.SeedAsync();
-
-        // Assert - 7 clients are created: andy-docs-api, andy-docs-web, claude-desktop, chatgpt, cline, roo, continue-dev
-        _mockAppManager.Verify(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default),
-            Times.Exactly(7));
-    }
-
-    [Fact(Skip = "Stale: same root cause as ShouldSeedClients_WhenClientsDoNotExist — total count assertion outdated since andy-docs-api moved to manifest path. TODO: rewrite as behaviour-based.")]
-    public async Task SeedAsync_ShouldNotSeedClients_WhenClientsAlreadyExist()
-    {
-        // Arrange
-        var existingClient = new object();
-        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
-            .ReturnsAsync(existingClient);
-
-        var configuration = CreateConfiguration("Production");
-        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
-
-        // Act
-        await seeder.SeedAsync();
-
-        // Assert - andy-docs-api, andy-docs-web, claude-desktop, chatgpt, cline, roo, continue-dev are always deleted and recreated
-        // So we expect 7 CreateAsync calls for the always-recreated clients
-        _mockAppManager.Verify(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default),
-            Times.Exactly(7));
-        // 8 DeleteAsync calls — 7 client recreates + 1 legacy `wagram-web` cleanup (E0-S6)
-        _mockAppManager.Verify(m => m.DeleteAsync(It.IsAny<object>(), default),
-            Times.Exactly(8));
-    }
-
-    [Fact(Skip = "Stale: this test asserts the hardcoded andy-docs-api client's DisplayName + ClientSecret, but that client was moved to the manifest-driven SeedFromManifestsAsync path (see DbSeeder.cs:283 comment). The hardcoded path no longer creates andy-docs-api at all. TODO: replace with a manifest-driven test in a separate file, or delete entirely.")]
-    public async Task SeedAsync_ShouldCreateAndyDocsApiClient_WithCorrectConfiguration()
-    {
-        // Arrange - andy-docs-api doesn't exist, all others exist
-        _mockAppManager.Setup(m => m.FindByClientIdAsync("andy-docs-api", default))
-            .ReturnsAsync((object?)null);
-        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.Is<string>(s => s != "andy-docs-api"), default))
-            .ReturnsAsync(new object());
-
-        var configuration = CreateConfiguration("Production");
 
         var capturedDescriptors = new List<OpenIddictApplicationDescriptor>();
         _mockAppManager.Setup(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default))
             .Callback<OpenIddictApplicationDescriptor, CancellationToken>((desc, _) => capturedDescriptors.Add(desc))
             .ReturnsAsync(new object());
 
+        var configuration = CreateConfiguration("Production");
         var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
 
         // Act
         await seeder.SeedAsync();
 
-        // Assert - find the andy-docs-api descriptor among all created
+        // Assert - behaviour, by client id (not a brittle total count).
+        var createdIds = capturedDescriptors.Select(d => d.ClientId).ToList();
+        Assert.Contains("claude-desktop", createdIds);
+        Assert.Contains("andy-docs-web", createdIds);
+        Assert.Contains("chatgpt", createdIds);
+        Assert.Contains("cline", createdIds);
+        Assert.Contains("continue-dev", createdIds);
+        // andy-docs-api is manifest-driven; a manifest-less run must not
+        // recreate it via the hardcoded path.
+        Assert.DoesNotContain("andy-docs-api", createdIds);
+    }
+
+    [Fact]
+    public async Task SeedAsync_RecreatesHardcodedClients_WhenClientsAlreadyExist()
+    {
+        // Arrange - every client already exists. The hardcoded clients use a
+        // delete-then-create strategy on every run so config/manifest edits
+        // take effect, so an existing row is deleted and the client recreated.
+        var existingClient = new object();
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
+            .ReturnsAsync(existingClient);
+
+        var createdIds = new List<string?>();
+        _mockAppManager.Setup(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default))
+            .Callback<OpenIddictApplicationDescriptor, CancellationToken>((desc, _) => createdIds.Add(desc.ClientId))
+            .ReturnsAsync(new object());
+
+        var configuration = CreateConfiguration("Production");
+        var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
+
+        // Act
+        await seeder.SeedAsync();
+
+        // Assert - the pre-existing row was deleted, and representative
+        // always-recreated clients were re-created.
+        _mockAppManager.Verify(m => m.DeleteAsync(existingClient, default), Times.AtLeastOnce);
+        Assert.Contains("claude-desktop", createdIds);
+        Assert.Contains("andy-docs-web", createdIds);
+    }
+
+    [Fact]
+    public async Task SeedAsync_CreatesAndyDocsApiClient_FromManifest()
+    {
+        // andy-docs-api moved off the hardcoded path to the manifest-driven
+        // SeedFromManifestsAsync path. This asserts the CURRENT behaviour:
+        // supplied a registration manifest, the seeder emits the andy-docs-api
+        // descriptor (Development fallback secret, grant permissions).
+        using var manifestDir = new TempManifestDirectory();
+        manifestDir.WriteManifest("andy-docs", new
+        {
+            service = new
+            {
+                name = "andy-docs",
+                displayName = "Andy Docs",
+                description = "manifest-driven andy-docs-api registration",
+                embeddedProxyPrefix = "/docs"
+            },
+            auth = new
+            {
+                audience = "urn:andy-docs-api",
+                apiClient = new
+                {
+                    clientId = "andy-docs-api",
+                    clientType = "confidential",
+                    clientSecretEnvVar = "ANDY_DOCS_API_SECRET_UNSET",
+                    displayName = "Andy Docs API",
+                    grantTypes = new[] { "authorization_code", "refresh_token", "client_credentials" },
+                    scopes = new[] { "scp:urn:andy-docs-api" }
+                }
+            }
+        });
+        Environment.SetEnvironmentVariable("ANDY_DOCS_API_SECRET_UNSET", null);
+
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
+            .ReturnsAsync((object?)null);
+        _mockScopeManager.Setup(m => m.FindByNameAsync(It.IsAny<string>(), default))
+            .ReturnsAsync((object?)null);
+        _mockScopeManager.Setup(m => m.CreateAsync(It.IsAny<OpenIddictScopeDescriptor>(), default))
+            .ReturnsAsync(new object());
+        _mockUserManager.Setup(m => m.FindByEmailAsync(It.IsAny<string>()))
+            .ReturnsAsync((ApplicationUser?)null);
+        _mockUserManager.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Success);
+
+        var capturedDescriptors = new List<OpenIddictApplicationDescriptor>();
+        _mockAppManager.Setup(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default))
+            .Callback<OpenIddictApplicationDescriptor, CancellationToken>((desc, _) => capturedDescriptors.Add(desc))
+            .ReturnsAsync(new object());
+
+        var configValues = new Dictionary<string, string?>
+        {
+            { "ASPNETCORE_ENVIRONMENT", "Development" },
+            { "Registrations:ManifestPaths:0", manifestDir.Path }
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configValues)
+            .Build();
+
+        var seeder = new DbSeeder(
+            _serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Development"));
+
+        // Act
+        await seeder.SeedAsync();
+
+        // Assert - the manifest-driven andy-docs-api descriptor.
         var andyDocsDescriptor = capturedDescriptors.FirstOrDefault(d => d.ClientId == "andy-docs-api");
         Assert.NotNull(andyDocsDescriptor);
-        Assert.Equal("Andy Docs API", andyDocsDescriptor.DisplayName);
-        Assert.Equal("andy-docs-secret-change-in-production", andyDocsDescriptor.ClientSecret);
+        Assert.Equal("Andy Docs API", andyDocsDescriptor!.DisplayName);
+        // Confidential client, secret env var intentionally unset → the
+        // Development-only deterministic fallback.
+        Assert.Equal("andy-docs-api-secret-change-in-production", andyDocsDescriptor.ClientSecret);
         Assert.Contains(OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode, andyDocsDescriptor.Permissions);
         Assert.Contains(OpenIddictConstants.Permissions.GrantTypes.RefreshToken, andyDocsDescriptor.Permissions);
         Assert.Contains(OpenIddictConstants.Permissions.GrantTypes.ClientCredentials, andyDocsDescriptor.Permissions);

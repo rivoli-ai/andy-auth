@@ -1,0 +1,20 @@
+{
+  "//": "TEST FIXTURE — not a real deployment manifest. Supplies the andy-docs-api OAuth client to the hermetic integration-test host (CustomWebApplicationFactory wires this directory into Registrations:ManifestPaths). In production andy-docs-api is sourced from andy-docs/config/registration.json, a sibling repo that CI does not check out; this fixture stands in for it so OAuth flows can be asserted for real instead of fake-skipped. The confidential client intentionally leaves ANDY_DOCS_API_SECRET unset so DbSeeder's Development fallback yields the well-known 'andy-docs-api-secret-change-in-production' secret the tests use.",
+  "service": {
+    "name": "andy-docs",
+    "displayName": "Andy Docs",
+    "description": "Test fixture manifest supplying andy-docs-api for hermetic OAuth integration tests.",
+    "embeddedProxyPrefix": "/docs"
+  },
+  "auth": {
+    "audience": "urn:andy-docs-api",
+    "apiClient": {
+      "clientId": "andy-docs-api",
+      "clientType": "confidential",
+      "clientSecretEnvVar": "ANDY_DOCS_API_SECRET",
+      "displayName": "Andy Docs API",
+      "grantTypes": ["client_credentials", "authorization_code", "refresh_token"],
+      "scopes": ["scp:urn:andy-docs-api"]
+    }
+  }
+}

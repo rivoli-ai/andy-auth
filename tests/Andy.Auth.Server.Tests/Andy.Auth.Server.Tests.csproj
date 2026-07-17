@@ -31,6 +31,10 @@
 
   <ItemGroup>
     <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Registration manifest fixtures wired into Registrations:ManifestPaths
+         by CustomWebApplicationFactory so OAuth clients (andy-docs-api) are
+         seeded hermetically without checking out sibling repos. -->
+    <Content Include="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

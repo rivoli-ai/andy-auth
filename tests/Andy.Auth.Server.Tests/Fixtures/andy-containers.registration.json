@@ -1,0 +1,20 @@
+{
+  "//": "TEST FIXTURE — stands in for andy-containers/config/registration.json (a sibling repo absent in CI). Supplies the andy-containers-api confidential client used by TokenExchangeIntegrationTests so the RFC 8693 rejection paths run for real instead of fake-skipping on invalid_client. token_exchange is enabled and CustomWebApplicationFactory pairs it with a TokenExchange:Policies entry (actor=andy-containers-api, audience=urn:andy-models-api) so DbSeeder grants the matching rsr: resource permission. The secret env var is intentionally unset so the Development fallback yields 'andy-containers-api-secret-change-in-production'.",
+  "service": {
+    "name": "andy-containers",
+    "displayName": "Andy Containers",
+    "description": "Test fixture manifest supplying andy-containers-api for hermetic token-exchange integration tests.",
+    "embeddedProxyPrefix": "/containers"
+  },
+  "auth": {
+    "audience": "urn:andy-containers-api",
+    "apiClient": {
+      "clientId": "andy-containers-api",
+      "clientType": "confidential",
+      "clientSecretEnvVar": "ANDY_CONTAINERS_API_SECRET",
+      "displayName": "Andy Containers API",
+      "grantTypes": ["client_credentials", "token_exchange"],
+      "scopes": ["scp:urn:andy-containers-api"]
+    }
+  }
+}

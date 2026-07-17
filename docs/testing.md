@@ -62,6 +62,35 @@ is unnecessary is tracked in andy-auth#131.
 
 ## Running Tests
 
+### The one command (fully hermetic)
+
+From a clean checkout, the entire .NET solution passes with a single command and
+**no external services** — no developer-local PostgreSQL, no Docker, no seeded
+database:
+
+```bash
+dotnet test andy-auth.sln
+```
+
+Why it is hermetic:
+
+- The shared `CustomWebApplicationFactory` points the app at an **isolated,
+  per-instance SQLite file** (via `Database__Provider=Sqlite` + a unique
+  `ConnectionStrings__Sqlite` path) instead of the Development PostgreSQL on
+  port 7435. Every environment variable it sets is captured and restored on
+  dispose, and the SQLite file is deleted afterwards.
+- The OAuth clients the integration tests need (`andy-docs-api`,
+  `andy-containers-api`, the `urn:andy-models-api` audience) are supplied as
+  **registration-manifest fixtures** under
+  `tests/Andy.Auth.Server.Tests/Fixtures/`, wired in via
+  `Registrations__ManifestPaths`. They normally live in sibling repos that CI
+  does not check out.
+- `Andy.Auth.E2E.Tests` uses an in-memory EF Core database; the unit test
+  projects need no database at all.
+
+There are **no fake-skip branches** (`Assert.True(true, "Skipping…")`): a test
+either runs and asserts for real, or reports as genuinely skipped.
+
 ### All .NET Tests (Unit + E2E)
 
 ```bash
