@@ -214,7 +214,15 @@
                                             </svg>
                                         </button>
 
-                                        <button class="btn-action btn-primary" onclick='showEditNameModal("@user.Id", "@user.Email", "@Html.Raw(user.FullName?.Replace("\"", "&quot;") ?? "")")' title="Edit Name">
+                                        @* Edit-name uses data-* attributes + a delegated click handler (see the
+                                           script below) instead of an inline onclick. FullName is attacker-controlled
+                                           free text; building an inline handler from it (previously via @@Html.Raw with a
+                                           single " -> &quot; replace) allowed a stored-XSS attribute breakout. Razor
+                                           HTML-encodes these data-* values normally, and the handler assigns them with
+                                           .value / .textContent (never innerHTML), so a malicious FullName cannot execute. *@
+                                        <button type="button" class="btn-action btn-primary js-edit-name"
+                                                data-user-id="@user.Id" data-user-email="@user.Email"
+                                                data-current-name="@(user.FullName ?? "")" title="Edit Name">
                                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M11.3333 2L14 4.66667L8.66667 10H6V7.33333L11.3333 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                                                 <path d="M10 3.33333L12.6667 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -866,6 +874,20 @@ function showEditNameModal(userId, email, currentName) {
     document.getElementById('newName').value = currentName;
     document.getElementById('editNameModal').classList.add('active');
 }
+
+// Delegated click handler for the Edit-name buttons. Reads the (HTML-encoded)
+// user data from data-* attributes rather than an inline onclick built from the
+// free-text FullName, closing the stored-XSS attribute-breakout on that value.
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.js-edit-name').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            showEditNameModal(
+                btn.getAttribute('data-user-id'),
+                btn.getAttribute('data-user-email'),
+                btn.getAttribute('data-current-name') || '');
+        });
+    });
+});
 
 function showResetPasswordModal(userId, email) {
     document.getElementById('resetPasswordUserId').value = userId;

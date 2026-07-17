@@ -104,6 +104,29 @@ public class ReadinessCheckTests : IDisposable
             "liveness must stay green even when seeding failed");
     }
 
+    [Fact]
+    public async Task Ready_WhenAdminSeedPasswordIsMalformed_Returns503_ButHealthStays200()
+    {
+        // Migration succeeds (SQLite), but a supplied admin password that violates
+        // the Identity policy makes UserManager.CreateAsync fail. That is a required
+        // seed failure: it must throw (not just warn) so readiness stays unhealthy
+        // and no admin-less deployment is admitted (#130).
+        using var factory = CreateFactory("Development", extra: new[]
+        {
+            new KeyValuePair<string, string?>("ADMIN_PASSWORD_SAM", "weak"), // too short, no upper/digit
+        });
+        // Development applies UseHttpsRedirection; use https so probes reach the endpoints.
+        using var client = HttpsOrHttpClient(factory, https: true);
+
+        var ready = await client.GetAsync("/ready");
+        ready.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable,
+            "a rejected admin password is a required-seed failure, so the service is not ready (#130)");
+
+        var health = await client.GetAsync("/health");
+        health.StatusCode.Should().Be(HttpStatusCode.OK,
+            "liveness must stay green even when a required seed step failed");
+    }
+
     private string NewDir(string name)
     {
         var dir = Path.Combine(_baseTemp, Guid.NewGuid().ToString("N"), name);

@@ -686,10 +686,17 @@ app.UseStaticFiles();
 // #128): a fresh per-request nonce is emitted into the header and stamped onto
 // every inline <script>/<style> element by NonceTagHelper, so the Razor views
 // render without 'unsafe-inline' in script-src/style-src. Injected <script>/
-// <style> elements without the nonce are blocked. Inline event handlers and
-// style="" attributes remain permitted via the *-src-attr fallbacks; the
-// document-level directives (base-uri, object-src, frame-ancestors, form-action)
-// stay restrictive.
+// <style> elements without the nonce are blocked. The document-level directives
+// (base-uri, object-src, frame-ancestors, form-action) stay restrictive.
+//
+// Tradeoff: the views still use inline event handlers (onclick=...) and
+// style="" attributes, so script-src-attr/style-src-attr keep 'unsafe-inline'.
+// That means CSP does NOT block attribute-injection, so any inline handler must
+// never be built from attacker-controlled data — those values go through
+// data-* attributes + addEventListener with normal Razor HTML-encoding instead
+// (see Views/Admin/Users.cshtml Edit-name). Dropping script-src-attr
+// 'unsafe-inline' entirely is follow-up work gated on converting the remaining
+// inline handlers across the admin/account views.
 var enableCsp = app.Configuration.GetValue("SecurityHeaders:EnableCsp", false);
 app.Use(async (context, next) =>
 {
@@ -701,8 +708,15 @@ app.Use(async (context, next) =>
 
     if (enableCsp)
     {
+        // URL-safe base64 (RFC 4648 base64url, no padding): the value is limited
+        // to [A-Za-z0-9-_], so Razor never HTML-encodes it inside the nonce="..."
+        // attribute. That keeps the header nonce byte-identical to the one the
+        // browser parses from the element (a raw base64 '+'/'/' would render as an
+        // HTML entity and, more importantly, is needless ambiguity). CSP allows
+        // base64url in nonce-source values.
         var nonce = Convert.ToBase64String(
-            System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
+                System.Security.Cryptography.RandomNumberGenerator.GetBytes(16))
+            .Replace('+', '-').Replace('/', '_').TrimEnd('=');
         context.Items[Andy.Auth.Server.Configuration.CspNonce.HttpContextItemKey] = nonce;
 
         context.Response.Headers["Content-Security-Policy"] =

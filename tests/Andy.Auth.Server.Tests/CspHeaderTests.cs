@@ -1,4 +1,5 @@
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Andy.Auth.Server.Configuration;
 using FluentAssertions;
@@ -104,6 +105,35 @@ public class CspHeaderTests : IDisposable
         var body = await response.Content.ReadAsStringAsync();
         body.Should().Contain($"nonce=\"{headerNonce}\"",
             "the per-request nonce must be stamped onto the view's inline <style>/<script> elements");
+    }
+
+    [Fact]
+    public void AdminUsersView_EditName_DoesNotBuildInlineHandlerFromFullName()
+    {
+        // Regression guard for the CSP-review Major: because script-src-attr keeps
+        // 'unsafe-inline', an inline onclick built from the attacker-controlled
+        // FullName was a stored-XSS attribute breakout. The Edit-name control must
+        // instead pass FullName via an auto-encoded data-* attribute and a delegated
+        // addEventListener (no @Html.Raw, no inline handler). A full render test would
+        // need admin auth + Postgres, so assert the source invariant directly.
+        var viewPath = ResolveRepoFile("src/Andy.Auth.Server/Views/Admin/Users.cshtml");
+        File.Exists(viewPath).Should().BeTrue($"expected the Users view at {viewPath}");
+
+        var content = File.ReadAllText(viewPath);
+        content.Should().NotContain("Html.Raw(user.FullName",
+            "the FullName inline-handler XSS sink must not be reintroduced");
+        content.Should().MatchRegex(@"data-current-name=""@\(user\.FullName",
+            "Edit-name must carry FullName in an auto-encoded data-* attribute");
+        content.Should().Contain(".js-edit-name",
+            "Edit-name must use a delegated addEventListener handler, not inline onclick");
+    }
+
+    private static string ResolveRepoFile(string relativePath, [CallerFilePath] string testFilePath = "")
+    {
+        // testFilePath -> .../tests/Andy.Auth.Server.Tests/CspHeaderTests.cs
+        var testProjectDir = Path.GetDirectoryName(testFilePath)!;
+        var repoRoot = Path.GetFullPath(Path.Combine(testProjectDir, "..", ".."));
+        return Path.Combine(repoRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
     }
 
     private static void AssertRestrictiveDirectives(string csp)
