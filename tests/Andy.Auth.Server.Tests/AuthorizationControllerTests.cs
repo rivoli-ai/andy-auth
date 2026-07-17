@@ -71,6 +71,8 @@ public class AuthorizationControllerTests
                     Microsoft.Extensions.Options.Options.Create(new RolePermissionOptions())),
                 _dbContext),
             new DcrClientGate(_dbContext),
+            new ConsentGrantService(
+                _dbContext, Mock.Of<ILogger<ConsentGrantService>>()),
             _mockLogger.Object);
 
         _httpContext = new DefaultHttpContext();

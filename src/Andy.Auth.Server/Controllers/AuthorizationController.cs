@@ -31,6 +31,7 @@ public class AuthorizationController : ControllerBase
     private readonly ISubjectTokenValidator _subjectTokenValidator;
     private readonly TokenClaimsPrincipalFactory _principalFactory;
     private readonly DcrClientGate _dcrGate;
+    private readonly ConsentGrantService _consentGrantService;
     private readonly ILogger<AuthorizationController> _logger;
 
     public AuthorizationController(
@@ -44,6 +45,7 @@ public class AuthorizationController : ControllerBase
         ISubjectTokenValidator subjectTokenValidator,
         TokenClaimsPrincipalFactory principalFactory,
         DcrClientGate dcrGate,
+        ConsentGrantService consentGrantService,
         ILogger<AuthorizationController> logger)
     {
         _applicationManager = applicationManager;
@@ -56,6 +58,7 @@ public class AuthorizationController : ControllerBase
         _subjectTokenValidator = subjectTokenValidator;
         _principalFactory = principalFactory;
         _dcrGate = dcrGate;
+        _consentGrantService = consentGrantService;
         _logger = logger;
     }
 
@@ -118,19 +121,36 @@ public class AuthorizationController : ControllerBase
             authorizations.Add(authorization);
         }
 
-        // Check if the user has already granted consent for this client and scopes
+        // Check if the user has already granted a durable ("remember") consent
+        // for this client that still covers every requested scope.
         var userId = await _userManager.GetUserIdAsync(user);
         var requestedScopes = request.GetScopes().ToList();
         var existingConsent = await _dbContext.UserConsents
             .FirstOrDefaultAsync(c => c.UserId == userId && c.ClientId == request.ClientId);
 
-        // Check if consent was just granted (redirect from consent page)
-        var consentGranted = Request.Query.ContainsKey("consent_granted") &&
-                             Request.Query["consent_granted"] == "true";
-
         var hasValidConsent = existingConsent != null &&
                               existingConsent.IsValid &&
                               existingConsent.CoversScopes(requestedScopes);
+
+        // The scopes to issue when a durable consent is used: the requested
+        // scopes intersected with what the user previously approved. Because
+        // hasValidConsent already requires the durable consent to cover every
+        // requested scope, this equals the requested set — but computing the
+        // intersection makes the "never issue an unapproved scope" invariant
+        // explicit and defensive.
+        var rememberedScopes = existingConsent == null
+            ? new List<string>()
+            : requestedScopes.Where(s => existingConsent.ScopesList.Contains(s)).ToList();
+
+        // Validate and consume any server-side consent grant referenced by the
+        // request. This is the ONLY trusted signal that the user just approved
+        // consent — the previous client-forgeable consent_granted=true marker
+        // has been removed (issue #124). A non-null result is the exact set of
+        // scopes the user approved, and the grant has been consumed so it
+        // cannot be replayed.
+        var approvedScopes = await ConsumeConsentGrantAsync(
+            userId, request.ClientId!, request.RedirectUri, requestedScopes);
+        var hasFreshConsent = approvedScopes != null;
 
         switch (await _applicationManager.GetConsentTypeAsync(application))
         {
@@ -147,45 +167,27 @@ public class AuthorizationController : ControllerBase
                     }));
 
             // If the consent is implicit or if an authorization was found,
-            // return an authorization response without displaying the consent form
+            // return an authorization response without displaying the consent form.
+            // These consent types do not require an interactive approval, so the
+            // full requested scope set is issued.
             case ConsentTypes.Implicit:
             case ConsentTypes.External when authorizations.Any():
-                var principal = await CreateClaimsPrincipalAsync(user, request.GetScopes());
+                return await IssueAuthorizationAsync(user, request.GetScopes(), request);
 
-                // Always include andy-docs-api audience for andy-docs-web client
-                if (request.ClientId == "andy-docs-web")
-                {
-                    var currentResources = principal.GetResources().ToList();
-                    const string andyDocsApiResource = "urn:andy-docs-api";
-                    if (!currentResources.Contains(andyDocsApiResource))
-                    {
-                        currentResources.Add(andyDocsApiResource);
-                    }
-                    principal.SetResources(currentResources);
-                }
-
-                // Signing in with the OpenIddict authentiction scheme trigger OpenIddict to issue a code
-                return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-
-            // For explicit consent, check if user has already granted consent
+            // Explicit consent with a pre-existing OpenIddict permanent
+            // authorization: the scopes were approved previously.
             case ConsentTypes.Explicit when authorizations.Any():
+                return await IssueAuthorizationAsync(user, request.GetScopes(), request);
+
+            // Explicit consent covered by a durable ("remember") consent record:
+            // issue only the scopes that record approved.
             case ConsentTypes.Explicit when hasValidConsent:
-            case ConsentTypes.Explicit when consentGranted:
-                var principalExplicit = await CreateClaimsPrincipalAsync(user, request.GetScopes());
+                return await IssueAuthorizationAsync(user, rememberedScopes, request);
 
-                // Always include andy-docs-api audience for andy-docs-web client
-                if (request.ClientId == "andy-docs-web")
-                {
-                    var currentResources = principalExplicit.GetResources().ToList();
-                    const string andyDocsApiResource = "urn:andy-docs-api";
-                    if (!currentResources.Contains(andyDocsApiResource))
-                    {
-                        currentResources.Add(andyDocsApiResource);
-                    }
-                    principalExplicit.SetResources(currentResources);
-                }
-
-                return SignIn(principalExplicit, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            // Explicit consent that the user just approved on the consent screen:
+            // issue only the approved subset carried by the consumed grant.
+            case ConsentTypes.Explicit when hasFreshConsent:
+                return await IssueAuthorizationAsync(user, approvedScopes!, request);
 
             // For explicit/systematic consent without prior consent, redirect to consent page
             // unless prompt=none was specified
@@ -211,11 +213,16 @@ public class AuthorizationController : ControllerBase
 
             // Default case: check for existing consent or redirect to consent page
             default:
-                // If user has valid consent, proceed
-                if (hasValidConsent || consentGranted)
+                // If the user has a durable consent, issue the approved subset.
+                if (hasValidConsent)
                 {
-                    var principalDefault = await CreateClaimsPrincipalAsync(user, request.GetScopes());
-                    return SignIn(principalDefault, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+                    return await IssueAuthorizationAsync(user, rememberedScopes, request);
+                }
+
+                // If the user just approved consent, issue the approved subset.
+                if (hasFreshConsent)
+                {
+                    return await IssueAuthorizationAsync(user, approvedScopes!, request);
                 }
 
                 // Redirect to consent page
@@ -223,6 +230,57 @@ public class AuthorizationController : ControllerBase
                     Request.HasFormContentType ? Request.Form.ToList() : Request.Query.ToList());
                 return Redirect($"/Consent?returnUrl={Uri.EscapeDataString(defaultReturnUrl)}");
         }
+    }
+
+    /// <summary>
+    /// Builds the OpenIddict claims principal for the given approved scopes and
+    /// signs in with the OpenIddict scheme, which triggers issuance of the
+    /// authorization code. Centralises the andy-docs-web audience injection so
+    /// every consent branch behaves identically.
+    /// </summary>
+    private async Task<IActionResult> IssueAuthorizationAsync(
+        ApplicationUser user, IEnumerable<string> scopes, OpenIddictRequest request)
+    {
+        var principal = await CreateClaimsPrincipalAsync(user, scopes);
+
+        // Always include andy-docs-api audience for andy-docs-web client
+        if (request.ClientId == "andy-docs-web")
+        {
+            var currentResources = principal.GetResources().ToList();
+            const string andyDocsApiResource = "urn:andy-docs-api";
+            if (!currentResources.Contains(andyDocsApiResource))
+            {
+                currentResources.Add(andyDocsApiResource);
+            }
+            principal.SetResources(currentResources);
+        }
+
+        // Signing in with the OpenIddict authentication scheme triggers OpenIddict to issue a code.
+        return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+    }
+
+    /// <summary>
+    /// Reads the <c>consent_id</c> parameter from the current request and asks
+    /// <see cref="ConsentGrantService"/> to validate and consume the referenced
+    /// server-side consent grant. Returns the exact set of scopes the user
+    /// approved when the grant is valid and bound to this (user, client,
+    /// redirect URI, requested-scope set); otherwise returns <c>null</c>, in
+    /// which case the caller falls back to displaying the consent screen.
+    ///
+    /// This is the trusted replacement for the removed, client-forgeable
+    /// <c>consent_granted</c> query marker (issue #124).
+    /// </summary>
+    private async Task<List<string>?> ConsumeConsentGrantAsync(
+        string userId, string clientId, string? redirectUri, List<string> requestedScopes)
+    {
+        var consentId = Request.HasFormContentType && Request.Form.ContainsKey("consent_id")
+            ? Request.Form["consent_id"].ToString()
+            : Request.Query["consent_id"].ToString();
+
+        var result = await _consentGrantService.ConsumeAsync(
+            consentId, userId, clientId, redirectUri, requestedScopes);
+
+        return result.Succeeded ? result.ApprovedScopes.ToList() : null;
     }
 
     [HttpPost("~/connect/token")]

@@ -490,6 +490,10 @@ builder.Services.AddScoped<OAuthAuthorizationService>();
 builder.Services.AddDataProtection();
 builder.Services.AddSingleton<OAuthCallbackCapabilityService>();
 
+// Owns lifecycle of short-lived, single-use server-side consent grants that
+// bridge the consent screen and the authorization endpoint (issue #124).
+builder.Services.AddScoped<ConsentGrantService>();
+
 // Add MCP Server for AI assistant integration with group management
 builder.Services
     .AddMcpServer()
