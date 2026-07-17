@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Andy.Auth.Server.Controllers;
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Services;
+using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -78,6 +79,57 @@ public class AuthorizationControllerTests
             HttpContext = _httpContext
         };
     }
+
+    #region IsDcrClientActiveAsync Fail-Closed Tests (#120)
+
+    [Fact]
+    public async Task IsDcrClientActiveAsync_NonDcrClient_NoMetadata_IsAllowed()
+    {
+        // Seeded first-party clients carry no DCR metadata and no dcr_ prefix;
+        // DCR restrictions must not apply to them.
+        (await _controller.IsDcrClientActiveAsync("first-party-web")).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task IsDcrClientActiveAsync_DcrPrefixedClient_WithoutMetadata_IsFailClosed()
+    {
+        // #120: an application whose client_id looks DCR-created but has no
+        // DynamicClientRegistration metadata is an orphaned/incomplete
+        // registration and must be denied.
+        (await _controller.IsDcrClientActiveAsync("dcr_orphan_incomplete")).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task IsDcrClientActiveAsync_ApprovedActiveDcrClient_IsAllowed()
+    {
+        _dbContext.DynamicClientRegistrations.Add(new DynamicClientRegistration
+        {
+            ClientId = "dcr_active",
+            IsApproved = true,
+            IsDisabled = false
+        });
+        await _dbContext.SaveChangesAsync();
+
+        (await _controller.IsDcrClientActiveAsync("dcr_active")).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(false, false)] // not approved
+    [InlineData(true, true)]   // disabled
+    public async Task IsDcrClientActiveAsync_UnapprovedOrDisabledDcrClient_IsDenied(bool isApproved, bool isDisabled)
+    {
+        _dbContext.DynamicClientRegistrations.Add(new DynamicClientRegistration
+        {
+            ClientId = "dcr_restricted",
+            IsApproved = isApproved,
+            IsDisabled = isDisabled
+        });
+        await _dbContext.SaveChangesAsync();
+
+        (await _controller.IsDcrClientActiveAsync("dcr_restricted")).Should().BeFalse();
+    }
+
+    #endregion
 
     #region Userinfo Endpoint Tests
 

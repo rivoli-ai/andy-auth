@@ -3,6 +3,7 @@ using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Models.Dcr;
 using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
 
@@ -256,30 +257,98 @@ public class DynamicClientRegistrationController : ControllerBase
             descriptor.Permissions.Add(OpenIddictConstants.Permissions.Prefixes.Resource + resource);
         }
 
-        // Create the client
-        await _applicationManager.CreateAsync(descriptor);
+        // Persist the whole registration as ONE logical transaction (#120):
+        // IAT consumption, the OpenIddict application, the registration access
+        // token, the DCR metadata, and the audit record either all commit or
+        // all roll back. OpenIddict's application manager writes through the
+        // same ApplicationDbContext, so it enlists in this transaction too.
+        //
+        // The EF in-memory provider (used by unit tests) is non-relational and
+        // does not support transactions; there we run without an explicit
+        // transaction — the relational providers (PostgreSQL, SQLite) carry the
+        // atomicity guarantee this defends.
+        var useTransaction = _context.Database.IsRelational();
+        var transaction = useTransaction
+            ? await _context.Database.BeginTransactionAsync()
+            : null;
 
-        // Update initial access token usage
-        if (initialAccessToken != null)
+        string registrationAccessToken;
+        try
         {
-            await _dcrService.IncrementInitialAccessTokenUseAsync(initialAccessToken);
+            // Reserve/consume the IAT atomically BEFORE issuing any client
+            // credentials (#121). The conditional UPDATE re-checks revocation,
+            // expiry, and use limits, so a concurrent registration cannot also
+            // consume the last remaining use. A false result means we lost the
+            // race (or the token was revoked/expired between validation and
+            // now); fail closed and roll back.
+            if (initialAccessToken != null)
+            {
+                var consumed = await _dcrService.TryConsumeInitialAccessTokenAsync(initialAccessToken.Id);
+                if (!consumed)
+                {
+                    if (transaction != null)
+                    {
+                        await transaction.RollbackAsync();
+                    }
+
+                    _logger.LogWarning(
+                        "DCR request denied: initial access token could not be consumed " +
+                        "(revoked, expired, or exhausted under concurrency).");
+                    return Unauthorized(new ClientRegistrationError
+                    {
+                        Error = DcrErrorCodes.InvalidToken,
+                        ErrorDescription = "Initial access token is no longer valid."
+                    });
+                }
+            }
+
+            // Create the client
+            await _applicationManager.CreateAsync(descriptor);
+
+            // Create registration access token
+            var (ratEntity, ratValue) = await _dcrService.CreateRegistrationAccessTokenAsync(clientId);
+            registrationAccessToken = ratValue;
+
+            // Create DCR metadata record
+            await _dcrService.CreateDynamicClientRegistrationAsync(
+                clientId,
+                ratEntity.Id,
+                initialAccessToken?.Id,
+                _settings.RequireAdminApproval,
+                HttpContext.Connection.RemoteIpAddress?.ToString(),
+                Request.Headers.UserAgent.FirstOrDefault(),
+                clientSecretExpiresAt);
+
+            // Log audit — written inside the transaction so the admin audit
+            // trail reflects only committed registrations (#120).
+            await LogAuditAsync("DcrClientRegistered", clientId, $"Client registered via DCR: {request.ClientName ?? clientId}");
+
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
         }
+        catch (Exception ex)
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync();
+            }
 
-        // Create registration access token
-        var (ratEntity, registrationAccessToken) = await _dcrService.CreateRegistrationAccessTokenAsync(clientId);
-
-        // Create DCR metadata record
-        await _dcrService.CreateDynamicClientRegistrationAsync(
-            clientId,
-            ratEntity.Id,
-            initialAccessToken?.Id,
-            _settings.RequireAdminApproval,
-            HttpContext.Connection.RemoteIpAddress?.ToString(),
-            Request.Headers.UserAgent.FirstOrDefault(),
-            clientSecretExpiresAt);
-
-        // Log audit
-        await LogAuditAsync("DcrClientRegistered", clientId, $"Client registered via DCR: {request.ClientName ?? clientId}");
+            _logger.LogError(ex, "DCR registration failed for client {ClientId}; rolled back.", clientId);
+            return StatusCode(500, new ClientRegistrationError
+            {
+                Error = DcrErrorCodes.InvalidClientMetadata,
+                ErrorDescription = "Client registration could not be completed."
+            });
+        }
+        finally
+        {
+            if (transaction != null)
+            {
+                await transaction.DisposeAsync();
+            }
+        }
 
         _logger.LogInformation("New client registered via DCR: {ClientId}", clientId);
 

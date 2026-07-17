@@ -18,6 +18,14 @@ public class DcrService
     private readonly DcrSettings _settings;
     private readonly ILogger<DcrService> _logger;
 
+    /// <summary>
+    /// Prefix stamped on every DCR-issued client_id. Also used as the
+    /// fail-closed marker: an OpenIddict application whose client_id carries
+    /// this prefix but has no DynamicClientRegistration metadata is treated
+    /// as an orphaned/incomplete registration (see #120).
+    /// </summary>
+    public const string ClientIdPrefix = "dcr_";
+
     public DcrService(
         ApplicationDbContext context,
         IOptions<DcrSettings> settings,
@@ -27,6 +35,14 @@ public class DcrService
         _settings = settings.Value;
         _logger = logger;
     }
+
+    /// <summary>
+    /// Whether the given client_id was issued by Dynamic Client Registration
+    /// (i.e. carries <see cref="ClientIdPrefix"/>).
+    /// </summary>
+    public static bool IsDcrIssuedClientId(string clientId) =>
+        !string.IsNullOrEmpty(clientId) &&
+        clientId.StartsWith(ClientIdPrefix, StringComparison.Ordinal);
 
     /// <summary>
     /// Validates the client registration request.
@@ -403,7 +419,7 @@ public class DcrService
             .Replace("=", "")
             .ToLowerInvariant();
 
-        return $"dcr_{id}";
+        return $"{ClientIdPrefix}{id}";
     }
 
     /// <summary>
@@ -453,7 +469,7 @@ public class DcrService
     /// <summary>
     /// Creates a registration access token for a client.
     /// </summary>
-    public async Task<(RegistrationAccessToken Entity, string PlainTextToken)> CreateRegistrationAccessTokenAsync(string clientId)
+    public virtual async Task<(RegistrationAccessToken Entity, string PlainTextToken)> CreateRegistrationAccessTokenAsync(string clientId)
     {
         var plainTextToken = GenerateRegistrationAccessToken();
         var tokenHash = HashToken(plainTextToken);
@@ -519,6 +535,65 @@ public class DcrService
     }
 
     /// <summary>
+    /// Atomically reserves (consumes) one use of an initial access token (#121).
+    ///
+    /// The revocation, expiry, single-use and max-use invariants are all
+    /// evaluated in the SAME conditional UPDATE as the increment, so two
+    /// concurrent registrations can never both consume the last remaining use
+    /// of a token. On a relational provider this is a single
+    /// <c>UPDATE ... SET UseCount = UseCount + 1 WHERE Id = @id AND &lt;still
+    /// valid&gt;</c> statement whose affected-row count is the arbiter: exactly
+    /// one row means this caller won the reservation.
+    ///
+    /// Callers MUST invoke this <b>before</b> issuing client credentials and,
+    /// for the atomic-registration guarantee (#120), inside the surrounding
+    /// registration transaction so a later failure rolls the consumption back.
+    /// </summary>
+    /// <returns><c>true</c> if a use was reserved for this caller; <c>false</c>
+    /// if the token was already revoked, expired, or exhausted (including by a
+    /// concurrent registration that won the race).</returns>
+    public async Task<bool> TryConsumeInitialAccessTokenAsync(int tokenId)
+    {
+        var now = DateTime.UtcNow;
+
+        // Relational providers (PostgreSQL, SQLite) get a true atomic
+        // conditional UPDATE. The WHERE clause re-checks every validity
+        // invariant against the committed row, so the check-and-increment is
+        // indivisible even under concurrent writers.
+        if (_context.Database.IsRelational())
+        {
+            var rowsAffected = await _context.InitialAccessTokens
+                .Where(t => t.Id == tokenId
+                    && !t.IsRevoked
+                    && (t.ExpiresAt == null || t.ExpiresAt > now)
+                    && (t.IsMultiUse || t.UseCount == 0)
+                    && (t.MaxUses == null || t.UseCount < t.MaxUses))
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(t => t.UseCount, t => t.UseCount + 1)
+                    .SetProperty(t => t.LastUsedAt, now));
+
+            return rowsAffected == 1;
+        }
+
+        // Non-relational fallback (EF in-memory provider, used by unit tests):
+        // ExecuteUpdate/transactions are unsupported, so emulate the guarded
+        // increment. This path carries no cross-connection concurrency
+        // guarantee — the relational conditional UPDATE above is production.
+        var token = await _context.InitialAccessTokens
+            .FirstOrDefaultAsync(t => t.Id == tokenId);
+
+        if (token == null || !token.IsValid)
+        {
+            return false;
+        }
+
+        token.UseCount++;
+        token.LastUsedAt = now;
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    /// <summary>
     /// Updates the last used timestamp for a registration access token.
     /// </summary>
     public async Task UpdateRegistrationAccessTokenLastUsedAsync(RegistrationAccessToken token)
@@ -540,7 +615,7 @@ public class DcrService
     /// <summary>
     /// Creates dynamic client registration metadata.
     /// </summary>
-    public async Task<DynamicClientRegistration> CreateDynamicClientRegistrationAsync(
+    public virtual async Task<DynamicClientRegistration> CreateDynamicClientRegistrationAsync(
         string clientId,
         int registrationAccessTokenId,
         int? initialAccessTokenId,
