@@ -82,6 +82,33 @@ jobs:
             -p:PackageVersion=$VERSION
         done
 
+    # Validate package metadata before it can be published. Guards against
+    # license drift (every package must declare the repo license, Apache-2.0)
+    # and against a package shipping without its readme. A .nupkg is a zip;
+    # its .nuspec carries the metadata we assert on.
+    - name: Validate package metadata
+      run: |
+        set -euo pipefail
+        shopt -s nullglob
+        fail=0
+        for pkg in ./artifacts/*.nupkg; do
+          echo "Validating $pkg"
+          nuspec=$(unzip -p "$pkg" '*.nuspec')
+          if ! grep -q '<license type="expression">Apache-2.0</license>' <<< "$nuspec"; then
+            echo "::error file=$pkg::Missing or non-Apache-2.0 <license> in nuspec"
+            fail=1
+          fi
+          if ! grep -q '<readme>' <<< "$nuspec"; then
+            echo "::error file=$pkg::Missing <readme> in nuspec"
+            fail=1
+          fi
+        done
+        if [[ $fail -ne 0 ]]; then
+          echo "Package metadata validation failed."
+          exit 1
+        fi
+        echo "All packages declare Apache-2.0 and include a readme."
+
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
