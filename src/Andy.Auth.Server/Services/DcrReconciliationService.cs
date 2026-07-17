@@ -67,6 +67,20 @@ public class DcrReconciliationService
                 continue;
             }
 
+            // TOCTOU guard for multi-replica / rolling deploys: `registeredSet`
+            // was snapshotted before this ListAsync enumeration began, so a
+            // registration that committed atomically on ANOTHER replica in the
+            // meantime would appear here as a false orphan. Re-check the LIVE
+            // metadata table immediately before deleting; only an application
+            // that STILL has no DCR metadata is a genuine orphan.
+            var stillHasNoMetadata = !await _context.DynamicClientRegistrations
+                .AsNoTracking()
+                .AnyAsync(d => d.ClientId == clientId, cancellationToken);
+            if (!stillHasNoMetadata)
+            {
+                continue;
+            }
+
             _logger.LogWarning(
                 "Reconciliation: removing orphaned DCR application {ClientId} " +
                 "(no DynamicClientRegistration metadata).",

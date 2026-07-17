@@ -278,6 +278,106 @@ public sealed class DcrAtomicRegistrationTests : IDisposable
         survivingTokenClientIds.Should().NotContain("dcr_orphan_token_only");
     }
 
+    [Fact]
+    public async Task Reconcile_RegistrationCommittingAfterSnapshot_DoesNotDeleteItsApplication()
+    {
+        // TOCTOU / multi-replica regression: a DCR-prefixed application that has
+        // no metadata when the reconciler snapshots the metadata table, but whose
+        // metadata is committed by another replica DURING the ListAsync
+        // enumeration, must NOT be deleted as a false orphan. The fresh
+        // pre-delete re-check must observe the just-committed metadata.
+        const string racingClientId = "dcr_race_after_snapshot";
+        using (var scope = _harness.NewVerificationScope())
+        {
+            var appManager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
+            await appManager.CreateAsync(new OpenIddictApplicationDescriptor
+            {
+                ClientId = racingClientId,
+                ClientType = OpenIddictConstants.ClientTypes.Public,
+                DisplayName = "Racing client"
+            });
+        }
+
+        // Simulate another replica committing this client's metadata mid-sweep:
+        // the injection fires once, during ListAsync enumeration — i.e. AFTER the
+        // reconciler has already snapshotted the (empty) metadata set.
+        async Task CommitMetadataOnAnotherReplicaAsync()
+        {
+            using var scope = _harness.NewVerificationScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            if (!await context.DynamicClientRegistrations.AnyAsync(d => d.ClientId == racingClientId))
+            {
+                context.DynamicClientRegistrations.Add(new DynamicClientRegistration
+                {
+                    ClientId = racingClientId,
+                    IsApproved = true,
+                    IsDisabled = false
+                });
+                await context.SaveChangesAsync();
+            }
+        }
+
+        int removed;
+        using (var scope = _harness.NewVerificationScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var realAppManager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
+
+            // Wrapping manager: real behavior everywhere, except ListAsync injects
+            // the concurrent metadata commit once before yielding any application.
+            var racingManager = new Mock<IOpenIddictApplicationManager>();
+            racingManager
+                .Setup(m => m.ListAsync(It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+                .Returns((int? count, int? offset, CancellationToken ct) =>
+                    InjectThenList(realAppManager, CommitMetadataOnAnotherReplicaAsync, count, offset, ct));
+            racingManager
+                .Setup(m => m.GetClientIdAsync(It.IsAny<object>(), It.IsAny<CancellationToken>()))
+                .Returns((object app, CancellationToken ct) => realAppManager.GetClientIdAsync(app, ct));
+            racingManager
+                .Setup(m => m.DeleteAsync(It.IsAny<object>(), It.IsAny<CancellationToken>()))
+                .Returns((object app, CancellationToken ct) => realAppManager.DeleteAsync(app, ct));
+            racingManager
+                .Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns((string id, CancellationToken ct) => realAppManager.FindByClientIdAsync(id, ct));
+
+            var reconciler = new DcrReconciliationService(
+                context, racingManager.Object, NullLogger<DcrReconciliationService>.Instance);
+            removed = await reconciler.ReconcileAsync();
+        }
+
+        removed.Should().Be(0, "the racing client is no longer an orphan by delete-time");
+        (await ApplicationExistsAsync(racingClientId))
+            .Should().BeTrue("a registration that committed after the snapshot must not be deleted");
+    }
+
+    private static async IAsyncEnumerable<object> InjectThenList(
+        IOpenIddictApplicationManager real,
+        Func<Task> injectOnce,
+        int? count,
+        int? offset,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // Buffer the real listing first so the underlying SQLite reader is closed
+        // before the injected "other replica" write runs — otherwise the open
+        // streaming reader and the concurrent writer deadlock on the file lock.
+        // This still faithfully reproduces the TOCTOU: the reconciler snapshotted
+        // the metadata table BEFORE calling ListAsync, and the injection commits
+        // the racing registration AFTER that snapshot but BEFORE any candidate is
+        // evaluated for deletion.
+        var buffer = new List<object>();
+        await foreach (var app in real.ListAsync(count, offset, cancellationToken).WithCancellation(cancellationToken))
+        {
+            buffer.Add(app);
+        }
+
+        await injectOnce();
+
+        foreach (var app in buffer)
+        {
+            yield return app;
+        }
+    }
+
     /// <summary>
     /// DcrService that persists real rows up to a chosen step, then throws — so a
     /// test can prove the surrounding transaction rolls the persisted rows back.
