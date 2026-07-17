@@ -247,6 +247,59 @@ issued every requested scope. That marker has been removed entirely.
 > table grows over time. The `(ExpiresAt, ConsumedAt)` index is in place so a
 > future scheduled reaper can delete `ConsumedAt IS NOT NULL OR ExpiresAt < now`
 > cheaply.
+### 9a. External Login & Account Linking
+
+**Implementation**: `Controllers/AccountController.cs` (`ExternalLoginCallback`, `LinkExternalLogin`), `Configuration/ExternalLoginOptions.cs`
+
+**Invariant**: An external (federated) identity is **NEVER** auto-linked to an
+existing local account solely because the provider asserts a matching email.
+Sign-in and account-linking are separate operations with separate proof
+requirements. Closes andy-auth#119.
+
+The `ExternalLoginCallback` has exactly three outcomes:
+
+1. **The external login is already linked** to a local account — sign the user
+   in via `SignInManager.ExternalLoginSignInAsync`. This does **not** silently
+   bypass a locally configured second factor: `bypassTwoFactor` is driven by
+   `ExternalLogin:BypassLocalTwoFactor` (default `false`), so a user with local
+   2FA is redirected through the normal 2FA challenge. Set the flag to `true`
+   only when the upstream provider's MFA is trusted to satisfy the local
+   second-factor requirement.
+2. **No local account has this email** — a new account is auto-provisioned and
+   bound to the external identity. This requires a verified email and an allowed
+   tenant/issuer (see below). This is provisioning, not linking to a pre-existing
+   account.
+3. **An existing local account shares the email but the login is not linked** —
+   the identity is **not** auto-linked. If (and only if) the request carries an
+   authenticated local session for that **same** user, the user is routed to an
+   explicit link-confirmation flow (`LinkExternalLogin`) that requires
+   **reauthentication with the local password** (the ownership challenge) before
+   the provider is attached. Otherwise the request is rejected with a clear
+   message and no link is created.
+
+**Explicit trust requirements** (`ExternalLoginOptions`, config section
+`ExternalLogin`):
+
+- `RequireVerifiedEmail` (default `true`) — the provider must assert
+  `email_verified`/`verified_email` = `true` before an account is provisioned or
+  linked. Providers that do not emit the claim must be configured to map it, or
+  an operator must explicitly opt out.
+- `AllowedTenantIds` — when non-empty, the principal's `tid` claim must be in the
+  allow-list.
+- `AllowedIssuers` — when non-empty, the principal's `iss` claim must be in the
+  allow-list.
+
+**User-state enforcement**: disabled (`IsActive == false`), suspended
+(`IsSuspended`), deleted (`DeletedAt`), and expired (`ExpiresAt`) users cannot be
+signed in or linked via the external flow. These checks are applied explicitly
+because ASP.NET Identity's sign-in path does not know about these custom
+`ApplicationUser` fields.
+
+**Audit events** distinguish each step: `UserLoginExternal` (external sign-in),
+`UserLoginExternalRejected` (blocked linked-account sign-in), `ExternalLinkRequested`
+(authenticated user began linking), `ExternalLinkSucceeded` (link confirmed after
+reauthentication), and `ExternalLinkRejected` (link refused — no session, unverified
+email, disallowed tenant/issuer, failed reauthentication, or email mismatch).
 
 ### 10. Database Security
 

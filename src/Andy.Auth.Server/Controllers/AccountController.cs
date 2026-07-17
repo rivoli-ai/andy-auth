@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace Andy.Auth.Server.Controllers;
 
@@ -28,6 +29,7 @@ public class AccountController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IAuditService _auditService;
     private readonly SessionService _sessionService;
+    private readonly ExternalLoginOptions _externalLoginOptions;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
@@ -35,12 +37,14 @@ public class AccountController : Controller
         UserManager<ApplicationUser> userManager,
         IAuditService auditService,
         SessionService sessionService,
+        IOptions<ExternalLoginOptions> externalLoginOptions,
         ILogger<AccountController> logger)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _auditService = auditService;
         _sessionService = sessionService;
+        _externalLoginOptions = externalLoginOptions.Value;
         _logger = logger;
     }
 
@@ -512,12 +516,31 @@ public class AccountController : Controller
 
     /// <summary>
     /// Handles the callback from external authentication providers.
-    /// Creates or links user accounts as needed.
+    ///
+    /// Closes andy-auth#119. The external identity is NEVER auto-linked to an
+    /// existing local account by matching email alone. The flow has three
+    /// distinct outcomes:
+    ///  1. The external login is ALREADY linked to a local account: sign the
+    ///     user in via <see cref="SignInManager{TUser}.ExternalLoginSignInAsync"/>.
+    ///     Local 2FA is enforced unless <see cref="ExternalLoginOptions.BypassLocalTwoFactor"/>
+    ///     is explicitly enabled (we do NOT silently bypass it).
+    ///  2. No local account has this email: auto-provision a new account bound
+    ///     to the external identity (this is not "linking to an existing
+    ///     account"). Requires a verified email and an allowed tenant/issuer.
+    ///  3. An existing local account shares the email but the login is not
+    ///     linked: refuse to auto-link. If the request carries an authenticated
+    ///     session for that SAME user, route to an explicit link-confirmation
+    ///     (reauthentication) flow; otherwise reject and emit an audit event.
+    ///
+    /// User-state invariants (disabled/suspended/deleted/expired) are enforced
+    /// before any sign-in or link, because ASP.NET Identity's sign-in path does
+    /// not know about our custom <see cref="ApplicationUser"/> state fields.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null)
     {
         returnUrl ??= Url.Content("~/");
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
         if (!string.IsNullOrEmpty(remoteError))
         {
@@ -534,52 +557,71 @@ public class AccountController : Controller
             return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
         }
 
-        // Try to sign in with the external login provider
-        var signInResult = await _signInManager.ExternalLoginSignInAsync(
-            info.LoginProvider,
-            info.ProviderKey,
-            isPersistent: false,
-            bypassTwoFactor: true);
-
-        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
-
-        if (signInResult.Succeeded)
+        // === Outcome 1: the external login is ALREADY linked to a local account. ===
+        var linkedUser = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
+        if (linkedUser != null)
         {
-            _logger.LogInformation("User logged in with {Provider} provider.", info.LoginProvider);
-
-            // Update last login time
-            var existingUser = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
-            if (existingUser != null)
+            // Enforce user-state invariants that ExternalLoginSignInAsync does not know about.
+            var blockedReason = GetSignInBlockedReason(linkedUser);
+            if (blockedReason != null)
             {
-                existingUser.LastLoginAt = DateTime.UtcNow;
-                await _userManager.UpdateAsync(existingUser);
+                await _auditService.LogAsync(
+                    "UserLoginExternalRejected",
+                    linkedUser.Id, linkedUser.Email ?? "Unknown", linkedUser.Id, linkedUser.Email,
+                    $"Login via {info.LoginProvider} rejected: {blockedReason}", ipAddress);
+                ModelState.AddModelError(string.Empty, blockedReason);
+                return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+            }
 
-                // Log external login
+            // Do NOT silently bypass local 2FA. The policy is explicit and
+            // defaults to enforcing the local second factor.
+            var signInResult = await _signInManager.ExternalLoginSignInAsync(
+                info.LoginProvider,
+                info.ProviderKey,
+                isPersistent: false,
+                bypassTwoFactor: _externalLoginOptions.BypassLocalTwoFactor);
+
+            if (signInResult.Succeeded)
+            {
+                _logger.LogInformation("User {UserId} logged in with {Provider} provider.", linkedUser.Id, info.LoginProvider);
+
+                linkedUser.LastLoginAt = DateTime.UtcNow;
+                await _userManager.UpdateAsync(linkedUser);
+
                 await _auditService.LogAsync(
                     "UserLoginExternal",
-                    existingUser.Id,
-                    existingUser.Email ?? "Unknown",
-                    existingUser.Id,
-                    existingUser.Email,
-                    $"Login via {info.LoginProvider}",
-                    ipAddress);
+                    linkedUser.Id, linkedUser.Email ?? "Unknown", linkedUser.Id, linkedUser.Email,
+                    $"Login via {info.LoginProvider}", ipAddress);
+
+                return RedirectToLocal(returnUrl);
             }
 
-            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            if (signInResult.RequiresTwoFactor)
             {
-                return Redirect(returnUrl);
+                _logger.LogInformation("External login for user {UserId} requires local 2FA.", linkedUser.Id);
+                return RedirectToAction(nameof(LoginWith2fa), new { returnUrl });
             }
-            return RedirectToAction("Index", "Home");
-        }
 
-        if (signInResult.IsLockedOut)
-        {
-            _logger.LogWarning("User account locked out.");
-            ModelState.AddModelError(string.Empty, "This account has been locked out. Please try again later.");
+            if (signInResult.IsLockedOut)
+            {
+                _logger.LogWarning("User {UserId} account locked out during external login.", linkedUser.Id);
+                await _auditService.LogAsync(
+                    "UserLoginExternalRejected",
+                    linkedUser.Id, linkedUser.Email ?? "Unknown", linkedUser.Id, linkedUser.Email,
+                    $"Login via {info.LoginProvider} rejected: account locked out", ipAddress);
+                ModelState.AddModelError(string.Empty, "This account has been locked out. Please try again later.");
+                return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+            }
+
+            await _auditService.LogAsync(
+                "UserLoginExternalRejected",
+                linkedUser.Id, linkedUser.Email ?? "Unknown", linkedUser.Id, linkedUser.Email,
+                $"Login via {info.LoginProvider} rejected: sign-in not allowed", ipAddress);
+            ModelState.AddModelError(string.Empty, "Unable to sign in with this provider.");
             return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
         }
 
-        // User doesn't have an account - create one or link to existing
+        // === The external login is NOT yet linked to any account. ===
         var email = info.Principal.FindFirstValue(ClaimTypes.Email);
         var name = info.Principal.FindFirstValue(ClaimTypes.Name)
                    ?? info.Principal.FindFirstValue("name")
@@ -592,32 +634,58 @@ public class AccountController : Controller
             return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
         }
 
-        // Check if user already exists with this email
-        var user = await _userManager.FindByEmailAsync(email);
-
-        if (user == null)
+        // Verified-email requirement (explicit). Applies to both provisioning a
+        // new account and linking to an existing one.
+        if (_externalLoginOptions.RequireVerifiedEmail && !IsEmailVerified(info.Principal))
         {
-            // Create a new user account
-            user = new ApplicationUser
+            _logger.LogWarning("External login for {Email} rejected: provider did not assert a verified email.", email);
+            await _auditService.LogAsync(
+                "ExternalLinkRejected",
+                email, email, null, email,
+                $"Provider {info.LoginProvider} did not assert a verified email (email_verified)", ipAddress);
+            ModelState.AddModelError(string.Empty,
+                "Your email address must be verified by the identity provider before you can sign in.");
+            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+        }
+
+        // Tenant / issuer allow-list (explicit).
+        var tenantIssuerReason = GetTenantIssuerRejection(info.Principal);
+        if (tenantIssuerReason != null)
+        {
+            _logger.LogWarning("External login for {Email} rejected: {Reason}", email, tenantIssuerReason);
+            await _auditService.LogAsync(
+                "ExternalLinkRejected",
+                email, email, null, email,
+                $"{info.LoginProvider}: {tenantIssuerReason}", ipAddress);
+            ModelState.AddModelError(string.Empty,
+                "Your organization is not permitted to sign in to this application.");
+            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+        }
+
+        var existingByEmail = await _userManager.FindByEmailAsync(email);
+
+        // === Outcome 2: no local account exists for this email — auto-provision. ===
+        if (existingByEmail == null)
+        {
+            var newUser = new ApplicationUser
             {
                 UserName = email,
                 Email = email,
-                EmailConfirmed = true, // Email is verified by external provider
+                EmailConfirmed = true, // Verified by the external provider (checked above).
                 FullName = name ?? "",
                 CreatedAt = DateTime.UtcNow,
                 LastLoginAt = DateTime.UtcNow,
                 IsActive = true
             };
 
-            // Extract profile picture if available
             var picture = info.Principal.FindFirstValue("picture")
                           ?? info.Principal.FindFirstValue("urn:google:picture");
             if (!string.IsNullOrEmpty(picture))
             {
-                user.ProfilePictureUrl = picture;
+                newUser.ProfilePictureUrl = picture;
             }
 
-            var createResult = await _userManager.CreateAsync(user);
+            var createResult = await _userManager.CreateAsync(newUser);
             if (!createResult.Succeeded)
             {
                 foreach (var error in createResult.Errors)
@@ -627,60 +695,272 @@ public class AccountController : Controller
                 return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
             }
 
-            _logger.LogInformation("Created new user {Email} via {Provider} external login.", email, info.LoginProvider);
-
-            // Log new user registration via external provider
-            await _auditService.LogAsync(
-                "UserRegisteredExternal",
-                user.Id,
-                user.Email ?? email,
-                user.Id,
-                user.Email,
-                $"New user registered via {info.LoginProvider}",
-                ipAddress);
-        }
-        else
-        {
-            // User exists - check the account lifecycle gate (andy-auth#146)
-            var externalDenial = UserLifecycle.GetDenialReason(user);
-            if (externalDenial is not null)
+            var addLoginResult = await _userManager.AddLoginAsync(newUser, info);
+            if (!addLoginResult.Succeeded)
             {
-                _logger.LogWarning(
-                    "External login refused for {Email}: {Reason}", user.Email, externalDenial);
-                ModelState.AddModelError(string.Empty, "This account has been disabled.");
-                return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+                _logger.LogWarning("Failed to add external login for new user {Email}: {Errors}",
+                    email, string.Join(", ", addLoginResult.Errors.Select(e => e.Description)));
             }
 
-            // Update last login time
-            user.LastLoginAt = DateTime.UtcNow;
-            await _userManager.UpdateAsync(user);
+            _logger.LogInformation("Created new user {Email} via {Provider} external login.", email, info.LoginProvider);
+            await _auditService.LogAsync(
+                "UserRegisteredExternal",
+                newUser.Id, newUser.Email ?? email, newUser.Id, newUser.Email,
+                $"New user registered via {info.LoginProvider}", ipAddress);
 
-            _logger.LogInformation("Linked {Provider} login to existing user {Email}.", info.LoginProvider, email);
+            await _signInManager.SignInAsync(newUser, isPersistent: false);
+            await _auditService.LogAsync(
+                "UserLoginExternal",
+                newUser.Id, newUser.Email ?? email, newUser.Id, newUser.Email,
+                $"Login via {info.LoginProvider}", ipAddress);
+
+            return RedirectToLocal(returnUrl);
         }
 
-        // Link the external login to the user account
+        // === Outcome 3: an existing local account shares this email but the ===
+        // === external login is NOT linked. NEVER auto-link by email alone.  ===
+        var sessionUser = User.Identity?.IsAuthenticated == true
+            ? await _userManager.GetUserAsync(User)
+            : null;
+
+        if (sessionUser == null || !string.Equals(sessionUser.Id, existingByEmail.Id, StringComparison.Ordinal))
+        {
+            // No authenticated session for the account being claimed: refuse to
+            // create the link and do NOT sign anyone in.
+            _logger.LogWarning(
+                "Refusing to auto-link {Provider} identity to existing account {Email}: no authenticated session for that user.",
+                info.LoginProvider, email);
+            await _auditService.LogAsync(
+                "ExternalLinkRejected",
+                existingByEmail.Id, existingByEmail.Email ?? email, existingByEmail.Id, existingByEmail.Email,
+                $"Auto-link of {info.LoginProvider} refused: email matches an existing account but no authenticated session for that user",
+                ipAddress);
+            ModelState.AddModelError(string.Empty,
+                "An account with this email already exists. Sign in with your existing credentials first, then link this provider from your account settings.");
+            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+        }
+
+        // Authenticated as the SAME user. Enforce user-state, then require an
+        // explicit ownership challenge (reauthentication) before linking.
+        var linkBlockedReason = GetSignInBlockedReason(existingByEmail);
+        if (linkBlockedReason != null)
+        {
+            await _auditService.LogAsync(
+                "ExternalLinkRejected",
+                existingByEmail.Id, existingByEmail.Email ?? email, existingByEmail.Id, existingByEmail.Email,
+                $"Link of {info.LoginProvider} rejected: {linkBlockedReason}", ipAddress);
+            ModelState.AddModelError(string.Empty, linkBlockedReason);
+            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+        }
+
+        await _auditService.LogAsync(
+            "ExternalLinkRequested",
+            existingByEmail.Id, existingByEmail.Email ?? email, existingByEmail.Id, existingByEmail.Email,
+            $"Authenticated user requested linking {info.LoginProvider}; reauthentication required", ipAddress);
+        return RedirectToAction(nameof(LinkExternalLogin), new { returnUrl });
+    }
+
+    /// <summary>
+    /// Shows the external-login link confirmation. Requires an authenticated
+    /// local session; the user must reauthenticate (see the POST) before the
+    /// external identity is attached. Part of andy-auth#119.
+    /// </summary>
+    [HttpGet]
+    [Authorize(AuthenticationSchemes = "Identity.Application")]
+    public async Task<IActionResult> LinkExternalLogin(string? returnUrl = null)
+    {
+        var info = await _signInManager.GetExternalLoginInfoAsync();
+        if (info == null)
+        {
+            return RedirectToAction(nameof(Login));
+        }
+
+        return View(new LinkExternalLoginViewModel
+        {
+            Provider = info.ProviderDisplayName ?? info.LoginProvider,
+            ReturnUrl = returnUrl
+        });
+    }
+
+    /// <summary>
+    /// Confirms linking the pending external identity to the signed-in account.
+    /// The ownership challenge is a password reauthentication: the account owner
+    /// must prove they know the local password before the provider is attached.
+    /// Part of andy-auth#119.
+    /// </summary>
+    [HttpPost]
+    [Authorize(AuthenticationSchemes = "Identity.Application")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> LinkExternalLogin(LinkExternalLoginViewModel model)
+    {
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+        {
+            return RedirectToAction(nameof(Login));
+        }
+
+        var info = await _signInManager.GetExternalLoginInfoAsync();
+        if (info == null)
+        {
+            ModelState.AddModelError(string.Empty, "The external login session has expired. Please try again.");
+            return View(model);
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        // Ownership challenge: reauthenticate with the local password.
+        var passwordOk = await _userManager.CheckPasswordAsync(user, model.Password);
+        if (!passwordOk)
+        {
+            await _auditService.LogAsync(
+                "ExternalLinkRejected",
+                user.Id, user.Email ?? "Unknown", user.Id, user.Email,
+                $"Reauthentication failed while linking {info.LoginProvider}", ipAddress);
+            ModelState.AddModelError(string.Empty, "Incorrect password.");
+            return View(model);
+        }
+
+        // Defense in depth: the external identity's email must still match the
+        // signed-in account, so a session for user A cannot attach an identity
+        // whose email belongs to user B.
+        var externalEmail = info.Principal.FindFirstValue(ClaimTypes.Email);
+        if (!string.IsNullOrEmpty(externalEmail)
+            && !string.Equals(externalEmail, user.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            await _auditService.LogAsync(
+                "ExternalLinkRejected",
+                user.Id, user.Email ?? "Unknown", user.Id, user.Email,
+                $"Link of {info.LoginProvider} rejected: provider email does not match the signed-in account", ipAddress);
+            ModelState.AddModelError(string.Empty, "This external account's email does not match your account.");
+            return View(model);
+        }
+
+        var blockedReason = GetSignInBlockedReason(user);
+        if (blockedReason != null)
+        {
+            await _auditService.LogAsync(
+                "ExternalLinkRejected",
+                user.Id, user.Email ?? "Unknown", user.Id, user.Email,
+                $"Link of {info.LoginProvider} rejected: {blockedReason}", ipAddress);
+            ModelState.AddModelError(string.Empty, blockedReason);
+            return View(model);
+        }
+
         var addLoginResult = await _userManager.AddLoginAsync(user, info);
         if (!addLoginResult.Succeeded)
         {
-            // Login might already be linked (e.g., if user registered with same email)
-            _logger.LogWarning("Failed to add external login for {Email}: {Errors}",
-                email, string.Join(", ", addLoginResult.Errors.Select(e => e.Description)));
+            _logger.LogWarning("Failed to link external login {Provider} for {Email}: {Errors}",
+                info.LoginProvider, user.Email, string.Join(", ", addLoginResult.Errors.Select(e => e.Description)));
+            await _auditService.LogAsync(
+                "ExternalLinkRejected",
+                user.Id, user.Email ?? "Unknown", user.Id, user.Email,
+                $"Link of {info.LoginProvider} failed: {string.Join(", ", addLoginResult.Errors.Select(e => e.Description))}",
+                ipAddress);
+            foreach (var error in addLoginResult.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+            return View(model);
         }
 
-        // Sign in the user
-        await _signInManager.SignInAsync(user, isPersistent: false);
-        _logger.LogInformation("User {Email} signed in via {Provider}.", email, info.LoginProvider);
-
-        // Log external login (for existing user linking)
+        _logger.LogInformation("User {Email} linked {Provider} to their account.", user.Email, info.LoginProvider);
         await _auditService.LogAsync(
-            "UserLoginExternal",
-            user.Id,
-            user.Email ?? email,
-            user.Id,
-            user.Email,
-            $"Login via {info.LoginProvider}",
-            ipAddress);
+            "ExternalLinkSucceeded",
+            user.Id, user.Email ?? "Unknown", user.Id, user.Email,
+            $"Linked {info.LoginProvider} to account", ipAddress);
 
+        // Refresh the sign-in so the (rotated) security stamp / cookie reflects
+        // the new login, without bypassing local 2FA on future sign-ins.
+        await _signInManager.RefreshSignInAsync(user);
+
+        return RedirectToLocal(model.ReturnUrl);
+    }
+
+    /// <summary>
+    /// Returns a reason string if the user is not permitted to sign in or be
+    /// linked (disabled/suspended/deleted/expired), or null if permitted.
+    /// Mirrors the state fields on <see cref="ApplicationUser"/>.
+    /// </summary>
+    private static string? GetSignInBlockedReason(ApplicationUser user)
+    {
+        if (user.DeletedAt.HasValue)
+        {
+            return "This account has been deleted.";
+        }
+        if (!user.IsActive)
+        {
+            return "This account has been disabled.";
+        }
+        if (user.IsSuspended)
+        {
+            return "This account has been suspended.";
+        }
+        if (user.ExpiresAt.HasValue && user.ExpiresAt.Value <= DateTime.UtcNow)
+        {
+            return "This account has expired.";
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Whether the external principal asserts a verified email. Recognises the
+    /// common OIDC (<c>email_verified</c>), Google (<c>verified_email</c>) and
+    /// Microsoft claim spellings.
+    /// </summary>
+    private static bool IsEmailVerified(ClaimsPrincipal principal)
+    {
+        var claim = principal.FindFirstValue("email_verified")
+                    ?? principal.FindFirstValue("verified_email")
+                    ?? principal.FindFirstValue("http://schemas.microsoft.com/identity/claims/emailverified");
+        return string.Equals(claim, "true", StringComparison.OrdinalIgnoreCase) || claim == "1";
+    }
+
+    /// <summary>
+    /// Enforces the configured tenant (<c>tid</c>) and issuer (<c>iss</c>)
+    /// allow-lists against the external principal. Returns a rejection reason or
+    /// null when the principal is allowed.
+    /// </summary>
+    private string? GetTenantIssuerRejection(ClaimsPrincipal principal)
+    {
+        var allowedTenants = _externalLoginOptions.AllowedTenantIds
+            .Where(t => !string.IsNullOrWhiteSpace(t) && !string.Equals(t, "common", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (allowedTenants.Count > 0)
+        {
+            var tid = principal.FindFirstValue("http://schemas.microsoft.com/identity/claims/tenantid")
+                      ?? principal.FindFirstValue("tid");
+            if (string.IsNullOrEmpty(tid) || !allowedTenants.Contains(tid, StringComparer.OrdinalIgnoreCase))
+            {
+                return $"Provider tenant '{tid ?? "(none)"}' is not in the allowed tenant list";
+            }
+        }
+
+        var allowedIssuers = _externalLoginOptions.AllowedIssuers
+            .Where(i => !string.IsNullOrWhiteSpace(i))
+            .ToList();
+        if (allowedIssuers.Count > 0)
+        {
+            var iss = principal.FindFirstValue("iss")
+                      ?? principal.FindFirstValue("http://schemas.microsoft.com/identity/claims/issuer");
+            if (string.IsNullOrEmpty(iss) || !allowedIssuers.Contains(iss, StringComparer.OrdinalIgnoreCase))
+            {
+                return $"Provider issuer '{iss ?? "(none)"}' is not in the allowed issuer list";
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Redirects to a validated local return URL, or to Home when absent/unsafe.
+    /// </summary>
+    private IActionResult RedirectToLocal(string? returnUrl)
+    {
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
         {
             return Redirect(returnUrl);
