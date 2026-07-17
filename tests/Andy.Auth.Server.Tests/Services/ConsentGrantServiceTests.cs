@@ -1,6 +1,7 @@
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Services;
 using FluentAssertions;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -246,5 +247,72 @@ public class ConsentGrantServiceTests : IDisposable
 
         result.Succeeded.Should().BeTrue();
         result.ApprovedScopes.Should().BeEquivalentTo(new[] { "openid", "profile", "email" });
+    }
+
+    // ==================== Consume: genuine concurrency ====================
+
+    [Fact]
+    public async Task ConsumeAsync_ConcurrentReplays_ExactlyOneSucceeds()
+    {
+        // The single-use guarantee must hold under concurrency, not just in the
+        // sequential case. This uses a real relational provider (file-backed
+        // SQLite, one connection per DbContext — mirroring per-request scoping)
+        // so the atomic "UPDATE ... WHERE ConsumedAt IS NULL" is exercised for
+        // real. A read-then-write consume would let several racers all observe
+        // ConsumedAt == null and all succeed.
+        var dbFile = Path.Combine(Path.GetTempPath(), $"consent-conc-{Guid.NewGuid():N}.db");
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite($"DataSource={dbFile}")
+            .Options;
+
+        try
+        {
+            string grantId;
+            using (var ctx = new ApplicationDbContext(options))
+            {
+                await ctx.Database.EnsureCreatedAsync();
+
+                // Satisfy the ConsentGrant -> AspNetUsers foreign key (SQLite
+                // enforces FKs; the in-memory provider does not).
+                ctx.Users.Add(new ApplicationUser { Id = User, UserName = User, Email = "u@example.com" });
+                await ctx.SaveChangesAsync();
+
+                var seedService = new ConsentGrantService(ctx, Mock.Of<ILogger<ConsentGrantService>>());
+                var grant = await seedService.CreateAsync(
+                    User, Client, Redirect,
+                    new[] { "openid", "profile" }, new[] { "openid", "profile" });
+                grantId = grant.GrantId;
+            }
+
+            const int concurrency = 16;
+            var tasks = Enumerable.Range(0, concurrency).Select(_ => Task.Run(async () =>
+            {
+                // Each racer gets its own DbContext + connection, as in production.
+                using var ctx = new ApplicationDbContext(options);
+                var service = new ConsentGrantService(ctx, Mock.Of<ILogger<ConsentGrantService>>());
+                var result = await service.ConsumeAsync(
+                    grantId, User, Client, Redirect, new[] { "openid", "profile" });
+                return result.Succeeded;
+            })).ToArray();
+
+            var results = await Task.WhenAll(tasks);
+
+            results.Count(ok => ok).Should().Be(
+                1, "exactly one concurrent replay may consume a single-use grant");
+
+            using (var verify = new ApplicationDbContext(options))
+            {
+                var g = await verify.ConsentGrants.SingleAsync(x => x.GrantId == grantId);
+                g.ConsumedAt.Should().NotBeNull();
+            }
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (File.Exists(dbFile))
+            {
+                File.Delete(dbFile);
+            }
+        }
     }
 }

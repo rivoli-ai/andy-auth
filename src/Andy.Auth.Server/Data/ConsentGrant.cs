@@ -18,6 +18,13 @@ namespace Andy.Auth.Server.Data;
 /// subset, and expires quickly. The authorization endpoint only proceeds when
 /// it can look up a matching, unconsumed, unexpired grant, and then issues
 /// only <see cref="GrantedScopes"/> — never the raw requested scopes.
+///
+/// NOTE (housekeeping): consumed and expired grants are inert (they can never
+/// authorize anything — see <c>ConsentGrantService.ConsumeAsync</c>), but there
+/// is currently no background reaper that deletes them, so the table grows
+/// unbounded over time. The <c>(ExpiresAt, ConsumedAt)</c> index exists so a
+/// future scheduled cleanup can prune <c>ConsumedAt IS NOT NULL OR ExpiresAt &lt; now</c>
+/// cheaply. Not required for correctness or security; tracked as follow-up.
 /// </summary>
 public class ConsentGrant
 {

@@ -170,7 +170,11 @@ issued every requested scope. That marker has been removed entirely.
 
 - **Forgery** — a fabricated/absent `consent_id` matches no server-side grant, so
   consent cannot be self-asserted by the client.
-- **Replay** — a consumed grant is rejected on any subsequent use.
+- **Replay** — a consumed grant is rejected on any subsequent use. Consumption
+  is **atomic**: the grant is claimed with a conditional
+  `UPDATE ... SET ConsumedAt = now WHERE ConsumedAt IS NULL`, so even two
+  requests replaying the same `consent_id` concurrently result in exactly one
+  success (covered by a concurrency test firing N simultaneous consumes).
 - **Expiry** — a grant past its short TTL is rejected.
 - **Tampering** — a request whose user, client, redirect URI, or requested-scope
   set differs from the recorded grant is rejected and re-prompts for consent
@@ -179,6 +183,12 @@ issued every requested scope. That marker has been removed entirely.
   recorded and issued; the de-selected scopes never reach a token.
 - **Non-remembered consent** — a "don't remember" decision creates no durable
   record; only the short-lived grant authorizes that single request.
+
+> **Housekeeping (follow-up, not security-critical):** consumed/expired grants
+> are inert but are not yet pruned by any background job, so the `ConsentGrants`
+> table grows over time. The `(ExpiresAt, ConsumedAt)` index is in place so a
+> future scheduled reaper can delete `ConsumedAt IS NOT NULL OR ExpiresAt < now`
+> cheaply.
 
 ### 10. Database Security
 

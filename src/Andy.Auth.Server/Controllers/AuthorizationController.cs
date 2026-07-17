@@ -142,15 +142,12 @@ public class AuthorizationController : ControllerBase
             ? new List<string>()
             : requestedScopes.Where(s => existingConsent.ScopesList.Contains(s)).ToList();
 
-        // Validate and consume any server-side consent grant referenced by the
-        // request. This is the ONLY trusted signal that the user just approved
-        // consent — the previous client-forgeable consent_granted=true marker
-        // has been removed (issue #124). A non-null result is the exact set of
-        // scopes the user approved, and the grant has been consumed so it
-        // cannot be replayed.
-        var approvedScopes = await ConsumeConsentGrantAsync(
-            userId, request.ClientId!, request.RedirectUri, requestedScopes);
-        var hasFreshConsent = approvedScopes != null;
+        // NOTE: the short-lived, server-side consent grant referenced by the
+        // request is validated and consumed lazily — only in the branches where
+        // it is actually the authority for issuance (i.e. there is no permanent
+        // OpenIddict authorization and no durable "remember" consent). Consuming
+        // it here unconditionally would needlessly burn a single-use grant when
+        // a durable consent would have authorized the request anyway.
 
         switch (await _applicationManager.GetConsentTypeAsync(application))
         {
@@ -180,19 +177,26 @@ public class AuthorizationController : ControllerBase
                 return await IssueAuthorizationAsync(user, request.GetScopes(), request);
 
             // Explicit consent covered by a durable ("remember") consent record:
-            // issue only the scopes that record approved.
+            // issue only the scopes that record approved. The short-lived grant
+            // is intentionally NOT consumed here — the durable consent is the
+            // authority.
             case ConsentTypes.Explicit when hasValidConsent:
                 return await IssueAuthorizationAsync(user, rememberedScopes, request);
 
-            // Explicit consent that the user just approved on the consent screen:
-            // issue only the approved subset carried by the consumed grant.
-            case ConsentTypes.Explicit when hasFreshConsent:
-                return await IssueAuthorizationAsync(user, approvedScopes!, request);
-
-            // For explicit/systematic consent without prior consent, redirect to consent page
-            // unless prompt=none was specified
+            // For explicit/systematic consent without a permanent authorization
+            // or durable consent, the short-lived grant is the authority: try to
+            // consume it, and only fall back to the consent screen if there is
+            // none. prompt=none cannot show a consent UI.
             case ConsentTypes.Explicit:
             case ConsentTypes.Systematic:
+            {
+                var approvedScopes = await ConsumeConsentGrantAsync(
+                    userId, request.ClientId!, request.RedirectUri, requestedScopes);
+                if (approvedScopes != null)
+                {
+                    return await IssueAuthorizationAsync(user, approvedScopes, request);
+                }
+
                 // If prompt=none, return error as we can't show consent UI
                 if (request.Prompt == "none")
                 {
@@ -210,25 +214,30 @@ public class AuthorizationController : ControllerBase
                 var returnUrl = Request.PathBase + Request.Path + QueryString.Create(
                     Request.HasFormContentType ? Request.Form.ToList() : Request.Query.ToList());
                 return Redirect($"/Consent?returnUrl={Uri.EscapeDataString(returnUrl)}");
+            }
 
             // Default case: check for existing consent or redirect to consent page
             default:
+            {
                 // If the user has a durable consent, issue the approved subset.
                 if (hasValidConsent)
                 {
                     return await IssueAuthorizationAsync(user, rememberedScopes, request);
                 }
 
-                // If the user just approved consent, issue the approved subset.
-                if (hasFreshConsent)
+                // Otherwise the short-lived grant is the authority — consume it.
+                var approvedScopes = await ConsumeConsentGrantAsync(
+                    userId, request.ClientId!, request.RedirectUri, requestedScopes);
+                if (approvedScopes != null)
                 {
-                    return await IssueAuthorizationAsync(user, approvedScopes!, request);
+                    return await IssueAuthorizationAsync(user, approvedScopes, request);
                 }
 
                 // Redirect to consent page
                 var defaultReturnUrl = Request.PathBase + Request.Path + QueryString.Create(
                     Request.HasFormContentType ? Request.Form.ToList() : Request.Query.ToList());
                 return Redirect($"/Consent?returnUrl={Uri.EscapeDataString(defaultReturnUrl)}");
+            }
         }
     }
 

@@ -151,9 +151,20 @@ public class ConsentGrantService
             return ConsentGrantConsumeResult.Fail(ConsentGrantConsumeStatus.BindingMismatch);
         }
 
-        // Consume (single use) before issuing anything.
-        grant.ConsumedAt = now;
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        // Atomically claim the grant (single use). This MUST be a conditional
+        // update rather than "read-then-write": two requests replaying the same
+        // consent_id concurrently would otherwise both pass the ConsumedAt-null
+        // check above and both be honoured. The relational path issues
+        // "UPDATE ... SET ConsumedAt=@now WHERE Id=@id AND ConsumedAt IS NULL"
+        // and treats rows-affected==1 as "this caller won the race".
+        var claimed = await TryClaimAsync(grant, now, cancellationToken);
+        if (!claimed)
+        {
+            _logger.LogWarning(
+                "Consent grant replay rejected (lost consume race) for user {UserId}, client {ClientId}.",
+                userId, clientId);
+            return ConsentGrantConsumeResult.Fail(ConsentGrantConsumeStatus.Replayed);
+        }
 
         // Issue only the approved subset, constrained to the current request.
         var approved = grant.GrantedScopesList
@@ -161,6 +172,42 @@ public class ConsentGrantService
             .ToList();
 
         return ConsentGrantConsumeResult.Ok(approved);
+    }
+
+    /// <summary>
+    /// Atomically flips <see cref="ConsentGrant.ConsumedAt"/> from null to
+    /// <paramref name="now"/> for the given grant, returning <c>true</c> only
+    /// for the single caller whose conditional update actually claimed the row.
+    /// On a relational provider this is a single atomic
+    /// <c>UPDATE ... WHERE ConsumedAt IS NULL</c>; concurrent replays of the
+    /// same grant race here and all but one observe zero affected rows.
+    /// </summary>
+    private async Task<bool> TryClaimAsync(ConsentGrant grant, DateTime now, CancellationToken cancellationToken)
+    {
+        if (_dbContext.Database.IsRelational())
+        {
+            var affected = await _dbContext.ConsentGrants
+                .Where(g => g.Id == grant.Id && g.ConsumedAt == null)
+                .ExecuteUpdateAsync(
+                    setters => setters.SetProperty(g => g.ConsumedAt, now),
+                    cancellationToken);
+
+            // Keep the tracked entity consistent with the store.
+            if (affected == 1)
+            {
+                grant.ConsumedAt = now;
+            }
+
+            return affected == 1;
+        }
+
+        // Non-relational provider (the in-memory test double) does not support
+        // ExecuteUpdate and offers no cross-context atomicity anyway. Fall back
+        // to a tracked write; genuine concurrency is exercised against a
+        // relational provider (SQLite) in the tests.
+        grant.ConsumedAt = now;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     /// <summary>
