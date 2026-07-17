@@ -8,7 +8,6 @@ NuGet package for easy OAuth 2.0 / OpenID Connect integration with ASP.NET Core 
 
 - **Andy Auth** (self-hosted OpenIddict server)
 - **Azure AD** (Microsoft Entra ID)
-- **Clerk** (third-party auth service)
 - **Custom OAuth providers**
 
 ## Features
@@ -162,19 +161,6 @@ public class ProfileController : ControllerBase
 }
 ```
 
-**Clerk Provider:**
-```json
-{
-  "AndyAuth": {
-    "Provider": "Clerk",
-    "Clerk": {
-      "Domain": "your-domain.clerk.accounts.dev",
-      "ApiKey": "your-api-key"
-    }
-  }
-}
-```
-
 ### Option 2: Code-based Configuration
 
 Configure authentication in code using an action:
@@ -211,12 +197,11 @@ builder.Services.AddAndyAuth(authOptions);
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `Provider` | `AuthProvider` | `AndyAuth` | Authentication provider (AndyAuth, AzureAD, Clerk, Custom) |
+| `Provider` | `AuthProvider` | `AndyAuth` | Authentication provider (AndyAuth, AzureAD, Custom) |
 | `AuthenticationScheme` | `string` | `"Bearer"` | Authentication scheme name |
 | `Authority` | `string?` | `null` | OAuth authority URL (required for AndyAuth) |
 | `Audience` | `string?` | `null` | Expected audience claim (optional) |
 | `AzureAd` | `AzureAdOptions?` | `null` | Azure AD configuration (required if Provider = AzureAD) |
-| `Clerk` | `ClerkOptions?` | `null` | Clerk configuration (required if Provider = Clerk) |
 | `EnableAutoUserProvisioning` | `bool` | `true` | Automatically provision users on first login |
 | `Events` | `JwtBearerEvents?` | `null` | Custom JWT Bearer events |
 | `RequireHttpsMetadata` | `bool` | `true` | Require HTTPS for metadata endpoint |
@@ -229,13 +214,6 @@ builder.Services.AddAndyAuth(authOptions);
 | `TenantId` | `string` | Azure AD tenant ID |
 | `ClientId` | `string` | Application (client) ID |
 | `Audience` | `string?` | Expected audience (defaults to `api://{ClientId}`) |
-
-### ClerkOptions
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `Domain` | `string` | Clerk frontend API domain |
-| `ApiKey` | `string` | Clerk API key |
 
 ## ICurrentUserService
 
@@ -340,12 +318,6 @@ Change providers by updating configuration:
 - Microsoft 365 integration
 - Azure RBAC
 - Conditional access policies
-
-**Clerk:**
-- Managed authentication service
-- Built-in user management UI
-- Social logins
-- Magic links
 
 ## Integration with Andy.Auth.Server
 
@@ -823,6 +795,18 @@ builder.Services.AddAndyAuth(options =>
    });
    ```
 
+## Breaking Changes
+
+### Removal of Clerk provider
+
+The built-in Clerk authentication provider has been removed. This is a breaking change to the public API:
+
+- The `AuthProvider.Clerk` enum member no longer exists.
+- The `ClerkOptions` type and the `AndyAuthOptions.Clerk` property have been removed.
+- The `ClerkProvider` type has been removed.
+
+Applications that previously used `Provider = AuthProvider.Clerk` must migrate to a supported provider (`AndyAuth`, `AzureAD`) or supply a custom `IAuthProvider` implementation. Because Clerk exposes a standard OIDC discovery document, most Clerk setups can be reproduced with `Provider = AuthProvider.AndyAuth` by pointing `Authority` at the Clerk domain, or via a custom provider.
+
 ## Support
 
 - **Documentation**: [docs/](../docs/)
@@ -836,5 +820,5 @@ Apache 2.0
 ---
 
 **Version:** 1.0.0
-**Last Updated:** 2025-11-16
+**Last Updated:** 2026-07-17
 **Maintained By:** Rivoli AI

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <Description>Multi-provider authentication library for ASP.NET Core supporting Andy Auth, Azure AD, Clerk, and custom OAuth providers</Description>
+    <Description>Multi-provider authentication library for ASP.NET Core supporting Andy Auth, Azure AD, and custom OAuth providers</Description>
     <PackageId>Andy.Auth</PackageId>
     <Version>1.0.0</Version>
     <Authors>Rivoli AI</Authors>

@@ -109,7 +109,6 @@ public class AuthenticationIntegrationTests
     [Theory]
     [InlineData(AuthProvider.AndyAuth)]
     [InlineData(AuthProvider.AzureAD)]
-    [InlineData(AuthProvider.Clerk)]
     public async Task DifferentProviders_ShouldBeConfigurableAtRuntime(AuthProvider provider)
     {
         // Arrange
@@ -123,11 +122,6 @@ public class AuthenticationIntegrationTests
             {
                 TenantId = "test-tenant",
                 ClientId = "test-client"
-            },
-            Clerk = new ClerkOptions
-            {
-                Domain = "test.clerk.accounts.dev",
-                Audience = "test-api"
             }
         };
 
