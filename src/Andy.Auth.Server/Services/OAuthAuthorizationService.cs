@@ -465,7 +465,10 @@ public class OAuthAuthorizationService
             _ => CallbackResult.ExchangePending
         };
 
-        return new CallbackClassification(result, auth.AuthorizationId, auth.FailureDetail);
+        // Committed=false: this outcome is read from an already-terminal record
+        // (idempotent replay, or the reconciled loser of a concurrent race), so
+        // the controller surfaces it as 409, not 200.
+        return new CallbackClassification(result, auth.AuthorizationId, auth.FailureDetail, Committed: false);
     }
 
     private static string HashStateToken(string raw)
@@ -510,10 +513,20 @@ public enum CallbackResult
 /// The result of a single OAuth callback classification, returned to callers of
 /// <see cref="OAuthAuthorizationService.ClassifyCallbackAsync"/>.
 /// </summary>
+/// <param name="Committed">
+/// True when THIS call performed the state processing (a fresh terminal write or
+/// a still-in-progress ExchangePending). False when the outcome was read from an
+/// already-terminal record — an idempotent replay, or the losing side of a
+/// concurrent terminal race that was reconciled to the winner. The controller
+/// maps <c>Committed == false</c> to <c>409 Conflict</c> (issue #123) so a
+/// concurrent loser receives 409 with the winner's preserved outcome, not a 200
+/// carrying a result different from what it submitted.
+/// </param>
 public record CallbackClassification(
     CallbackResult Result,
     Guid? AuthorizationId,
-    string? Detail);
+    string? Detail,
+    bool Committed = true);
 
 /// <summary>
 /// Minimal, side-effect-free view of an authorization used by the controller to

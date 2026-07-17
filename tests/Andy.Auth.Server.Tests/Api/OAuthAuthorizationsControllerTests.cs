@@ -4,6 +4,7 @@ using Andy.Auth.Server.Services;
 using FluentAssertions;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -61,12 +62,20 @@ public class OAuthAuthorizationsControllerTests : IDisposable
 
     // ── test helpers ───────────────────────────────────────────────────────────
 
-    private void SetPrincipal(string? subject, bool isServiceIdentity = false)
+    private void SetPrincipal(string? subject, bool brokerIdentity = false, bool humanAdmin = false)
+    {
+        _httpContext.User = BuildPrincipal(subject, brokerIdentity, humanAdmin);
+    }
+
+    private static ClaimsPrincipal BuildPrincipal(string? subject, bool brokerIdentity, bool humanAdmin)
     {
         var claims = new List<Claim>();
         if (subject != null) claims.Add(new Claim("sub", subject));
-        if (isServiceIdentity) claims.Add(new Claim(ClaimTypes.Role, "Admin"));
-        _httpContext.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Bearer"));
+        // The machine broker identity is the dedicated OAuth scope — NOT the human
+        // Admin role (issue #123, MAJOR 2).
+        if (brokerIdentity) claims.Add(new Claim("scope", OAuthAuthorizationsController.BrokerScope));
+        if (humanAdmin) claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+        return new ClaimsPrincipal(new ClaimsIdentity(claims, "Bearer"));
     }
 
     private void SetCapabilityHeader(Guid authorizationId, string provider)
@@ -303,7 +312,7 @@ public class OAuthAuthorizationsControllerTests : IDisposable
         // The broker/service identity may drive the callback without a capability.
         var auth = await CreateOwnedAsync();
         ClearCapabilityHeader();
-        SetPrincipal("svc-broker", isServiceIdentity: true);
+        SetPrincipal("svc-broker", brokerIdentity: true);
 
         var result = await _controller.RecordCallback(auth.AuthorizationId,
             new RecordCallbackRequest
@@ -318,6 +327,32 @@ public class OAuthAuthorizationsControllerTests : IDisposable
         ok.StatusCode.Should().Be(StatusCodes.Status200OK);
         var dto = ok.Value.Should().BeOfType<CallbackOutcomeDto>().Subject;
         dto.Result.Should().Be("success");
+    }
+
+    [Fact]
+    public async Task Callback_HumanAdmin_WithoutBrokerScopeOrCapability_Returns401()
+    {
+        // MAJOR 2: a human Admin is NOT the broker service identity. Without a
+        // capability the Admin role must not authorize a terminal transition.
+        var auth = await CreateOwnedAsync();
+        ClearCapabilityHeader();
+        SetPrincipal("human-admin", humanAdmin: true); // Admin role, but no broker scope
+
+        var result = await _controller.RecordCallback(auth.AuthorizationId,
+            new RecordCallbackRequest
+            {
+                ReturnedStateToken = "state",
+                CodePresent = true,
+                TokenExchangeSuccess = true
+            });
+
+        var obj = result.Should().BeOfType<ObjectResult>().Subject;
+        obj.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+
+        // State must not have transitioned.
+        var persisted = await _context.OAuthAuthorizations.AsNoTracking()
+            .FirstAsync(a => a.AuthorizationId == auth.AuthorizationId);
+        persisted.State.Should().Be(OAuthAuthorizationState.Pending);
     }
 
     // ── replay → 409 (issue #123) ─────────────────────────────────────────────
@@ -388,6 +423,86 @@ public class OAuthAuthorizationsControllerTests : IDisposable
 
         var obj = result.Should().BeOfType<ObjectResult>().Subject;
         obj.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+    }
+
+    // ── concurrency: losing racer gets 409 with winner's outcome (MAJOR 1) ────
+
+    [Fact]
+    public async Task ExchangeResult_ConcurrentLoser_Returns409WithWinnerOutcome()
+    {
+        // MAJOR 1: two concurrent first-callbacks both pre-read Pending. The DB
+        // layer lets one win and reconciles the loser to the winner; the loser
+        // must be returned as 409 carrying the WINNER's outcome, not a 200
+        // carrying the result it submitted. The 200/409 status is derived from the
+        // transition result, not a pre-read.
+        //
+        // SQLite (relational) enforces the concurrency token; InMemory does not.
+        using var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        using var seedContext = new ApplicationDbContext(options);
+        await seedContext.Database.EnsureCreatedAsync();
+
+        using var winnerContext = new ApplicationDbContext(options);
+        using var loserContext = new ApplicationDbContext(options);
+        var winnerService = new OAuthAuthorizationService(
+            winnerContext, new Mock<ILogger<OAuthAuthorizationService>>().Object);
+        var loserService = new OAuthAuthorizationService(
+            loserContext, new Mock<ILogger<OAuthAuthorizationService>>().Object);
+        var winnerController = BuildBrokerController(winnerService);
+        var loserController = BuildBrokerController(loserService);
+
+        var created = await winnerService.CreateAsync("github", "state", OwnerSubject);
+        var id = created.AuthorizationId;
+
+        // The loser context tracks a stale Pending snapshot before the winner commits.
+        var staleTracked = await loserContext.OAuthAuthorizations
+            .FirstAsync(a => a.AuthorizationId == id);
+        staleTracked.State.Should().Be(OAuthAuthorizationState.Pending);
+
+        // Winner commits its terminal transition first → 200.
+        var winnerResult = await winnerController.MarkExchangeResult(id,
+            new MarkExchangeResultRequest { Success = true, ConnectionId = "conn-win" });
+        var winnerOk = winnerResult.Should().BeOfType<ObjectResult>().Subject;
+        winnerOk.StatusCode.Should().Be(StatusCodes.Status200OK);
+        ((CallbackOutcomeDto)winnerOk.Value!).Result.Should().Be("success");
+
+        // Loser races a conflicting failure on its stale snapshot → 409 with the
+        // winner's preserved outcome.
+        var loserResult = await loserController.MarkExchangeResult(id,
+            new MarkExchangeResultRequest { Success = false, Detail = "should not win" });
+        var conflict = loserResult.Should().BeOfType<ObjectResult>().Subject;
+        conflict.StatusCode.Should().Be(StatusCodes.Status409Conflict);
+        ((CallbackOutcomeDto)conflict.Value!).Result.Should().Be("success");
+
+        // Database is authoritative and untorn.
+        using var verifyContext = new ApplicationDbContext(options);
+        var persisted = await verifyContext.OAuthAuthorizations
+            .FirstAsync(a => a.AuthorizationId == id);
+        persisted.State.Should().Be(OAuthAuthorizationState.Completed);
+        persisted.ConnectionId.Should().Be("conn-win");
+    }
+
+    /// <summary>
+    /// Builds a controller over the given service, authenticated as the broker
+    /// service identity (so the callback capability is not required), for
+    /// multi-context concurrency scenarios.
+    /// </summary>
+    private OAuthAuthorizationsController BuildBrokerController(OAuthAuthorizationService service)
+    {
+        var controller = new OAuthAuthorizationsController(
+            service, _capabilities, new Mock<ILogger<OAuthAuthorizationsController>>().Object);
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = BuildPrincipal("svc-broker", brokerIdentity: true, humanAdmin: false)
+            }
+        };
+        return controller;
     }
 
     // ── GET status — crash reconciliation ─────────────────────────────────────
@@ -473,12 +588,25 @@ public class OAuthAuthorizationsControllerTests : IDisposable
     public async Task GetStatus_ServiceIdentity_CanReadAnyRecord()
     {
         var auth = await CreateOwnedAsync(); // owned by OwnerSubject
-        SetPrincipal("svc-broker", isServiceIdentity: true);
+        SetPrincipal("svc-broker", brokerIdentity: true);
 
         var result = await _controller.GetStatus(auth.AuthorizationId);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         ok.Value.Should().BeOfType<AuthorizationStatusDto>();
+    }
+
+    [Fact]
+    public async Task GetStatus_HumanAdmin_NonOwner_Returns403()
+    {
+        // MAJOR 2: the human Admin role is NOT a broker identity — an admin cannot
+        // read another user's authorization status.
+        var auth = await CreateOwnedAsync(); // owned by OwnerSubject
+        SetPrincipal("human-admin", humanAdmin: true);
+
+        var result = await _controller.GetStatus(auth.AuthorizationId);
+
+        result.Should().BeOfType<ForbidResult>();
     }
 
     [Fact]

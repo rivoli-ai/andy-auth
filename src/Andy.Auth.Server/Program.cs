@@ -1,4 +1,5 @@
 using Andy.Auth.Server.Configuration;
+using Andy.Auth.Server.Controllers.Api;
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Mcp;
 using Andy.Auth.Server.Middleware;
@@ -324,8 +325,15 @@ builder.Services.AddOpenIddict()
             }
         }
 
-        // Register scopes
-        options.RegisterScopes("openid", "profile", "email", "roles", "offline_access", "urn:andy-docs-api");
+        // Register scopes. `andy_auth:oauth_broker` (issue #123) is the dedicated
+        // machine broker-service scope that authorizes the OAuth broker callback /
+        // exchange-result mutations and status reads without a signed capability.
+        // It is granted only to the client-credentials broker client and is
+        // distinct from the human `Admin` role, so an admin user cannot forge
+        // terminal transitions or read arbitrary authorization status.
+        options.RegisterScopes("openid", "profile", "email", "roles", "offline_access",
+            "urn:andy-docs-api",
+            OAuthAuthorizationsController.BrokerScope);
 
         // Register MCP resource servers — the audience values that clients
         // can request tokens for via the `resource` parameter. Read from

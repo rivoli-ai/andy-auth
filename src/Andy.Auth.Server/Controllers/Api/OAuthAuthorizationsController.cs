@@ -2,6 +2,7 @@ using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenIddict.Abstractions;
 using OpenIddict.Validation.AspNetCore;
 using System.Text.Json.Serialization;
 
@@ -48,12 +49,14 @@ public class OAuthAuthorizationsController : ControllerBase
     public const string CapabilityHeader = "X-OAuth-Callback-Token";
 
     /// <summary>
-    /// Role that identifies an authorized broker / service (machine) identity —
-    /// consistent with the other privileged API controllers in this project
-    /// (Users/Groups/McpUsers gate on <c>Roles = "Admin"</c>). Such an identity
-    /// may drive callback mutations and read any authorization's status.
+    /// Dedicated OAuth scope identifying the machine <b>broker</b> service
+    /// identity (issue #123). Granted only to the client-credentials broker
+    /// client — NOT to human users, and deliberately independent of the human
+    /// <c>Admin</c> role. A principal carrying this scope may drive callback
+    /// mutations without a capability and read any authorization's status. See
+    /// <c>Program.cs</c> where the scope is registered.
     /// </summary>
-    private const string ServiceRole = "Admin";
+    public const string BrokerScope = "andy_auth:oauth_broker";
 
     private readonly OAuthAuthorizationService _service;
     private readonly OAuthCallbackCapabilityService _capabilities;
@@ -157,10 +160,6 @@ public class OAuthAuthorizationsController : ControllerBase
         if (!TryAuthorizeCallbackMutation(id, descriptor.Provider, out var failure))
             return failure!;
 
-        // Whether the record was already terminal before this call — replaying a
-        // callback for a terminal authorization is a 409 with the existing outcome.
-        var wasAlreadyTerminal = await IsTerminalAsync(id);
-
         var classification = await _service.ClassifyCallbackAsync(
             authorizationId: id,
             providerError: request.ProviderError,
@@ -172,9 +171,14 @@ public class OAuthAuthorizationsController : ControllerBase
 
         var dto = MapClassificationToDto(classification);
 
-        var statusCode = wasAlreadyTerminal
-            ? StatusCodes.Status409Conflict
-            : StatusCodes.Status200OK;
+        // 200 when THIS call committed the processing; 409 when the outcome came
+        // from an already-terminal record — an idempotent replay, or the loser of
+        // a concurrent terminal race reconciled to the winner's outcome. Derived
+        // from the transition result, not a pre-read, so it holds under
+        // concurrency (issue #123).
+        var statusCode = classification.Committed
+            ? StatusCodes.Status200OK
+            : StatusCodes.Status409Conflict;
 
         _logger.LogInformation(
             "[SM.2.2] Callback recorded for auth {AuthId}: result={Result} status={Status}",
@@ -207,8 +211,6 @@ public class OAuthAuthorizationsController : ControllerBase
         if (!TryAuthorizeCallbackMutation(id, descriptor.Provider, out var failure))
             return failure!;
 
-        var wasAlreadyTerminal = await IsTerminalAsync(id);
-
         var classification = await _service.MarkTokenExchangeResultAsync(
             id,
             request.Success,
@@ -217,10 +219,11 @@ public class OAuthAuthorizationsController : ControllerBase
 
         var dto = MapClassificationToDto(classification);
 
-        // Return 409 when the caller replays against an already-terminal record.
-        var httpStatus = wasAlreadyTerminal
-            ? StatusCodes.Status409Conflict
-            : StatusCodes.Status200OK;
+        // 409 when the outcome came from an already-terminal record (idempotent
+        // replay or reconciled concurrent loser); 200 when this call committed.
+        var httpStatus = classification.Committed
+            ? StatusCodes.Status200OK
+            : StatusCodes.Status409Conflict;
 
         return StatusCode(httpStatus, dto);
     }
@@ -340,24 +343,35 @@ public class OAuthAuthorizationsController : ControllerBase
     }
 
     /// <summary>
-    /// True when the authenticated principal is an authorized broker/service
-    /// (machine) identity — represented, consistent with the other privileged
-    /// API controllers in this project, by the <c>Admin</c> role.
+    /// True when the authenticated principal is the machine <b>broker</b> service
+    /// identity — i.e. it carries the dedicated <see cref="BrokerScope"/> OAuth
+    /// scope (issue #123). This is deliberately distinct from the human
+    /// <c>Admin</c> role: a person with admin rights is not a broker and must not
+    /// be able to read arbitrary authorization status or forge terminal
+    /// transitions without a signed capability. The scope is granted only to the
+    /// client-credentials (M2M) broker client.
     /// </summary>
     private bool IsAuthorizedServiceIdentity()
-        => User.Identity?.IsAuthenticated == true && User.IsInRole(ServiceRole);
+        => User.Identity?.IsAuthenticated == true && HasBrokerScope();
 
     /// <summary>
-    /// True when the authorization has already reached a terminal state — used to
-    /// distinguish a first-time mutation (200) from a replay (409).
+    /// True when the principal's granted scopes include <see cref="BrokerScope"/>.
+    /// Handles both a space-delimited <c>scope</c> claim (JWT / RFC 8693 access
+    /// token) and OpenIddict's normalized private scope claims.
     /// </summary>
-    private async Task<bool> IsTerminalAsync(Guid id)
+    private bool HasBrokerScope()
     {
-        var status = await _service.GetStatusAsync(id);
-        return status is { } s
-            && s.State is OAuthAuthorizationState.Completed
-                or OAuthAuthorizationState.Failed
-                or OAuthAuthorizationState.Expired;
+        foreach (var claim in User.FindAll("scope"))
+        {
+            if (claim.Value
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Contains(BrokerScope, StringComparer.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return User.HasScope(BrokerScope);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
