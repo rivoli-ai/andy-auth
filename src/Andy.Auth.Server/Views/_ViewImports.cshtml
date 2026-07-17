@@ -1,4 +1,7 @@
 @using Andy.Auth.Server
 @using Andy.Auth.Server.Models
 @using Andy.Auth.Server.Data
+@using Andy.Auth.Server.Configuration
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@* NonceTagHelper: stamps the per-request CSP nonce onto inline <script>/<style> (issue #128). *@
+@addTagHelper *, Andy.Auth.Server

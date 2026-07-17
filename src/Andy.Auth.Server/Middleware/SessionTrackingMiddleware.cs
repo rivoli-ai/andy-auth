@@ -18,7 +18,7 @@ public class SessionTrackingMiddleware
     // Paths to skip session tracking
     private static readonly string[] SkipPaths = new[]
     {
-        "/css", "/js", "/images", "/favicon", "/.well-known", "/health", "/connect"
+        "/css", "/js", "/images", "/favicon", "/.well-known", "/health", "/ready", "/connect"
     };
 
     public SessionTrackingMiddleware(RequestDelegate next, ILogger<SessionTrackingMiddleware> logger)

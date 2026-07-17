@@ -8,6 +8,7 @@ using Andy.Auth.Server.Telemetry;
 using Andy.Telemetry;
 using AspNetCoreRateLimit;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Validation.AspNetCore;
@@ -33,17 +34,92 @@ else
     builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 }
 
-// Configure forwarded headers for Railway's HTTPS proxy
+// Configure forwarded headers for the reverse proxy in front of the server
+// (Railway's HTTPS edge in Production/UAT, Conductor's unified proxy in
+// Embedded, a local proxy in Development/Docker). Honouring X-Forwarded-* from
+// ANY peer lets a caller spoof their client IP and request scheme (issue #125):
+// it evades per-IP rate limits on login/token and contaminates audit/session
+// records. So the trusted-proxy set is configurable per deployment mode:
+//
+//   ForwardedHeaders:TrustAllProxies  true  -> accept forwarded headers from any
+//                                             immediate peer (empty known-proxy
+//                                             set). Only safe when the platform
+//                                             guarantees the app is reachable
+//                                             solely through a trusted edge that
+//                                             strips inbound X-Forwarded-* (local
+//                                             dev proxy, Conductor unified proxy).
+//   ForwardedHeaders:KnownNetworks    CIDR list of trusted proxy networks.
+//   ForwardedHeaders:KnownProxies     individual trusted proxy IPs.
+//   ForwardedHeaders:ForwardLimit     max proxy hops to unwind (default 1).
+//
+// Base appsettings.json sets TrustAllProxies=true so the local-development modes
+// (Development/Docker/Embedded) keep their existing behaviour. Production/UAT
+// override it to false + the private ranges the Railway edge connects from (see
+// appsettings.Production.json / appsettings.UAT.json); the Railway edge
+// overwrites inbound X-Forwarded-* so an external client cannot forge it.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
                                Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
-    options.KnownNetworks.Clear();
-    options.KnownProxies.Clear();
+
+    var forwardedConfig = builder.Configuration.GetSection("ForwardedHeaders");
+    options.ForwardLimit = forwardedConfig.GetValue<int?>("ForwardLimit", 1);
+
+    if (forwardedConfig.GetValue("TrustAllProxies", false))
+    {
+        // Empty KnownNetworks + KnownProxies makes the middleware accept
+        // forwarded headers from any immediate peer.
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    }
+    else
+    {
+        var knownProxies = forwardedConfig.GetSection("KnownProxies").Get<string[]>() ?? Array.Empty<string>();
+        var knownNetworks = forwardedConfig.GetSection("KnownNetworks").Get<string[]>() ?? Array.Empty<string>();
+
+        // Only replace the framework default (loopback only) when explicit
+        // trusted proxies/networks are configured. When neither is set we keep
+        // the loopback default rather than clearing to empty — clearing would
+        // re-enable the trust-everything behaviour this fix removes.
+        if (knownProxies.Length > 0 || knownNetworks.Length > 0)
+        {
+            options.KnownNetworks.Clear();
+            options.KnownProxies.Clear();
+
+            foreach (var proxy in knownProxies)
+            {
+                if (System.Net.IPAddress.TryParse(proxy, out var ip))
+                {
+                    options.KnownProxies.Add(ip);
+                }
+            }
+
+            foreach (var network in knownNetworks)
+            {
+                var parts = network.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (parts.Length == 2
+                    && System.Net.IPAddress.TryParse(parts[0], out var prefix)
+                    && int.TryParse(parts[1], out var prefixLength))
+                {
+                    options.KnownNetworks.Add(
+                        new Microsoft.AspNetCore.HttpOverrides.IPNetwork(prefix, prefixLength));
+                }
+            }
+        }
+    }
 });
 
 // Add services to the container
 builder.Services.AddControllersWithViews();
+
+// Startup readiness (issue #130). A singleton records the migration/seed
+// outcome; the readiness health check (mapped at /ready) reports Unhealthy
+// until both complete, so orchestrators withhold traffic while the DB is
+// unavailable or required seeding has failed. Liveness (/health) is separate.
+builder.Services.AddSingleton<Andy.Auth.Server.Configuration.StartupReadinessState>();
+builder.Services.AddHealthChecks()
+    .AddCheck<Andy.Auth.Server.Configuration.StartupReadinessHealthCheck>(
+        "startup", tags: new[] { "ready" });
 
 // Configure rate limiting
 builder.Services.AddMemoryCache();
@@ -243,6 +319,18 @@ builder.Services.AddOpenIddict()
             // in TokenExchange:Policies in config (see TokenExchangeSettings).
             // Drives Epic IDP (rivoli-ai/conductor#1246).
             .AllowCustomFlow(TokenExchangeConstants.GrantType);
+
+        // Advertise and accept S256 as the ONLY PKCE code-challenge method
+        // (issue #122). #46 made PKCE mandatory server-wide, but OpenIddict
+        // still lists `plain` alongside `S256` in the discovery document and
+        // accepts it at the authorization endpoint. `plain` transmits the
+        // verifier in the clear and offers no protection against code
+        // interception, so remove it: with `plain` gone, the server rejects any
+        // authorization request that sends `code_challenge_method=plain` and
+        // `/.well-known/openid-configuration` reports exactly ["S256"].
+        options.Configure(serverOptions =>
+            serverOptions.CodeChallengeMethods.Remove(
+                OpenIddict.Abstractions.OpenIddictConstants.CodeChallengeMethods.Plain));
 
         // Register encryption and signing keys
         //
@@ -592,7 +680,16 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 // Security headers
-// Note: CSP can be toggled via configuration in case of browser-specific issues.
+// CSP is toggled via SecurityHeaders:EnableCsp. Production and UAT enable it by
+// default (see appsettings.{Production,UAT}.json); it can still be turned off
+// per-deployment for browser-specific issues. The policy is nonce-based (issue
+// #128): a fresh per-request nonce is emitted into the header and stamped onto
+// every inline <script>/<style> element by NonceTagHelper, so the Razor views
+// render without 'unsafe-inline' in script-src/style-src. Injected <script>/
+// <style> elements without the nonce are blocked. Inline event handlers and
+// style="" attributes remain permitted via the *-src-attr fallbacks; the
+// document-level directives (base-uri, object-src, frame-ancestors, form-action)
+// stay restrictive.
 var enableCsp = app.Configuration.GetValue("SecurityHeaders:EnableCsp", false);
 app.Use(async (context, next) =>
 {
@@ -604,8 +701,10 @@ app.Use(async (context, next) =>
 
     if (enableCsp)
     {
-        // Keep this conservative but compatible with inline styles used in Razor views.
-        // If you want a strict CSP, move inline styles/scripts to static files and use nonces/hashes.
+        var nonce = Convert.ToBase64String(
+            System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
+        context.Items[Andy.Auth.Server.Configuration.CspNonce.HttpContextItemKey] = nonce;
+
         context.Response.Headers["Content-Security-Policy"] =
             "default-src 'self'; " +
             "base-uri 'self'; " +
@@ -613,8 +712,11 @@ app.Use(async (context, next) =>
             "frame-ancestors 'none'; " +
             "form-action 'self'; " +
             "img-src 'self' data:; " +
-            "style-src 'self' 'unsafe-inline'; " +
-            "script-src 'self'";
+            "font-src 'self'; " +
+            $"style-src 'self' 'nonce-{nonce}'; " +
+            "style-src-attr 'unsafe-inline'; " +
+            $"script-src 'self' 'nonce-{nonce}'; " +
+            "script-src-attr 'unsafe-inline'";
     }
 
     await next();
@@ -669,6 +771,39 @@ app.MapGet("/health", () => Results.Ok(new
     .AllowAnonymous()
     .WithName("HealthCheck")
     .ExcludeFromDescription();
+
+// --- Readiness probe ---
+// Distinct from /health (liveness): reports Healthy only once startup migration
+// and required seeding have both completed, and 503 Unhealthy otherwise — DB
+// unavailable, migration failure, or a required seed failure (issue #130).
+// Anonymous and dependency-light (reads the init-status singleton, not the DB).
+// Railway (railway.json healthcheckPath) and container probes use /ready for
+// traffic admission so no request is served against an unmigrated/unseeded DB.
+app.MapHealthChecks("/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+})
+    .AllowAnonymous()
+    .WithName("ReadinessCheck")
+    .ExcludeFromDescription();
+
+// --- Client-info diagnostics (opt-in) ---
+// Anonymous endpoint that echoes the request's post-ForwardedHeaders client IP
+// and scheme. Disabled by default; enable per-deployment with
+// Diagnostics:EnableClientInfoEndpoint=true to verify the trusted-proxy contract
+// (issue #125) — e.g. confirm that a staging edge forwards X-Forwarded-* and
+// that a direct/untrusted caller cannot spoof its IP/scheme. Reveals only the
+// caller's own connection metadata.
+if (app.Configuration.GetValue("Diagnostics:EnableClientInfoEndpoint", false))
+{
+    app.MapGet("/internal/client-info", (HttpContext ctx) => Results.Ok(new
+    {
+        ip = ctx.Connection.RemoteIpAddress?.ToString(),
+        scheme = ctx.Request.Scheme
+    }))
+        .AllowAnonymous()
+        .ExcludeFromDescription();
+}
 
 // Static test endpoint to debug Safari crash (dev only)
 if (app.Environment.IsDevelopment())
@@ -725,7 +860,20 @@ app.MapMcp("/mcp")
     .RequireCors("AllowMcpClients")
     .RequireAuthorization(McpAdminPolicy);
 
-// Seed database on startup
+// Migrate + seed the database on startup, recording the outcome so /ready can
+// gate traffic admission (issue #130). Previously this swallowed every failure
+// and continued to app.Run(), so the dependency-free /health reported healthy
+// even when the DB was unavailable or seeding only partially completed.
+//
+// Now: on success we mark readiness ready; on failure we log, mark readiness
+// unhealthy (with the reason surfaced by /ready), and — unless
+// Startup:FailFastOnInitError=true — keep the process alive so the liveness
+// probe stays green while readiness reports 503. The orchestrator then withholds
+// traffic and retries/redeploys. Both the migration step (EF tracks applied
+// migrations; SQLite EnsureCreated is a no-op when the schema exists) and the
+// seeder (delete-then-create for clients/scopes; FindByEmail guards for users)
+// are idempotent, so a partial init is safe to re-run on the next start.
+var readinessState = app.Services.GetRequiredService<Andy.Auth.Server.Configuration.StartupReadinessState>();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -756,6 +904,7 @@ using (var scope = app.Services.CreateScope())
         {
             await context.Database.MigrateAsync();
         }
+        readinessState.MarkMigrationsApplied();
 
         // Seed OAuth clients and test data
         var seeder = new DbSeeder(
@@ -769,11 +918,19 @@ using (var scope = app.Services.CreateScope())
         // registration from before the atomic-registration transaction shipped.
         var reconciler = services.GetRequiredService<DcrReconciliationService>();
         await reconciler.ReconcileAsync();
+
+        readinessState.MarkSeedCompleted();
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+        logger.LogError(ex, "Startup migration/seeding failed; readiness will report unhealthy until resolved.");
+        readinessState.MarkFailed(ex.Message);
+
+        if (app.Configuration.GetValue("Startup:FailFastOnInitError", false))
+        {
+            throw;
+        }
     }
 }
 

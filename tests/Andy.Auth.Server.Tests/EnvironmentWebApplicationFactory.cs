@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Andy.Auth.Server.Tests;
 
@@ -29,15 +31,19 @@ internal sealed class EnvironmentWebApplicationFactory : WebApplicationFactory<P
 {
     private readonly Dictionary<string, string?> _priorEnvValues = new();
     private readonly string _environmentName;
+    private readonly Action<IServiceCollection>? _configureTestServices;
 
     public EnvironmentWebApplicationFactory(
         string environmentName,
         string dbPath,
         string issuer,
         string? keysPath = null,
-        bool useEphemeralKeys = false)
+        bool useEphemeralKeys = false,
+        IEnumerable<KeyValuePair<string, string?>>? extraEnvironment = null,
+        Action<IServiceCollection>? configureTestServices = null)
     {
         _environmentName = environmentName;
+        _configureTestServices = configureTestServices;
         SetEnv("ASPNETCORE_ENVIRONMENT", environmentName);
         SetEnv("OpenIddict__Issuer", issuer);
         SetEnv("Database__Provider", "Sqlite");
@@ -45,11 +51,26 @@ internal sealed class EnvironmentWebApplicationFactory : WebApplicationFactory<P
         SetEnv("ConnectionStrings__DefaultConnection", $"Data Source={dbPath}");
         SetEnv("OpenIddict__SigningKeys__Path", keysPath);
         SetEnv("OpenIddict__UseEphemeralKeys", useEphemeralKeys ? "true" : "false");
+
+        // Applied last so a test can override any default above (e.g. swap the
+        // provider to PostgreSql with an unreachable host, enable the
+        // client-info diagnostics endpoint, or pin a ForwardedHeaders trust set).
+        if (extraEnvironment is not null)
+        {
+            foreach (var (key, value) in extraEnvironment)
+            {
+                SetEnv(key, value);
+            }
+        }
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(_environmentName);
+        if (_configureTestServices is not null)
+        {
+            builder.ConfigureTestServices(_configureTestServices);
+        }
     }
 
     protected override void Dispose(bool disposing)

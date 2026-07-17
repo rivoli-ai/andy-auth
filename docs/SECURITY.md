@@ -24,7 +24,15 @@ Rate limits are enforced on critical endpoints to prevent brute force attacks an
 
 When rate limits are exceeded, the server returns HTTP 429 (Too Many Requests).
 
-**Code Location**: `Program.cs:12-17` (service registration), `Program.cs:140` (middleware)
+**Trusted client IP (issue #125)**: The rate-limit identity is the *normalized*
+client IP from `HttpContext.Connection.RemoteIpAddress` (resolved by
+`UseForwardedHeaders` from the trusted-proxy set — see "Forwarded Headers &
+Trusted Proxies" below), **not** a caller-supplied header. `IpRateLimiting:RealIpHeader`
+is intentionally empty; a raw header such as `X-Real-IP` is never used as the
+identity, so a client cannot rotate a header to evade login/token limits.
+
+**Code Location**: `Program.cs` (rate-limit service registration), `Program.cs`
+(`app.UseIpRateLimiting()`), `appsettings.json` (`IpRateLimiting`).
 
 ### 2. Account Lockout
 
@@ -58,11 +66,24 @@ The following security headers are automatically added to all responses:
 - **Referrer-Policy: no-referrer**
   - Prevents leaking sensitive information in referrer headers
 
-- **Content-Security-Policy**
-  - `default-src 'self'`: Only load resources from same origin
-  - `script-src 'self'`: Only execute scripts from same origin
-  - `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`: Styles from same origin and Google Fonts
-  - `font-src 'self' https://fonts.gstatic.com`: Fonts from same origin and Google Fonts
+- **Content-Security-Policy** (issue #128)
+  - **Enabled by default in Production and UAT** (`SecurityHeaders:EnableCsp=true`
+    in `appsettings.Production.json` / `appsettings.UAT.json`); off by default in
+    Development so local iteration isn't blocked. Toggle per-deployment via the
+    same key.
+  - Nonce-based, not `'unsafe-inline'`: a fresh per-request nonce is emitted in
+    the header and stamped onto every inline `<script>`/`<style>` element by
+    `NonceTagHelper` (registered in `Views/_ViewImports.cshtml`). Injected
+    script/style *elements* without the nonce are blocked.
+  - Directives: `default-src 'self'`; `base-uri 'self'`; `object-src 'none'`;
+    `frame-ancestors 'none'`; `form-action 'self'`; `img-src 'self' data:`;
+    `font-src 'self'`; `style-src 'self' 'nonce-<per-request>'`;
+    `script-src 'self' 'nonce-<per-request>'`.
+  - Inline event handlers (`onclick=...`) and `style="..."` attributes remain
+    permitted via `script-src-attr 'unsafe-inline'` / `style-src-attr
+    'unsafe-inline'`; the document-level directives above stay restrictive. All
+    login / consent / device-verification / MFA / admin flows work under this
+    policy.
 
 ### 4. HTTPS Enforcement
 
@@ -74,6 +95,43 @@ The following security headers are automatically added to all responses:
 - HSTS (HTTP Strict Transport Security) is enabled in production
   - Forces browsers to only communicate over HTTPS
   - Prevents protocol downgrade attacks
+
+### 4a. Forwarded Headers & Trusted Proxies (issue #125)
+
+**Implementation**: ASP.NET Core `UseForwardedHeaders`, configured per deployment
+mode via the `ForwardedHeaders` config section.
+
+The server runs behind a reverse proxy (Railway's HTTPS edge in Production/UAT,
+Conductor's unified proxy in Embedded, a local proxy in Development/Docker), so
+it honours `X-Forwarded-For` / `X-Forwarded-Proto` to recover the real client IP
+and scheme. Honouring those headers from an **untrusted** peer would let a caller
+spoof its IP (evading rate limits, poisoning audit/session records) or scheme, so
+the trusted-proxy set is configurable:
+
+| Key | Meaning |
+| --- | --- |
+| `ForwardedHeaders:TrustAllProxies` | `true` → accept forwarded headers from any immediate peer (empty known-proxy set). Only for local modes behind a trusted local proxy. |
+| `ForwardedHeaders:KnownNetworks` | CIDR list of trusted proxy networks. |
+| `ForwardedHeaders:KnownProxies` | Individual trusted proxy IPs. |
+| `ForwardedHeaders:ForwardLimit` | Max proxy hops to unwind (default 1). |
+
+- **Local modes** (Development/Docker/Embedded) inherit `TrustAllProxies=true`
+  from base `appsettings.json` — unchanged behaviour behind the local proxy.
+- **Production/UAT** set `TrustAllProxies=false` plus an explicit `KnownNetworks`
+  list (the private ranges the Railway edge connects from). When no trusted
+  proxy/network is configured and `TrustAllProxies=false`, the middleware keeps
+  ASP.NET Core's loopback-only default rather than trusting everything.
+
+**Edge contract**: In Production/UAT the app is reachable **only** through the
+platform edge (Railway), which **overwrites** any inbound `X-Forwarded-*` before
+proxying and connects to the container over the private network in
+`KnownNetworks`. An external client therefore cannot forge these headers. If the
+platform's proxy range differs, override `ForwardedHeaders__KnownNetworks__*` (or
+set `ForwardedHeaders__TrustAllProxies=true`) via environment variables.
+
+**Diagnostics**: an opt-in anonymous endpoint `/internal/client-info`
+(`Diagnostics:EnableClientInfoEndpoint=true`, off by default) echoes the resolved
+client IP + scheme so operators can verify the proxy contract in staging.
 
 ### 5. CSRF (Cross-Site Request Forgery) Protection
 
@@ -213,6 +271,36 @@ All authentication and authorization events are logged, including:
 - OAuth token grants
 - Administrative actions
 
+### 14. Startup Health & Readiness (issue #130)
+
+**Implementation**: ASP.NET Core HealthChecks + an init-status singleton set by
+the startup migration/seed step.
+
+Two distinct probes:
+
+- **`/health`** — anonymous, dependency-free **liveness**. Answers 200 as long as
+  the process is up; never touches the DB, OpenIddict, or the session store.
+- **`/ready`** — anonymous **readiness**. Returns 200 only once startup migration
+  **and** required seeding both completed; otherwise 503. It reflects
+  DB/schema/required-seed state via the `StartupReadinessState` singleton.
+
+If migration or a required seed step fails (DB unavailable, migration error,
+missing production admin/client secrets), the process stays up, logs the error,
+and `/ready` reports 503 with the reason — so the orchestrator withholds traffic
+and retries/redeploys while liveness stays green. Set
+`Startup:FailFastOnInitError=true` to instead crash the process on init failure.
+Migration (EF tracks applied migrations; SQLite `EnsureCreated` is a no-op when
+the schema exists) and seeding (delete-then-create for clients/scopes,
+`FindByEmail` guards for users) are idempotent, so a partial init is safe to
+re-run on the next start.
+
+**Traffic admission**: `railway.json` sets `healthcheckPath=/ready` so Railway
+withholds traffic from a new deployment until it is ready. Container orchestrators
+should likewise probe `/ready` for readiness and `/health` for liveness. (The
+`docker-compose.yml` server image — `mcr.microsoft.com/dotnet/aspnet:8.0` — has no
+`curl`/`wget`, so no compose `HEALTHCHECK` is wired; probe `/ready` from the
+orchestrator instead.)
+
 ## Security Best Practices
 
 ### Development
@@ -230,6 +318,13 @@ All authentication and authorization events are logged, including:
 5. **Regular updates**: Keep all NuGet packages up to date
 6. **Backup database**: Implement automated database backups
 7. **Rate limit tuning**: Adjust rate limits based on actual usage patterns
+8. **Trusted proxies**: Confirm `ForwardedHeaders:KnownNetworks` matches the
+   platform edge's proxy range, and that the edge strips/overwrites inbound
+   `X-Forwarded-*` (see "Forwarded Headers & Trusted Proxies")
+9. **CSP**: Keep `SecurityHeaders:EnableCsp=true` (default); only disable to
+   debug a browser-specific issue
+10. **Readiness gating**: Point the platform health check at `/ready` (Railway is
+    pre-wired) so traffic is withheld until migration + seeding succeed
 
 ## Vulnerability Reporting
 
