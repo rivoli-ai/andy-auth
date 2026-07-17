@@ -135,30 +135,33 @@ public class OAuthAuthorizationService
         // ── expiry check ──────────────────────────────────────────────────────
         if (auth.IsStaleAndPending)
         {
-            await TransitionAsync(auth, OAuthAuthorizationState.Expired, OAuthFailureReason.InvalidCallback,
-                "Authorization expired before callback was received");
-            return new CallbackClassification(CallbackResult.InvalidCallback, authorizationId,
-                "Authorization expired");
+            return await TerminalTransitionAsync(auth, OAuthAuthorizationState.Expired,
+                OAuthFailureReason.InvalidCallback,
+                "Authorization expired before callback was received",
+                new CallbackClassification(CallbackResult.InvalidCallback, authorizationId,
+                    "Authorization expired"));
         }
 
         // ── 1. user_denied: provider explicitly signalled access_denied ───────
         if (string.Equals(providerError, "access_denied", StringComparison.OrdinalIgnoreCase))
         {
-            await TransitionAsync(auth, OAuthAuthorizationState.Failed, OAuthFailureReason.UserDenied,
-                "Provider returned error=access_denied");
             _logger.LogInformation("[SM.2.2] Auth {AuthId}: classified as user_denied", authorizationId);
-            return new CallbackClassification(CallbackResult.UserDenied, authorizationId,
-                "User denied access");
+            return await TerminalTransitionAsync(auth, OAuthAuthorizationState.Failed,
+                OAuthFailureReason.UserDenied,
+                "Provider returned error=access_denied",
+                new CallbackClassification(CallbackResult.UserDenied, authorizationId,
+                    "User denied access"));
         }
 
         // ── 2. other provider error (not access_denied, not success) ──────────
         if (!string.IsNullOrEmpty(providerError))
         {
-            await TransitionAsync(auth, OAuthAuthorizationState.Failed, OAuthFailureReason.InvalidCallback,
-                $"Provider returned error={providerError}");
             _logger.LogWarning("[SM.2.2] Auth {AuthId}: provider error {Error}", authorizationId, providerError);
-            return new CallbackClassification(CallbackResult.InvalidCallback, authorizationId,
-                $"Provider error: {providerError}");
+            return await TerminalTransitionAsync(auth, OAuthAuthorizationState.Failed,
+                OAuthFailureReason.InvalidCallback,
+                $"Provider returned error={providerError}",
+                new CallbackClassification(CallbackResult.InvalidCallback, authorizationId,
+                    $"Provider error: {providerError}"));
         }
 
         // ── 3. state_mismatch (CSRF): state token returned does not match ─────
@@ -166,29 +169,32 @@ public class OAuthAuthorizationService
         {
             if (!VerifyStateToken(returnedStateToken, auth.StateTokenHash))
             {
-                await TransitionAsync(auth, OAuthAuthorizationState.Failed, OAuthFailureReason.StateMismatch,
-                    "CSRF anti-forgery state token mismatch");
                 _logger.LogWarning("[SM.2.2] Auth {AuthId}: state mismatch", authorizationId);
-                return new CallbackClassification(CallbackResult.StateMismatch, authorizationId,
-                    "Anti-forgery state token mismatch");
+                return await TerminalTransitionAsync(auth, OAuthAuthorizationState.Failed,
+                    OAuthFailureReason.StateMismatch,
+                    "CSRF anti-forgery state token mismatch",
+                    new CallbackClassification(CallbackResult.StateMismatch, authorizationId,
+                        "Anti-forgery state token mismatch"));
             }
         }
         else if (returnedStateToken == null && auth.StateTokenHash != null)
         {
             // Provider sent no state back at all — treat as CSRF/mismatch.
-            await TransitionAsync(auth, OAuthAuthorizationState.Failed, OAuthFailureReason.StateMismatch,
-                "No state token returned by provider");
-            return new CallbackClassification(CallbackResult.StateMismatch, authorizationId,
-                "Provider did not return state token");
+            return await TerminalTransitionAsync(auth, OAuthAuthorizationState.Failed,
+                OAuthFailureReason.StateMismatch,
+                "No state token returned by provider",
+                new CallbackClassification(CallbackResult.StateMismatch, authorizationId,
+                    "Provider did not return state token"));
         }
 
         // ── 4. no code in callback ────────────────────────────────────────────
         if (!codePresent)
         {
-            await TransitionAsync(auth, OAuthAuthorizationState.Failed, OAuthFailureReason.InvalidCallback,
-                "Callback contained no authorization code");
-            return new CallbackClassification(CallbackResult.InvalidCallback, authorizationId,
-                "No authorization code in callback");
+            return await TerminalTransitionAsync(auth, OAuthAuthorizationState.Failed,
+                OAuthFailureReason.InvalidCallback,
+                "Callback contained no authorization code",
+                new CallbackClassification(CallbackResult.InvalidCallback, authorizationId,
+                    "No authorization code in callback"));
         }
 
         // ── 5. token exchange result (if the caller resolved it synchronously) ─
@@ -197,18 +203,19 @@ public class OAuthAuthorizationService
             if (tokenExchangeSuccess.Value)
             {
                 auth.ConnectionId = connectionId;
-                await TransitionAsync(auth, OAuthAuthorizationState.Completed, null, null);
                 _logger.LogInformation("[SM.2.2] Auth {AuthId}: completed successfully", authorizationId);
-                return new CallbackClassification(CallbackResult.Success, authorizationId, null);
+                return await TerminalTransitionAsync(auth, OAuthAuthorizationState.Completed, null, null,
+                    new CallbackClassification(CallbackResult.Success, authorizationId, null));
             }
             else
             {
-                await TransitionAsync(auth, OAuthAuthorizationState.Failed, OAuthFailureReason.TokenExchangeFailed,
-                    tokenExchangeDetail ?? "Token exchange POST to provider failed");
                 _logger.LogWarning("[SM.2.2] Auth {AuthId}: token_exchange_failed ({Detail})",
                     authorizationId, tokenExchangeDetail);
-                return new CallbackClassification(CallbackResult.TokenExchangeFailed, authorizationId,
-                    tokenExchangeDetail ?? "Token exchange failed");
+                return await TerminalTransitionAsync(auth, OAuthAuthorizationState.Failed,
+                    OAuthFailureReason.TokenExchangeFailed,
+                    tokenExchangeDetail ?? "Token exchange POST to provider failed",
+                    new CallbackClassification(CallbackResult.TokenExchangeFailed, authorizationId,
+                        tokenExchangeDetail ?? "Token exchange failed"));
             }
         }
 
@@ -247,13 +254,39 @@ public class OAuthAuthorizationService
         if (success)
         {
             auth.ConnectionId = connectionId;
-            await TransitionAsync(auth, OAuthAuthorizationState.Completed, null, null);
-            return new CallbackClassification(CallbackResult.Success, authorizationId, null);
+            return await TerminalTransitionAsync(auth, OAuthAuthorizationState.Completed, null, null,
+                new CallbackClassification(CallbackResult.Success, authorizationId, null));
         }
 
-        await TransitionAsync(auth, OAuthAuthorizationState.Failed, OAuthFailureReason.TokenExchangeFailed,
-            detail ?? "Token exchange POST to provider failed");
-        return new CallbackClassification(CallbackResult.TokenExchangeFailed, authorizationId, detail);
+        return await TerminalTransitionAsync(auth, OAuthAuthorizationState.Failed,
+            OAuthFailureReason.TokenExchangeFailed,
+            detail ?? "Token exchange POST to provider failed",
+            new CallbackClassification(CallbackResult.TokenExchangeFailed, authorizationId, detail));
+    }
+
+    // ── ownership / capability lookup ─────────────────────────────────────────
+
+    /// <summary>
+    /// Returns the minimal descriptor (provider + initiating subject) needed to
+    /// authorize a callback mutation or status read, without mutating the record
+    /// (no lazy expiry). Returns <c>null</c> when the record does not exist.
+    /// <para>
+    /// Issue #123: the controller loads this first so it can bind the callback
+    /// capability to the record's <see cref="OAuthAuthorization.Provider"/> and
+    /// verify record ownership against the caller's subject, before any state
+    /// transition is attempted.
+    /// </para>
+    /// </summary>
+    public async Task<OAuthAuthorizationDescriptor?> GetDescriptorAsync(Guid authorizationId)
+    {
+        var auth = await _db.OAuthAuthorizations
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.AuthorizationId == authorizationId);
+
+        if (auth == null)
+            return null;
+
+        return new OAuthAuthorizationDescriptor(auth.AuthorizationId, auth.Provider, auth.SubjectId);
     }
 
     // ── status query (crash reconciliation) ──────────────────────────────────
@@ -323,7 +356,38 @@ public class OAuthAuthorizationService
 
     // ── internal helpers ──────────────────────────────────────────────────────
 
-    private async Task TransitionAsync(
+    /// <summary>
+    /// Applies a terminal transition and returns the caller's intended outcome on
+    /// success, or — when the record is already terminal or a concurrent writer
+    /// won the race — the authoritative existing terminal outcome. This is the
+    /// single funnel through which the callback classifier reaches a terminal
+    /// state so that idempotency and concurrency reconciliation are handled once.
+    /// </summary>
+    private async Task<CallbackClassification> TerminalTransitionAsync(
+        OAuthAuthorization auth,
+        OAuthAuthorizationState targetState,
+        OAuthFailureReason? reason,
+        string? detail,
+        CallbackClassification onWin)
+    {
+        var won = await TransitionAsync(auth, targetState, reason, detail);
+        return won ? onWin : MapTerminalStateToClassification(auth);
+    }
+
+    /// <summary>
+    /// Attempts a single Pending → terminal transition. Returns <c>true</c> when
+    /// this call applied the transition, <c>false</c> when the record was already
+    /// terminal or a concurrent writer committed a terminal state first (the
+    /// tracked entity is reloaded to the winning state on that path).
+    /// <para>
+    /// Atomicity (issue #123): the <see cref="OAuthAuthorization.ConcurrencyToken"/>
+    /// is rotated on every write, so two racing terminal saves cannot both
+    /// commit — the loser's UPDATE matches zero rows and EF raises
+    /// <see cref="DbUpdateConcurrencyException"/>, which we reconcile to the
+    /// winner rather than overwrite.
+    /// </para>
+    /// </summary>
+    private async Task<bool> TransitionAsync(
         OAuthAuthorization auth,
         OAuthAuthorizationState targetState,
         OAuthFailureReason? reason,
@@ -335,14 +399,38 @@ public class OAuthAuthorizationService
             _logger.LogDebug(
                 "[SM.2.2] Ignoring transition for already-terminal auth {AuthId} (current={State})",
                 auth.AuthorizationId, auth.State);
-            return;
+            return false;
         }
 
         auth.State = targetState;
         auth.FailureReason = reason;
         auth.FailureDetail = detail;
         auth.CompletedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
+        auth.ConcurrencyToken = Guid.NewGuid();
+
+        try
+        {
+            await _db.SaveChangesAsync();
+            return true;
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            // Lost the race to a concurrent terminal writer. Reload the winning
+            // state into the tracked entity so callers surface the authoritative
+            // outcome (409 idempotency) instead of clobbering it.
+            var entry = ex.Entries.SingleOrDefault();
+            if (entry != null)
+            {
+                await entry.ReloadAsync();
+            }
+
+            _logger.LogWarning(
+                "[#123] Concurrent terminal transition for auth {AuthId} lost the race; " +
+                "reconciled to authoritative state {State}.",
+                auth.AuthorizationId, auth.State);
+
+            return false;
+        }
     }
 
     private static OAuthAuthorizationStatus MapToStatus(OAuthAuthorization auth)
@@ -350,6 +438,7 @@ public class OAuthAuthorizationService
         return new OAuthAuthorizationStatus
         {
             AuthorizationId = auth.AuthorizationId,
+            SubjectId = auth.SubjectId,
             State = auth.State,
             FailureReason = auth.FailureReason,
             FailureDetail = auth.FailureDetail,
@@ -427,11 +516,30 @@ public record CallbackClassification(
     string? Detail);
 
 /// <summary>
+/// Minimal, side-effect-free view of an authorization used by the controller to
+/// authorize a callback mutation or status read before any state transition:
+/// the <see cref="Provider"/> the callback capability must be bound to, and the
+/// <see cref="SubjectId"/> that owns the record (issue #123).
+/// </summary>
+public record OAuthAuthorizationDescriptor(
+    Guid AuthorizationId,
+    string Provider,
+    string? SubjectId);
+
+/// <summary>
 /// Authoritative authorization status for the crash-reconciliation endpoint.
 /// </summary>
 public record OAuthAuthorizationStatus
 {
     public Guid AuthorizationId { get; init; }
+
+    /// <summary>
+    /// The andy-auth subject that initiated this authorization, used by the
+    /// controller to enforce record ownership on status reads (issue #123).
+    /// Null for guest / pre-login broker flows.
+    /// </summary>
+    public string? SubjectId { get; init; }
+
     public OAuthAuthorizationState State { get; init; }
     public OAuthFailureReason? FailureReason { get; init; }
     public string? FailureDetail { get; init; }

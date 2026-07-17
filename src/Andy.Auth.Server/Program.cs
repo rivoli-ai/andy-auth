@@ -470,6 +470,15 @@ builder.Services.AddHostedService<TokenCleanupService>();
 // state transitions, and crash-reconciliation status queries.
 builder.Services.AddScoped<OAuthAuthorizationService>();
 
+// Issue #123 — signed one-time capability that authorizes the anonymous OAuth
+// broker callback / exchange-result mutations. Minted at /authorize time and
+// bound to the authorization id + provider via ASP.NET Data Protection, so
+// knowledge of the authorization UUID alone is no longer sufficient authority.
+// AddDataProtection is idempotent (Identity already pulls it in) but is declared
+// explicitly here to make this endpoint's dependency self-evident.
+builder.Services.AddDataProtection();
+builder.Services.AddSingleton<OAuthCallbackCapabilityService>();
+
 // Add MCP Server for AI assistant integration with group management
 builder.Services
     .AddMcpServer()

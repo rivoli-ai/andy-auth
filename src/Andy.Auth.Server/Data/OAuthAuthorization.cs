@@ -94,6 +94,23 @@ public class OAuthAuthorization
     [MaxLength(450)]
     public string? ConnectionId { get; set; }
 
+    /// <summary>
+    /// Optimistic-concurrency token. Rotated on every state transition so that
+    /// two racing terminal writes cannot both succeed: the second
+    /// <c>SaveChanges</c> observes a stale token, the relational provider's
+    /// UPDATE matches zero rows, and EF raises <c>DbUpdateConcurrencyException</c>.
+    /// The service reconciles the loser to the winner's terminal outcome
+    /// (409 idempotency) rather than clobbering it. See
+    /// <see cref="Services.OAuthAuthorizationService"/>.
+    /// <para>
+    /// Modelled as a GUID (rather than a Postgres <c>xmin</c> system column) so
+    /// the token is enforced identically across every provider andy-auth targets
+    /// — PostgreSQL (migrations), SQLite (EnsureCreated), and test fixtures.
+    /// </para>
+    /// </summary>
+    [ConcurrencyCheck]
+    public Guid ConcurrencyToken { get; set; } = Guid.NewGuid();
+
     // ── derived helpers ────────────────────────────────────────────────────────
 
     /// <summary>True when the record has reached a terminal state.</summary>
