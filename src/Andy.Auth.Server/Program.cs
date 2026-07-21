@@ -593,6 +593,16 @@ using (var scope = app.Services.CreateScope())
         if (dbProvider == DatabaseProvider.Sqlite)
         {
             await context.Database.EnsureCreatedAsync();
+
+            // EnsureCreated is a no-op on an existing DB, so a schema created
+            // by an older binary silently drifts when the model gains a column
+            // or table. Heal additive drift in place (missing tables via the
+            // model's own generated DDL, missing nullable/defaulted columns
+            // via ALTER TABLE ADD COLUMN).
+            var healLogger = services
+                .GetRequiredService<ILoggerFactory>()
+                .CreateLogger(nameof(SqliteSchemaBootstrapper));
+            await SqliteSchemaBootstrapper.HealAsync(context, healLogger);
         }
         else
         {
