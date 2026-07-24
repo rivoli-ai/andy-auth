@@ -25,6 +25,14 @@ public class ClerkProvider : IAuthProvider
         if (options.Clerk == null || string.IsNullOrEmpty(options.Clerk.Domain))
             throw new ArgumentException("Clerk configuration with Domain is required for Clerk provider");
 
+        // Fail fast rather than quietly disabling audience validation
+        // (andy-auth#148) — an unconfigured audience previously meant any
+        // token from the Clerk instance was accepted.
+        if (string.IsNullOrEmpty(options.Clerk.Audience))
+            throw new ArgumentException(
+                "AndyAuth:Clerk:Audience is required for the Clerk provider. Without it, every token " +
+                "issued by this Clerk instance would be accepted, including tokens minted for other APIs.");
+
         var clerkDomain = options.Clerk.Domain;
 
         // Add policy scheme that routes to appropriate handler based on token type
@@ -57,7 +65,10 @@ public class ClerkProvider : IAuthProvider
             {
                 ValidateIssuer = true,
                 ValidIssuer = $"https://{clerkDomain}",
-                ValidateAudience = !string.IsNullOrEmpty(options.Clerk.Audience),
+                // Same fail-open shape as the AndyAuth provider carried
+                // (andy-auth#148); the guard below makes the empty case
+                // unreachable, so this stays true unconditionally.
+                ValidateAudience = true,
                 ValidAudience = options.Clerk.Audience,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,

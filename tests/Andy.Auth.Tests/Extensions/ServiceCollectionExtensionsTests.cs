@@ -74,7 +74,8 @@ public class ServiceCollectionExtensionsTests
             Provider = AuthProvider.Clerk,
             Clerk = new ClerkOptions
             {
-                Domain = "test.clerk.accounts.dev"
+                Domain = "test.clerk.accounts.dev",
+                Audience = "test-api"
             }
         };
 
@@ -148,7 +149,8 @@ public class ServiceCollectionExtensionsTests
         var options = new AndyAuthOptions
         {
             Provider = AuthProvider.AndyAuth,
-            Authority = "https://auth.example.com"
+            Authority = "https://auth.example.com",
+            Audience = "test-api"
         };
 
         // Act
@@ -170,7 +172,8 @@ public class ServiceCollectionExtensionsTests
             Provider = AuthProvider.Clerk,
             Clerk = new ClerkOptions
             {
-                Domain = "test.clerk.accounts.dev"
+                Domain = "test.clerk.accounts.dev",
+                Audience = "test-api"
             }
         };
 
@@ -213,6 +216,7 @@ public class ServiceCollectionExtensionsTests
         {
             Provider = provider,
             Authority = "https://auth.example.com",
+            Audience = "test-api",
             AzureAd = new AzureAdOptions
             {
                 TenantId = "test-tenant",
@@ -220,7 +224,8 @@ public class ServiceCollectionExtensionsTests
             },
             Clerk = new ClerkOptions
             {
-                Domain = "test.clerk.accounts.dev"
+                Domain = "test.clerk.accounts.dev",
+                Audience = "test-api"
             }
         };
 

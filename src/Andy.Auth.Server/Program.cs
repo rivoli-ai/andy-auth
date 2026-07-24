@@ -418,6 +418,11 @@ builder.Services.Configure<RolePermissionOptions>(
     builder.Configuration.GetSection(RolePermissionOptions.SectionName));
 builder.Services.AddScoped<RolePermissionResolver>();
 
+// One claims-principal builder for every user-bearing grant. The auth-code and
+// device flows each had their own copy and drifted — device-flow tokens lost
+// the `permission` claims entirely (andy-auth#149).
+builder.Services.AddScoped<TokenClaimsPrincipalFactory>();
+
 // Register token cleanup background service
 builder.Services.AddHostedService<TokenCleanupService>();
 

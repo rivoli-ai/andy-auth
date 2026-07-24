@@ -34,7 +34,8 @@ public class ClerkProviderTests
         {
             Clerk = new ClerkOptions
             {
-                Domain = "test.clerk.accounts.dev"
+                Domain = "test.clerk.accounts.dev",
+                Audience = "test-api"
             }
         };
 
@@ -138,7 +139,8 @@ public class ClerkProviderTests
         {
             Clerk = new ClerkOptions
             {
-                Domain = domain
+                Domain = domain,
+                Audience = "test-api"
             }
         };
 
