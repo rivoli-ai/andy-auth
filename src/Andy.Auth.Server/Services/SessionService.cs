@@ -223,6 +223,16 @@ public class SessionService
         var session = await _dbContext.UserSessions
             .FirstOrDefaultAsync(s => s.SessionId == sessionId);
 
+        return await IsSessionValidAsync(session);
+    }
+
+    /// <summary>
+    /// Overload for callers that have already loaded the row — the tracking
+    /// middleware runs on every authenticated request, so re-reading it here
+    /// doubled the per-request query count (andy-auth#154).
+    /// </summary>
+    public async Task<bool> IsSessionValidAsync(UserSession? session)
+    {
         if (session == null)
             return false;
 

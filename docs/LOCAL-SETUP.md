@@ -74,22 +74,23 @@ Clients are automatically seeded on startup. Edit `src/Andy.Auth.Server/Data/DbS
 
 ### Security Keys
 
-For development, keys are in `appsettings.Development.json`:
-```json
-{
-  "OpenIddict": {
-    "Server": {
-      "EncryptionKey": "DEV-ENCRYPTION-KEY-32-CHARS!!",
-      "SigningKey": "DEV-SIGNING-KEY-32-CHARS-HERE!"
-    }
-  }
-}
-```
+Development needs no key configuration — the server generates ephemeral
+signing and encryption keys on each start. You re-authenticate through the
+browser on reload, so a rotating JWKS costs nothing.
 
-**For production:** Generate secure keys:
-```bash
-openssl rand -base64 32
-```
+Two settings control key material everywhere else:
+
+| Setting | Effect |
+|---|---|
+| `OpenIddict:SigningKeys:Path` | RSA keypair persisted in that directory. The JWKS `kid` survives restarts, so previously-issued JWTs keep validating. Required in Embedded mode; recommended in Production. |
+| `OpenIddict:UseEphemeralKeys` | Production opt-in to rotating keys on every start. Every token in flight becomes invalid — only safe for stateless pods where every consumer can re-authenticate on demand. |
+
+Production startup fails unless one of the two is set.
+
+> There is no `OpenIddict:Server:SigningKey` / `:EncryptionKey` setting. Those
+> keys appeared in the settings files for a long time and were read by nothing;
+> they have been removed and the server now refuses to start if they are
+> present (andy-auth#152).
 
 ## Database Management
 
@@ -256,8 +257,6 @@ Create `.env` file (not committed):
 
 ```bash
 ConnectionStrings__DefaultConnection=Host=localhost;Database=andy_auth_dev;Username=postgres;Password=postgres
-OpenIddict__Server__EncryptionKey=your-32-char-encryption-key
-OpenIddict__Server__SigningKey=your-32-char-signing-key
 ASPNETCORE_ENVIRONMENT=Development
 ```
 

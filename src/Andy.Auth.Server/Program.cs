@@ -140,6 +140,28 @@ builder.Services.AddOpenIddict()
     // Register the OpenIddict server components
     .AddServer(options =>
     {
+        // `OpenIddict:Server:EncryptionKey` / `:SigningKey` shipped in every
+        // settings file and were read by nothing — key material has always
+        // come from `OpenIddict:SigningKeys:Path` or the ephemeral fallbacks
+        // below. An operator following appsettings.Production.json would set
+        // those env vars, believe key material was pinned, and get either a
+        // startup error or silently-rotating keys (andy-auth#152). They are
+        // gone now; refuse to start if something still sets them, so the same
+        // false sense of security can't return unnoticed.
+        var strayServerKeys = builder.Configuration
+            .GetSection("OpenIddict:Server")
+            .GetChildren()
+            .Select(c => c.Key)
+            .ToArray();
+        if (strayServerKeys.Length > 0)
+        {
+            throw new InvalidOperationException(
+                $"Unrecognized configuration under `OpenIddict:Server` ({string.Join(", ", strayServerKeys)}). " +
+                "These settings are not read by anything. Signing/encryption key material is configured via " +
+                "`OpenIddict:SigningKeys:Path` (persisted RSA keypair) or `OpenIddict:UseEphemeralKeys`. " +
+                "See docs/DEPLOYMENT.md.");
+        }
+
         // Fix the issuer so it's consistent regardless of how the server is accessed
         // (localhost vs host.docker.internal, or a reverse proxy like Conductor's
         // unified proxy on port 9100). Read from config so each deployment mode
@@ -171,7 +193,17 @@ builder.Services.AddOpenIddict()
             // polls /connect/token with grant_type=urn:ietf:params:oauth:
             // grant-type:device_code until the user completes verification.
             .SetDeviceAuthorizationEndpointUris("connect/device")
-            .SetEndUserVerificationEndpointUris("connect/verify");
+            .SetEndUserVerificationEndpointUris("connect/verify")
+            // OIDC RP-Initiated Logout. Registering the endpoint is what makes
+            // `GetOpenIddictServerRequest()` return a parsed logout request in
+            // AuthorizationController.Logout — without it that call returned
+            // null, `post_logout_redirect_uri` was always ignored, every
+            // logout landed on "/", and `end_session_endpoint` never appeared
+            // in discovery (andy-auth#151). Registration is also what makes
+            // OpenIddict validate the supplied post_logout_redirect_uri
+            // against the client's registered list, so the redirect below is
+            // not an open redirect.
+            .SetEndSessionEndpointUris("connect/logout");
 
         // Add registration_endpoint to discovery document for DCR (RFC 7591)
         // OpenIddict doesn't natively support DCR, so we add it via a custom handler
@@ -348,6 +380,8 @@ builder.Services.AddOpenIddict()
             // MVC passthrough so we can render the code-entry form and
             // hook into our existing Identity sign-in flow.
             .EnableEndUserVerificationEndpointPassthrough()
+            // Logout is rendered/handled by AuthorizationController.Logout.
+            .EnableEndSessionEndpointPassthrough()
             .EnableStatusCodePagesIntegration();
 
         // Allow HTTP for local development, CI, Docker compose stacks, and
@@ -422,6 +456,11 @@ builder.Services.AddScoped<RolePermissionResolver>();
 // device flows each had their own copy and drifted — device-flow tokens lost
 // the `permission` claims entirely (andy-auth#149).
 builder.Services.AddScoped<TokenClaimsPrincipalFactory>();
+
+// Shared enabled/approved/secret-expiry gate for dynamically-registered
+// clients, used by the authorization, token and device-verify paths
+// (andy-auth#153).
+builder.Services.AddScoped<DcrClientGate>();
 
 // Register token cleanup background service
 builder.Services.AddHostedService<TokenCleanupService>();
@@ -557,6 +596,28 @@ app.Use(async (context, next) =>
     await next();
 });
 
+// RFC 9728 §5.1 — an unauthenticated call to the protected resource must point
+// the client at its metadata document, otherwise discovery has no entry point
+// and the metadata added above is unreachable in practice (andy-auth#155).
+// Sits this high in the pipeline so it observes the final status code after
+// authentication/authorization have run.
+app.Use(async (context, next) =>
+{
+    await next();
+
+    if (context.Response.StatusCode == StatusCodes.Status401Unauthorized &&
+        context.Request.Path.StartsWithSegments("/mcp") &&
+        !context.Response.Headers.ContainsKey("WWW-Authenticate"))
+    {
+        var metadataUrl =
+            $"{context.Request.Scheme}://{context.Request.Host}{context.Request.PathBase}" +
+            "/.well-known/oauth-protected-resource";
+
+        context.Response.Headers.WWWAuthenticate =
+            $"Bearer resource_metadata=\"{metadataUrl}\"";
+    }
+});
+
 // Add rate limiting
 app.UseIpRateLimiting();
 
@@ -601,6 +662,38 @@ app.MapControllerRoute(
 // OT4 (rivoli-ai/conductor#1262). Exposes /metrics for the Conductor
 // scraper; OTLP push is independent.
 app.MapAndyTelemetry();
+
+// --- RFC 9728 Protected Resource Metadata (andy-auth#155) ---
+// The MCP authorization spec requires an MCP server acting as a resource
+// server to publish this document, and to point at it from the 401 challenge,
+// so a client can discover which authorization server guards the resource.
+// We shipped neither: `/mcp` returned a bare 401 and a conformant client had
+// nowhere to go, despite the README advertising full MCP OAuth 2.1 support.
+//
+// `resource` is the canonical identifier of this MCP endpoint. It has to match
+// what clients send in the RFC 8707 `resource` parameter, which is why it is
+// config-driven per deployment mode — Mode 1 uses 5xxx ports, Embedded uses
+// the 9100 unified proxy, hosted prod uses the public URL. Falls back to the
+// live request origin when unset so local runs work without extra config.
+app.MapGet("/.well-known/oauth-protected-resource", (HttpContext context, IConfiguration configuration) =>
+{
+    var issuer = configuration["OpenIddict:Issuer"]?.TrimEnd('/');
+
+    var resource = configuration["Mcp:ResourceIdentifier"]
+        ?? $"{context.Request.Scheme}://{context.Request.Host}{context.Request.PathBase}/mcp";
+
+    return Results.Ok(new Dictionary<string, object?>
+    {
+        ["resource"] = resource,
+        ["authorization_servers"] = new[] { issuer },
+        ["bearer_methods_supported"] = new[] { "header" },
+        ["scopes_supported"] = new[] { "openid", "profile", "email", "roles" },
+        ["resource_documentation"] = $"{issuer}/docs/",
+    });
+})
+    .AllowAnonymous()
+    .WithName("ProtectedResourceMetadata")
+    .ExcludeFromDescription();
 
 // Map MCP Server endpoint at /mcp with permissive CORS for MCP clients
 // Require authorization so clients (e.g., Claude Desktop) receive an OAuth challenge

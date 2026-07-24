@@ -31,6 +31,7 @@ public class DeviceController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly TokenClaimsPrincipalFactory _principalFactory;
+    private readonly DcrClientGate _dcrGate;
     private readonly ApplicationDbContext _dbContext;
     private readonly ILogger<DeviceController> _logger;
 
@@ -39,6 +40,7 @@ public class DeviceController : Controller
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         TokenClaimsPrincipalFactory principalFactory,
+        DcrClientGate dcrGate,
         ApplicationDbContext dbContext,
         ILogger<DeviceController> logger)
     {
@@ -46,6 +48,7 @@ public class DeviceController : Controller
         _userManager = userManager;
         _signInManager = signInManager;
         _principalFactory = principalFactory;
+        _dcrGate = dcrGate;
         _dbContext = dbContext;
         _logger = logger;
     }
@@ -134,18 +137,20 @@ public class DeviceController : Controller
         }
 
         var deviceClientId = result.Principal.GetClaim(Claims.ClientId);
-        if (!string.IsNullOrEmpty(deviceClientId) && !await IsDcrClientActiveAsync(deviceClientId))
+        var dcrDenial = string.IsNullOrEmpty(deviceClientId)
+            ? null
+            : await _dcrGate.GetDenialReasonAsync(deviceClientId);
+        if (dcrDenial is not null)
         {
             _logger.LogWarning(
-                "Device authorization refused: DCR client {ClientId} is disabled or pending approval",
-                deviceClientId);
+                "Device authorization refused for DCR client {ClientId}: {Reason}",
+                deviceClientId, dcrDenial);
             return Forbid(
                 authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 properties: new AuthenticationProperties(new Dictionary<string, string?>
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidClient,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
-                        "The client application is disabled or pending approval."
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = dcrDenial
                 }));
         }
 
@@ -178,25 +183,5 @@ public class DeviceController : Controller
             string.Join(" ", principal.GetScopes()));
 
         return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-    }
-
-    /// <summary>
-    /// Mirrors <c>AuthorizationController.IsDcrClientActiveAsync</c>: a
-    /// dynamically-registered client that an admin later disabled or has not
-    /// yet approved must not complete any flow (andy-auth#149).
-    /// </summary>
-    private async Task<bool> IsDcrClientActiveAsync(string clientId)
-    {
-        var dcr = await _dbContext.DynamicClientRegistrations
-            .AsNoTracking()
-            .Where(d => d.ClientId == clientId)
-            .Select(d => new { d.IsApproved, d.IsDisabled })
-            .FirstOrDefaultAsync();
-
-        // Not a DCR client => no DCR-based restrictions.
-        if (dcr == null)
-            return true;
-
-        return dcr.IsApproved && !dcr.IsDisabled;
     }
 }

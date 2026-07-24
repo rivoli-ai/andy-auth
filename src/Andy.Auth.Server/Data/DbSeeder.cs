@@ -262,6 +262,16 @@ public class DbSeeder
             }
         }
 
+        // OpenIddict enforces a per-client endpoint permission for RP-initiated
+        // logout, so a client with registered post-logout URIs also needs
+        // `ept:end_session` or its logout request is rejected. The endpoint
+        // itself only became reachable in andy-auth#151 — before that, these
+        // URIs were dead config.
+        if (descriptor.PostLogoutRedirectUris.Count > 0)
+        {
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.EndSession);
+        }
+
         await appManager.CreateAsync(descriptor);
         _logger.LogInformation("[manifest] Created OAuth client: {ClientId} ({Type})",
             client.ClientId, isConfidential ? "confidential" : "public");

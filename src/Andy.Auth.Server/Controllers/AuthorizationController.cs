@@ -30,6 +30,7 @@ public class AuthorizationController : ControllerBase
     private readonly ITokenExchangePolicy _tokenExchangePolicy;
     private readonly ISubjectTokenValidator _subjectTokenValidator;
     private readonly TokenClaimsPrincipalFactory _principalFactory;
+    private readonly DcrClientGate _dcrGate;
     private readonly ILogger<AuthorizationController> _logger;
 
     public AuthorizationController(
@@ -42,6 +43,7 @@ public class AuthorizationController : ControllerBase
         ITokenExchangePolicy tokenExchangePolicy,
         ISubjectTokenValidator subjectTokenValidator,
         TokenClaimsPrincipalFactory principalFactory,
+        DcrClientGate dcrGate,
         ILogger<AuthorizationController> logger)
     {
         _applicationManager = applicationManager;
@@ -53,6 +55,7 @@ public class AuthorizationController : ControllerBase
         _tokenExchangePolicy = tokenExchangePolicy;
         _subjectTokenValidator = subjectTokenValidator;
         _principalFactory = principalFactory;
+        _dcrGate = dcrGate;
         _logger = logger;
     }
 
@@ -66,15 +69,17 @@ public class AuthorizationController : ControllerBase
 
         // If this client was dynamically registered and later disabled/unapproved by an admin,
         // block authorization requests early.
-        if (!string.IsNullOrEmpty(request.ClientId) && !await IsDcrClientActiveAsync(request.ClientId))
+        var dcrDenial = string.IsNullOrEmpty(request.ClientId)
+            ? null
+            : await _dcrGate.GetDenialReasonAsync(request.ClientId);
+        if (dcrDenial is not null)
         {
             return Forbid(
                 authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 properties: new AuthenticationProperties(new Dictionary<string, string?>
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidClient,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
-                        "The client application is disabled or pending approval."
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = dcrDenial
                 }));
         }
 
@@ -271,15 +276,17 @@ public class AuthorizationController : ControllerBase
 
         // If this client was dynamically registered and later disabled/unapproved by an admin,
         // block token requests early.
-        if (!string.IsNullOrEmpty(request.ClientId) && !await IsDcrClientActiveAsync(request.ClientId))
+        var dcrDenial = string.IsNullOrEmpty(request.ClientId)
+            ? null
+            : await _dcrGate.GetDenialReasonAsync(request.ClientId);
+        if (dcrDenial is not null)
         {
             return Forbid(
                 authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 properties: new AuthenticationProperties(new Dictionary<string, string?>
                 {
                     [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidClient,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
-                        "The client application is disabled or pending approval."
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = dcrDenial
                 }));
         }
 
@@ -652,19 +659,4 @@ public class AuthorizationController : ControllerBase
     /// </summary>
     private Task<ClaimsPrincipal> CreateClaimsPrincipalAsync(ApplicationUser user, IEnumerable<string> scopes) =>
         _principalFactory.CreateAsync(user, scopes, HttpContext.GetOpenIddictServerRequest()?.ClientId);
-
-    private async Task<bool> IsDcrClientActiveAsync(string clientId)
-    {
-        var dcr = await _dbContext.DynamicClientRegistrations
-            .AsNoTracking()
-            .Where(d => d.ClientId == clientId)
-            .Select(d => new { d.IsApproved, d.IsDisabled })
-            .FirstOrDefaultAsync();
-
-        // Not a DCR client => no DCR-based restrictions.
-        if (dcr == null)
-            return true;
-
-        return dcr.IsApproved && !dcr.IsDisabled;
-    }
 }

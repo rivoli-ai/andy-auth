@@ -185,8 +185,17 @@ public class DynamicClientRegistrationController : ControllerBase
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Token);
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Introspection);
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Revocation);
+        // Required for RP-initiated logout to reach the end-session
+        // endpoint registered in andy-auth#151.
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.EndSession);
 
-        // Add grant type permissions
+        // Add grant type permissions.
+        //
+        // RFC 7591 §3.2.1 requires the response to report the metadata the
+        // server actually registered. This switch used to drop anything it
+        // didn't recognise on the floor while the response echoed the request
+        // verbatim, so a client asking for e.g. `implicit` was told it had a
+        // grant it could never use (andy-auth#153). Refuse instead.
         var grantTypes = request.GrantTypes ?? new List<string> { "authorization_code" };
         foreach (var grantType in grantTypes)
         {
@@ -202,22 +211,34 @@ public class DynamicClientRegistrationController : ControllerBase
                 case "client_credentials":
                     descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.ClientCredentials);
                     break;
+                default:
+                    return BadRequest(new ClientRegistrationError
+                    {
+                        Error = DcrErrorCodes.InvalidClientMetadata,
+                        ErrorDescription = $"Grant type '{grantType}' is not supported."
+                    });
             }
         }
 
-        // Add scope permissions
-        // If no scopes specified, grant all allowed scopes by default for MCP clients
+        // Add scope permissions.
+        // If no scopes specified, grant all allowed scopes by default for MCP clients.
+        // `DcrService.ValidateRegistrationRequest` has already rejected any
+        // requested scope outside AllowedScopes, so `grantedScopes` below is
+        // the full requested set — but build it from what we register rather
+        // than from the request, so the response can't drift from reality.
         var scopes = request.Scope?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (scopes == null || scopes.Length == 0)
         {
             // Default to all allowed scopes
             scopes = _settings.AllowedScopes.ToArray();
         }
+        var grantedScopes = new List<string>();
         foreach (var scope in scopes)
         {
             if (_settings.AllowedScopes.Contains(scope))
             {
                 descriptor.Permissions.Add(OpenIddictConstants.Permissions.Prefixes.Scope + scope);
+                grantedScopes.Add(scope);
             }
         }
 
@@ -272,8 +293,11 @@ public class DynamicClientRegistrationController : ControllerBase
             ClientSecretExpiresAt = isConfidential ? clientSecretExpiresAt : null,
             RegistrationAccessToken = registrationAccessToken,
             RegistrationClientUri = $"{baseUri}/connect/register/{clientId}",
-            RedirectUris = request.RedirectUris,
-            ResponseTypes = request.ResponseTypes ?? (grantTypes.Contains("authorization_code") ? new List<string> { "code" } : null),
+            // Registered values, not requested ones (RFC 7591 §3.2.1,
+            // andy-auth#153). descriptor.RedirectUris is what survived
+            // Uri.TryCreate above.
+            RedirectUris = descriptor.RedirectUris.Select(u => u.ToString()).ToList(),
+            ResponseTypes = grantTypes.Contains("authorization_code") ? new List<string> { "code" } : null,
             GrantTypes = grantTypes,
             ApplicationType = request.ApplicationType ?? "web",
             Contacts = request.Contacts,
@@ -287,8 +311,8 @@ public class DynamicClientRegistrationController : ControllerBase
             SoftwareId = request.SoftwareId,
             SoftwareVersion = request.SoftwareVersion,
             TokenEndpointAuthMethod = request.TokenEndpointAuthMethod ?? (isConfidential ? "client_secret_basic" : "none"),
-            Scope = request.Scope ?? string.Join(" ", scopes),
-            PostLogoutRedirectUris = request.PostLogoutRedirectUris
+            Scope = string.Join(" ", grantedScopes),
+            PostLogoutRedirectUris = descriptor.PostLogoutRedirectUris.Select(u => u.ToString()).ToList()
         };
 
         return StatusCode(201, response);
