@@ -138,6 +138,22 @@ public class DeviceController : Controller
         var user = await _userManager.GetUserAsync(User) ??
             throw new InvalidOperationException("The user details cannot be retrieved.");
 
+        // The Identity cookie can outlive a suspension/expiry/soft-delete, so
+        // re-check before minting device-flow credentials (andy-auth#146).
+        if (!await _signInManager.CanSignInAsync(user))
+        {
+            _logger.LogWarning(
+                "Device authorization refused: user {UserId} may no longer sign in", user.Id);
+            return Forbid(
+                authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                properties: new AuthenticationProperties(new Dictionary<string, string?>
+                {
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.AccessDenied,
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                        "The user is no longer allowed to sign in."
+                }));
+        }
+
         var principal = await CreateClaimsPrincipalAsync(user, result.Principal.GetScopes(), result.Principal.GetClaim(Claims.ClientId));
 
         _logger.LogInformation(

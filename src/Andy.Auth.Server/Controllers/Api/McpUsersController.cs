@@ -20,15 +20,18 @@ public class McpUsersController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IAuditService _auditService;
+    private readonly IUserAccessRevoker _accessRevoker;
     private readonly ILogger<McpUsersController> _logger;
 
     public McpUsersController(
         UserManager<ApplicationUser> userManager,
         IAuditService auditService,
+        IUserAccessRevoker accessRevoker,
         ILogger<McpUsersController> logger)
     {
         _userManager = userManager;
         _auditService = auditService;
+        _accessRevoker = accessRevoker;
         _logger = logger;
     }
 
@@ -192,6 +195,9 @@ public class McpUsersController : ControllerBase
         user.SuspendedAt = DateTime.UtcNow;
         await _userManager.UpdateAsync(user);
 
+        // Suspension must also kill credentials already in flight (andy-auth#146).
+        await _accessRevoker.RevokeAllAccessAsync(user, "Account suspended");
+
         await LogAuditAsync("UserSuspendedViaMcp", user.Id, user.Email, $"Reason: {request.Reason}");
 
         return Ok(new { success = true, message = $"User {user.Email} suspended" });
@@ -246,6 +252,8 @@ public class McpUsersController : ControllerBase
         user.DeletedAt = DateTime.UtcNow;
         user.IsActive = false;
         await _userManager.UpdateAsync(user);
+
+        await _accessRevoker.RevokeAllAccessAsync(user, "Account deleted");
 
         await LogAuditAsync("UserDeletedViaMcp", user.Id, user.Email);
 

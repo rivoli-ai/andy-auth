@@ -18,6 +18,7 @@ public class McpUsersControllerTests : IDisposable
     private readonly ApplicationDbContext _context;
     private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
     private readonly Mock<IAuditService> _auditServiceMock;
+    private readonly Mock<IUserAccessRevoker> _accessRevokerMock;
     private readonly Mock<ILogger<McpUsersController>> _loggerMock;
     private readonly McpUsersController _controller;
 
@@ -34,11 +35,14 @@ public class McpUsersControllerTests : IDisposable
             store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         _auditServiceMock = new Mock<IAuditService>();
+
+        _accessRevokerMock = new Mock<IUserAccessRevoker>();
         _loggerMock = new Mock<ILogger<McpUsersController>>();
 
         _controller = new McpUsersController(
             _userManagerMock.Object,
             _auditServiceMock.Object,
+            _accessRevokerMock.Object,
             _loggerMock.Object);
 
         // Setup HttpContext with user claims

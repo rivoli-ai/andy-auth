@@ -17,6 +17,7 @@ public class AdminController : Controller
     private readonly IOpenIddictTokenManager _tokenManager;
     private readonly IOpenIddictAuthorizationManager _authorizationManager;
     private readonly IAuditService _auditService;
+    private readonly IUserAccessRevoker _accessRevoker;
     private readonly ILogger<AdminController> _logger;
 
     public AdminController(
@@ -26,6 +27,7 @@ public class AdminController : Controller
         IOpenIddictTokenManager tokenManager,
         IOpenIddictAuthorizationManager authorizationManager,
         IAuditService auditService,
+        IUserAccessRevoker accessRevoker,
         ILogger<AdminController> logger)
     {
         _context = context;
@@ -34,6 +36,7 @@ public class AdminController : Controller
         _tokenManager = tokenManager;
         _authorizationManager = authorizationManager;
         _auditService = auditService;
+        _accessRevoker = accessRevoker;
         _logger = logger;
     }
 
@@ -464,6 +467,10 @@ public class AdminController : Controller
         user.SuspendedAt = DateTime.UtcNow;
 
         await _userManager.UpdateAsync(user);
+
+        // Suspension must also kill credentials already in flight (andy-auth#146).
+        await _accessRevoker.RevokeAllAccessAsync(user, "Account suspended");
+
         await LogAuditAsync("UserSuspended", user.Id, user.Email, $"Reason: {reason}");
 
         TempData["SuccessMessage"] = $"User {user.Email} has been suspended.";
@@ -498,6 +505,14 @@ public class AdminController : Controller
         user.ExpiresAt = expiresAt;
 
         await _userManager.UpdateAsync(user);
+
+        // An expiry set in the past takes effect immediately, so the user's
+        // live credentials have to go with it (andy-auth#146). A future expiry
+        // leaves them alone until the date passes.
+        if (expiresAt.HasValue && expiresAt.Value <= DateTime.UtcNow)
+        {
+            await _accessRevoker.RevokeAllAccessAsync(user, "Account expired");
+        }
 
         var details = expiresAt.HasValue
             ? $"Expires: {expiresAt.Value:yyyy-MM-dd HH:mm}"
@@ -537,6 +552,9 @@ public class AdminController : Controller
         user.IsActive = false;
 
         await _userManager.UpdateAsync(user);
+
+        await _accessRevoker.RevokeAllAccessAsync(user, "Account deleted");
+
         await LogAuditAsync("UserDeleted", user.Id, user.Email);
 
         TempData["SuccessMessage"] = $"User {user.Email} has been deleted.";

@@ -72,6 +72,9 @@ public class E2ETestServer : IAsyncDisposable
             options.SignIn.RequireConfirmedEmail = false;
         })
         .AddEntityFrameworkStores<ApplicationDbContext>()
+        // Mirrors Program.cs — the lifecycle gate from andy-auth#146 must be in
+        // play here too, or E2E exercises a laxer server than we ship.
+        .AddSignInManager<AndyAuthSignInManager>()
         .AddDefaultTokenProviders();
 
         // Configure cookie authentication
@@ -88,6 +91,7 @@ public class E2ETestServer : IAsyncDisposable
         // Register custom services
         builder.Services.AddScoped<IAuditService, AuditService>();
         builder.Services.AddScoped<SessionService>();
+        builder.Services.AddScoped<IUserAccessRevoker, UserAccessRevoker>();
 
         // Configure OpenIddict
         builder.Services.AddOpenIddict()
