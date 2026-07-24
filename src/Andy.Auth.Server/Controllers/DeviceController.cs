@@ -1,5 +1,6 @@
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Models;
+using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -28,26 +29,23 @@ public class DeviceController : Controller
 {
     private readonly IOpenIddictApplicationManager _applicationManager;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IOpenIddictAuthorizationManager _authorizationManager;
-    private readonly IOpenIddictScopeManager _scopeManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly TokenClaimsPrincipalFactory _principalFactory;
     private readonly ApplicationDbContext _dbContext;
     private readonly ILogger<DeviceController> _logger;
 
     public DeviceController(
         IOpenIddictApplicationManager applicationManager,
         UserManager<ApplicationUser> userManager,
-        IOpenIddictAuthorizationManager authorizationManager,
-        IOpenIddictScopeManager scopeManager,
         SignInManager<ApplicationUser> signInManager,
+        TokenClaimsPrincipalFactory principalFactory,
         ApplicationDbContext dbContext,
         ILogger<DeviceController> logger)
     {
         _applicationManager = applicationManager;
         _userManager = userManager;
-        _authorizationManager = authorizationManager;
-        _scopeManager = scopeManager;
         _signInManager = signInManager;
+        _principalFactory = principalFactory;
         _dbContext = dbContext;
         _logger = logger;
     }
@@ -135,6 +133,22 @@ public class DeviceController : Controller
                 }));
         }
 
+        var deviceClientId = result.Principal.GetClaim(Claims.ClientId);
+        if (!string.IsNullOrEmpty(deviceClientId) && !await IsDcrClientActiveAsync(deviceClientId))
+        {
+            _logger.LogWarning(
+                "Device authorization refused: DCR client {ClientId} is disabled or pending approval",
+                deviceClientId);
+            return Forbid(
+                authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                properties: new AuthenticationProperties(new Dictionary<string, string?>
+                {
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidClient,
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                        "The client application is disabled or pending approval."
+                }));
+        }
+
         var user = await _userManager.GetUserAsync(User) ??
             throw new InvalidOperationException("The user details cannot be retrieved.");
 
@@ -154,7 +168,8 @@ public class DeviceController : Controller
                 }));
         }
 
-        var principal = await CreateClaimsPrincipalAsync(user, result.Principal.GetScopes(), result.Principal.GetClaim(Claims.ClientId));
+        var principal = await _principalFactory.CreateAsync(
+            user, result.Principal.GetScopes(), result.Principal.GetClaim(Claims.ClientId));
 
         _logger.LogInformation(
             "Device authorization granted: user {UserId}, client {ClientId}, scopes {Scopes}",
@@ -166,89 +181,22 @@ public class DeviceController : Controller
     }
 
     /// <summary>
-    /// Mirrors AuthorizationController.CreateClaimsPrincipalAsync but
-    /// with the client_id passed in explicitly (the OpenIddict server
-    /// request at the verification endpoint doesn't carry it the same
-    /// way the auth-code flow does — it's instead part of the
-    /// device-authorization principal returned by AuthenticateAsync).
-    /// Kept as a private copy rather than refactoring the shared
-    /// implementation to avoid disturbing the existing auth-code flow
-    /// in this PR.
+    /// Mirrors <c>AuthorizationController.IsDcrClientActiveAsync</c>: a
+    /// dynamically-registered client that an admin later disabled or has not
+    /// yet approved must not complete any flow (andy-auth#149).
     /// </summary>
-    private async Task<ClaimsPrincipal> CreateClaimsPrincipalAsync(ApplicationUser user, IEnumerable<string> scopes, string? clientId)
+    private async Task<bool> IsDcrClientActiveAsync(string clientId)
     {
-        var principal = await _signInManager.CreateUserPrincipalAsync(user);
-        var identity = (ClaimsIdentity)principal.Identity!;
-
-        identity.AddClaim(new Claim(Claims.Subject, user.Id).SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        identity.AddClaim(new Claim(Claims.Email, user.Email!).SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        identity.AddClaim(new Claim(Claims.Name, user.FullName ?? user.UserName ?? user.Email!).SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        identity.AddClaim(new Claim(Claims.PreferredUsername, user.UserName ?? user.Email!).SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-
-        var groups = await _dbContext.UserGroups
+        var dcr = await _dbContext.DynamicClientRegistrations
             .AsNoTracking()
-            .Where(ug => ug.UserId == user.Id && ug.Group.IsActive && (ug.ExpiresAt == null || ug.ExpiresAt > DateTime.UtcNow))
-            .Select(ug => ug.Group.Code)
-            .ToListAsync();
-        foreach (var groupCode in groups)
-        {
-            identity.AddClaim(new Claim("groups", groupCode).SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        }
+            .Where(d => d.ClientId == clientId)
+            .Select(d => new { d.IsApproved, d.IsDisabled })
+            .FirstOrDefaultAsync();
 
-        principal.SetScopes(scopes);
+        // Not a DCR client => no DCR-based restrictions.
+        if (dcr == null)
+            return true;
 
-        var resources = new List<string>();
-        await foreach (var resource in _scopeManager.ListResourcesAsync(principal.GetScopes()))
-        {
-            resources.Add(resource);
-        }
-        principal.SetResources(resources);
-
-        if (!string.IsNullOrEmpty(clientId))
-        {
-            var application = await _applicationManager.FindByClientIdAsync(clientId);
-            if (application != null)
-            {
-                object? authorization = null;
-                await foreach (var auth in _authorizationManager.FindAsync(
-                    subject: user.Id,
-                    client: await _applicationManager.GetIdAsync(application)!,
-                    status: Statuses.Valid,
-                    type: AuthorizationTypes.Permanent,
-                    scopes: principal.GetScopes()))
-                {
-                    authorization = auth;
-                    break;
-                }
-                authorization ??= await _authorizationManager.CreateAsync(
-                    principal: principal,
-                    subject: user.Id,
-                    client: await _applicationManager.GetIdAsync(application)!,
-                    type: AuthorizationTypes.Permanent,
-                    scopes: principal.GetScopes());
-
-                principal.SetAuthorizationId(await _authorizationManager.GetIdAsync(authorization));
-            }
-        }
-
-        foreach (var claim in principal.Claims)
-        {
-            claim.SetDestinations(GetDestinations(claim, principal));
-        }
-
-        return principal;
+        return dcr.IsApproved && !dcr.IsDisabled;
     }
-
-    private static IEnumerable<string> GetDestinations(Claim claim, ClaimsPrincipal principal) => claim.Type switch
-    {
-        Claims.Name or Claims.Email or Claims.PreferredUsername => principal.HasScope(Scopes.Profile) || principal.HasScope(Scopes.Email)
-            ? new[] { Destinations.AccessToken, Destinations.IdentityToken }
-            : new[] { Destinations.AccessToken },
-        Claims.Role => principal.HasScope(Scopes.Roles)
-            ? new[] { Destinations.AccessToken, Destinations.IdentityToken }
-            : new[] { Destinations.AccessToken },
-        "groups" => new[] { Destinations.AccessToken, Destinations.IdentityToken },
-        "AspNet.Identity.SecurityStamp" => Array.Empty<string>(),
-        _ => new[] { Destinations.AccessToken },
-    };
 }

@@ -92,6 +92,10 @@ public class E2ETestServer : IAsyncDisposable
         builder.Services.AddScoped<IAuditService, AuditService>();
         builder.Services.AddScoped<SessionService>();
         builder.Services.AddScoped<IUserAccessRevoker, UserAccessRevoker>();
+        builder.Services.Configure<RolePermissionOptions>(
+            builder.Configuration.GetSection(RolePermissionOptions.SectionName));
+        builder.Services.AddScoped<RolePermissionResolver>();
+        builder.Services.AddScoped<TokenClaimsPrincipalFactory>();
 
         // Configure OpenIddict
         builder.Services.AddOpenIddict()

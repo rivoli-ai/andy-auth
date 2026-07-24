@@ -1,0 +1,153 @@
+using System.Security.Claims;
+using Andy.Auth.Server.Data;
+using Andy.Auth.Server.Services;
+using FluentAssertions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Moq;
+using OpenIddict.Abstractions;
+using Xunit;
+using static OpenIddict.Abstractions.OpenIddictConstants;
+
+namespace Andy.Auth.Server.Tests.Services;
+
+/// <summary>
+/// andy-auth#149. The auth-code and device flows each carried their own copy
+/// of the claims-principal build and drifted: the role→`permission` projection
+/// landed in one copy only, so device-flow tokens reached downstream services
+/// with no `permission` claim and every RequireClaim("permission", …) policy
+/// rejected them. These assert the single shared implementation emits the full
+/// claim set regardless of which flow calls it.
+/// </summary>
+public class TokenClaimsPrincipalFactoryTests
+{
+    private readonly ApplicationDbContext _dbContext;
+    private readonly Mock<UserManager<ApplicationUser>> _userManager;
+    private readonly Mock<SignInManager<ApplicationUser>> _signInManager;
+    private readonly Mock<IOpenIddictScopeManager> _scopeManager;
+    private readonly TokenClaimsPrincipalFactory _factory;
+
+    private static readonly ApplicationUser User = new()
+    {
+        Id = "user-1",
+        Email = "user@test.local",
+        UserName = "user@test.local",
+        FullName = "Test User",
+        IsActive = true,
+    };
+
+    public TokenClaimsPrincipalFactoryTests()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}")
+            .Options;
+        _dbContext = new ApplicationDbContext(options);
+
+        var store = new Mock<IUserStore<ApplicationUser>>();
+        _userManager = new Mock<UserManager<ApplicationUser>>(
+            store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
+        _userManager.Setup(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(new List<string> { "User" });
+
+        _signInManager = new Mock<SignInManager<ApplicationUser>>(
+            _userManager.Object,
+            new Mock<IHttpContextAccessor>().Object,
+            new Mock<IUserClaimsPrincipalFactory<ApplicationUser>>().Object,
+            null!, null!, null!, null!);
+        _signInManager.Setup(x => x.CreateUserPrincipalAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(() => new ClaimsPrincipal(new ClaimsIdentity(
+                Array.Empty<Claim>(), "Identity.Application", Claims.Name, Claims.Role)));
+
+        _scopeManager = new Mock<IOpenIddictScopeManager>();
+        _scopeManager.Setup(x => x.ListResourcesAsync(It.IsAny<System.Collections.Immutable.ImmutableArray<string>>(), default))
+            .Returns(AsyncEmpty<string>());
+
+        var rolePermissions = Options.Create(new RolePermissionOptions
+        {
+            RolePermissions = new Dictionary<string, List<string>>
+            {
+                ["User"] = new() { "tasks:approvePlan", "tasks:editPlan" },
+            }
+        });
+
+        _factory = new TokenClaimsPrincipalFactory(
+            _signInManager.Object,
+            _userManager.Object,
+            new Mock<IOpenIddictApplicationManager>().Object,
+            new Mock<IOpenIddictAuthorizationManager>().Object,
+            _scopeManager.Object,
+            new RolePermissionResolver(rolePermissions),
+            _dbContext);
+    }
+
+    private static async IAsyncEnumerable<T> AsyncEmpty<T>()
+    {
+        await Task.CompletedTask;
+        yield break;
+    }
+
+    [Theory]
+    // The client_id argument is the only thing that ever differed between the
+    // two copies: the auth-code flow reads it off the OpenIddict request, the
+    // device flow off the principal resolved from the user code.
+    [InlineData(null)]              // auth-code request with no client_id resolved
+    [InlineData("andy-cli")]        // device flow
+    public async Task CreateAsync_EmitsPermissionClaims_ForEveryFlow(string? clientId)
+    {
+        var principal = await _factory.CreateAsync(User, new[] { "openid", "profile" }, clientId);
+
+        principal.FindAll("permission").Select(c => c.Value)
+            .Should().BeEquivalentTo("tasks:approvePlan", "tasks:editPlan");
+    }
+
+    [Fact]
+    public async Task CreateAsync_RoutesPermissionClaimsToAccessTokenOnly()
+    {
+        // The identity token is for the client/UI; permissions are for
+        // downstream service policies.
+        var principal = await _factory.CreateAsync(User, new[] { "openid", "profile" }, "andy-cli");
+
+        var permission = principal.FindFirst("permission");
+        permission.Should().NotBeNull();
+        permission!.GetDestinations().Should().BeEquivalentTo(Destinations.AccessToken);
+    }
+
+    [Fact]
+    public async Task CreateAsync_EmitsActiveGroupClaims()
+    {
+        var group = new Group { Code = "engineering", Name = "Engineering", IsActive = true };
+        _dbContext.Groups.Add(group);
+        _dbContext.UserGroups.Add(new UserGroup { UserId = User.Id, Group = group });
+        await _dbContext.SaveChangesAsync();
+
+        var principal = await _factory.CreateAsync(User, new[] { "openid" }, "andy-cli");
+
+        principal.FindAll("groups").Select(c => c.Value).Should().BeEquivalentTo("engineering");
+    }
+
+    [Fact]
+    public async Task CreateAsync_NeverLeaksSecurityStamp()
+    {
+        _signInManager.Setup(x => x.CreateUserPrincipalAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(() => new ClaimsPrincipal(new ClaimsIdentity(
+                new[] { new Claim("AspNet.Identity.SecurityStamp", "secret-value") },
+                "Identity.Application", Claims.Name, Claims.Role)));
+
+        var principal = await _factory.CreateAsync(User, new[] { "openid" }, "andy-cli");
+
+        principal.FindFirst("AspNet.Identity.SecurityStamp")!
+            .GetDestinations().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateAsync_EmitsCoreSubjectClaims()
+    {
+        var principal = await _factory.CreateAsync(User, new[] { "openid", "profile" }, "andy-cli");
+
+        principal.FindFirst(Claims.Subject)!.Value.Should().Be(User.Id);
+        principal.FindFirst(Claims.Email)!.Value.Should().Be(User.Email);
+        principal.FindFirst(Claims.PreferredUsername)!.Value.Should().Be(User.UserName);
+    }
+}

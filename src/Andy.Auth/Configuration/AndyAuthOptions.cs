@@ -62,6 +62,20 @@ public class AndyAuthOptions
     /// Set to false only in development environments
     /// </summary>
     public bool RequireHttpsMetadata { get; set; } = true;
+
+    /// <summary>
+    /// Disables TLS certificate validation on the backchannel used to fetch
+    /// discovery metadata and JWKS. Development only.
+    /// </summary>
+    /// <remarks>
+    /// This used to be implied by <see cref="RequireHttpsMetadata"/> = false,
+    /// which conflated two unrelated decisions: "allow plain-HTTP metadata"
+    /// and "accept any certificate". A deployment that relaxed the first
+    /// silently lost MITM protection on key retrieval (andy-auth#148). It is
+    /// now an explicit, separate opt-in, and the provider refuses to honour it
+    /// when the host environment resolves to Production.
+    /// </remarks>
+    public bool AllowInvalidBackchannelCertificates { get; set; } = false;
 }
 
 /// <summary>

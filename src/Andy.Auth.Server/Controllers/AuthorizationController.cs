@@ -29,7 +29,7 @@ public class AuthorizationController : ControllerBase
     private readonly ApplicationDbContext _dbContext;
     private readonly ITokenExchangePolicy _tokenExchangePolicy;
     private readonly ISubjectTokenValidator _subjectTokenValidator;
-    private readonly RolePermissionResolver _rolePermissionResolver;
+    private readonly TokenClaimsPrincipalFactory _principalFactory;
     private readonly ILogger<AuthorizationController> _logger;
 
     public AuthorizationController(
@@ -41,7 +41,7 @@ public class AuthorizationController : ControllerBase
         ApplicationDbContext dbContext,
         ITokenExchangePolicy tokenExchangePolicy,
         ISubjectTokenValidator subjectTokenValidator,
-        RolePermissionResolver rolePermissionResolver,
+        TokenClaimsPrincipalFactory principalFactory,
         ILogger<AuthorizationController> logger)
     {
         _applicationManager = applicationManager;
@@ -52,7 +52,7 @@ public class AuthorizationController : ControllerBase
         _dbContext = dbContext;
         _tokenExchangePolicy = tokenExchangePolicy;
         _subjectTokenValidator = subjectTokenValidator;
-        _rolePermissionResolver = rolePermissionResolver;
+        _principalFactory = principalFactory;
         _logger = logger;
     }
 
@@ -646,135 +646,12 @@ public class AuthorizationController : ControllerBase
         return Redirect("/");
     }
 
-    private async Task<ClaimsPrincipal> CreateClaimsPrincipalAsync(ApplicationUser user, IEnumerable<string> scopes)
-    {
-        var principal = await _signInManager.CreateUserPrincipalAsync(user);
-        var identity = (ClaimsIdentity)principal.Identity!;
-
-        // Add the claims that will be persisted in the tokens
-        identity.AddClaim(new Claim(Claims.Subject, user.Id).SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        identity.AddClaim(new Claim(Claims.Email, user.Email!).SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        identity.AddClaim(new Claim(Claims.Name, user.FullName ?? user.UserName ?? user.Email!).SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        identity.AddClaim(new Claim(Claims.PreferredUsername, user.UserName ?? user.Email!).SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-
-        // Add groups claims for RBAC integration
-        var groups = await GetUserGroupsAsync(user.Id);
-        foreach (var groupCode in groups)
-        {
-            identity.AddClaim(new Claim("groups", groupCode).SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        }
-
-        // Add permission claims for RBAC integration. Downstream services
-        // authorize on a flat `permission` claim — e.g. andy-tasks'
-        // `tasks:approvePlan` / `tasks:editPlan` policies do
-        // RequireClaim("permission", …). Project the principal's role
-        // bindings onto the permission strings granted by those roles
-        // (Authorization:RolePermissions config). Interim until the full
-        // AL-rbac roll-out sources effective permissions from andy-rbac.
-        var roles = await _userManager.GetRolesAsync(user);
-        foreach (var permission in _rolePermissionResolver.Resolve(roles))
-        {
-            identity.AddClaim(new Claim("permission", permission).SetDestinations(Destinations.AccessToken));
-        }
-
-        // Set the list of scopes granted to the client application
-        principal.SetScopes(scopes);
-
-        var resources = new List<string>();
-        await foreach (var resource in _scopeManager.ListResourcesAsync(principal.GetScopes()))
-        {
-            resources.Add(resource);
-        }
-        principal.SetResources(resources);
-
-        // Automatically create/reuse a permanent authorization for this (user, client, scopes).
-        // Note: authorizations are per client+scopes; selecting "any authorization for the user"
-        // can incorrectly bind tokens issued for one client to a different client.
-        var request = HttpContext.GetOpenIddictServerRequest();
-        if (!string.IsNullOrEmpty(request?.ClientId))
-        {
-            var application = await _applicationManager.FindByClientIdAsync(request.ClientId);
-            if (application != null)
-            {
-                object? authorization = null;
-                await foreach (var auth in _authorizationManager.FindAsync(
-                    subject: user.Id,
-                    client: await _applicationManager.GetIdAsync(application)!,
-                    status: Statuses.Valid,
-                    type: AuthorizationTypes.Permanent,
-                    scopes: principal.GetScopes()))
-                {
-                    authorization = auth;
-                    break;
-                }
-
-                authorization ??= await _authorizationManager.CreateAsync(
-                    principal: principal,
-                    subject: user.Id,
-                    client: await _applicationManager.GetIdAsync(application)!,
-                    type: AuthorizationTypes.Permanent,
-                    scopes: principal.GetScopes());
-
-                principal.SetAuthorizationId(await _authorizationManager.GetIdAsync(authorization));
-            }
-        }
-
-        foreach (var claim in principal.Claims)
-        {
-            claim.SetDestinations(GetDestinations(claim, principal));
-        }
-
-        return principal;
-    }
-
-    private static IEnumerable<string> GetDestinations(Claim claim, ClaimsPrincipal principal)
-    {
-        // Note: by default, claims are NOT automatically included in the access and identity tokens.
-        // To allow OpenIddict to serialize them, you must attach them a destination, that specifies
-        // whether they should be included in access tokens, in identity tokens or in both.
-
-        switch (claim.Type)
-        {
-            case Claims.Name:
-            case Claims.Email:
-            case Claims.PreferredUsername:
-                yield return Destinations.AccessToken;
-
-                if (principal.HasScope(Scopes.Profile) || principal.HasScope(Scopes.Email))
-                    yield return Destinations.IdentityToken;
-
-                yield break;
-
-            case Claims.Role:
-                yield return Destinations.AccessToken;
-
-                if (principal.HasScope(Scopes.Roles))
-                    yield return Destinations.IdentityToken;
-
-                yield break;
-
-            // Groups claim for RBAC integration - always include in access token
-            case "groups":
-                yield return Destinations.AccessToken;
-                yield return Destinations.IdentityToken;
-                yield break;
-
-            // Permission claim for RBAC integration — access token only
-            // (downstream service policies read it; it has no place in the
-            // identity token, which is for the client/UI).
-            case "permission":
-                yield return Destinations.AccessToken;
-                yield break;
-
-            // Never include the security stamp in the access and identity tokens, as it's a secret value
-            case "AspNet.Identity.SecurityStamp":
-                yield break;
-
-            default:
-                yield return Destinations.AccessToken;
-                yield break;
-        }
-    }
+    /// <summary>
+    /// Delegates to the shared factory so this flow and the device flow can't
+    /// drift apart again (andy-auth#149).
+    /// </summary>
+    private Task<ClaimsPrincipal> CreateClaimsPrincipalAsync(ApplicationUser user, IEnumerable<string> scopes) =>
+        _principalFactory.CreateAsync(user, scopes, HttpContext.GetOpenIddictServerRequest()?.ClientId);
 
     private async Task<bool> IsDcrClientActiveAsync(string clientId)
     {
@@ -789,17 +666,5 @@ public class AuthorizationController : ControllerBase
             return true;
 
         return dcr.IsApproved && !dcr.IsDisabled;
-    }
-
-    private async Task<List<string>> GetUserGroupsAsync(string userId)
-    {
-        var now = DateTime.UtcNow;
-        return await _dbContext.UserGroups
-            .AsNoTracking()
-            .Where(ug => ug.UserId == userId
-                && ug.Group.IsActive
-                && (ug.ExpiresAt == null || ug.ExpiresAt > now))
-            .Select(ug => ug.Group.Code)
-            .ToListAsync();
     }
 }
