@@ -462,6 +462,11 @@ builder.Services.AddScoped<TokenClaimsPrincipalFactory>();
 // (andy-auth#153).
 builder.Services.AddScoped<DcrClientGate>();
 
+// Signed, short-lived proof that a user approved an authorization request on
+// the consent screen. Replaces the forgeable `consent_granted=true` query
+// marker (andy-auth#124).
+builder.Services.AddScoped<ConsentTicketService>();
+
 // Register token cleanup background service
 builder.Services.AddHostedService<TokenCleanupService>();
 

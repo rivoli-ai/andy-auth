@@ -1,5 +1,6 @@
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Models;
+using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,7 @@ public class ConsentController : Controller
     private readonly IOpenIddictScopeManager _scopeManager;
     private readonly ApplicationDbContext _dbContext;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ConsentTicketService _consentTickets;
     private readonly ILogger<ConsentController> _logger;
 
     // Friendly descriptions for standard scopes
@@ -35,12 +37,14 @@ public class ConsentController : Controller
         IOpenIddictScopeManager scopeManager,
         ApplicationDbContext dbContext,
         UserManager<ApplicationUser> userManager,
+        ConsentTicketService consentTickets,
         ILogger<ConsentController> logger)
     {
         _applicationManager = applicationManager;
         _scopeManager = scopeManager;
         _dbContext = dbContext;
         _userManager = userManager;
+        _consentTickets = consentTickets;
         _logger = logger;
     }
 
@@ -122,28 +126,43 @@ public class ConsentController : Controller
             }
         }
 
-        // Save or update consent
+        // Persist a standing grant only when the user asked to be remembered.
+        //
+        // A non-remembered decision used to be stored with ExpiresAt = null,
+        // which UserConsent.IsValid reads as "never expires" — so ticking
+        // "don't remember" produced a *permanent* grant, the opposite of what
+        // the checkbox says. The one-shot case is now carried entirely by the
+        // signed ticket below, which dies in minutes (andy-auth#124).
         var existingConsent = await _dbContext.UserConsents
             .FirstOrDefaultAsync(c => c.UserId == userId && c.ClientId == clientId);
 
-        if (existingConsent != null)
+        if (model.RememberConsent)
         {
-            existingConsent.SetScopes(scopesConsented);
-            existingConsent.GrantedAt = DateTime.UtcNow;
-            existingConsent.RememberConsent = model.RememberConsent;
-            existingConsent.ExpiresAt = model.RememberConsent ? DateTime.UtcNow.AddDays(90) : null;
-        }
-        else
-        {
-            var newConsent = new UserConsent
+            if (existingConsent != null)
             {
-                UserId = userId,
-                ClientId = clientId,
-                RememberConsent = model.RememberConsent,
-                ExpiresAt = model.RememberConsent ? DateTime.UtcNow.AddDays(90) : null
-            };
-            newConsent.SetScopes(scopesConsented);
-            _dbContext.UserConsents.Add(newConsent);
+                existingConsent.SetScopes(scopesConsented);
+                existingConsent.GrantedAt = DateTime.UtcNow;
+                existingConsent.RememberConsent = true;
+                existingConsent.ExpiresAt = DateTime.UtcNow.AddDays(90);
+            }
+            else
+            {
+                var newConsent = new UserConsent
+                {
+                    UserId = userId,
+                    ClientId = clientId,
+                    RememberConsent = true,
+                    ExpiresAt = DateTime.UtcNow.AddDays(90)
+                };
+                newConsent.SetScopes(scopesConsented);
+                _dbContext.UserConsents.Add(newConsent);
+            }
+        }
+        else if (existingConsent != null)
+        {
+            // The user actively declined to be remembered this time, so an
+            // earlier standing grant must not keep authorizing them silently.
+            _dbContext.UserConsents.Remove(existingConsent);
         }
 
         await _dbContext.SaveChangesAsync();
@@ -151,8 +170,20 @@ public class ConsentController : Controller
         _logger.LogInformation("User {UserId} granted consent for client {ClientId} with scopes: {Scopes}",
             userId, clientId, string.Join(", ", scopesConsented));
 
-        // Add consent granted marker to return URL
-        var consentUrl = AppendQueryString(model.ReturnUrl, "consent_granted", "true");
+        // Hand back an authenticated, short-lived ticket bound to this user,
+        // client, redirect URI and approved scope subset. The previous
+        // `consent_granted=true` marker was unsigned and unbound, so any caller
+        // could mint it and skip this screen entirely (andy-auth#124).
+        query.TryGetValue("redirect_uri", out var redirectUriValues);
+
+        var ticket = _consentTickets.Issue(
+            userId,
+            clientId,
+            redirectUriValues.FirstOrDefault(),
+            scopesConsented);
+
+        var consentUrl = AppendQueryString(
+            model.ReturnUrl, ConsentTicketService.QueryParameterName, ticket);
         return Redirect(consentUrl);
     }
 

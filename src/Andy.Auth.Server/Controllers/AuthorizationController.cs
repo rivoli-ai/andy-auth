@@ -31,6 +31,7 @@ public class AuthorizationController : ControllerBase
     private readonly ISubjectTokenValidator _subjectTokenValidator;
     private readonly TokenClaimsPrincipalFactory _principalFactory;
     private readonly DcrClientGate _dcrGate;
+    private readonly ConsentTicketService _consentTickets;
     private readonly ILogger<AuthorizationController> _logger;
 
     public AuthorizationController(
@@ -44,6 +45,7 @@ public class AuthorizationController : ControllerBase
         ISubjectTokenValidator subjectTokenValidator,
         TokenClaimsPrincipalFactory principalFactory,
         DcrClientGate dcrGate,
+        ConsentTicketService consentTickets,
         ILogger<AuthorizationController> logger)
     {
         _applicationManager = applicationManager;
@@ -56,6 +58,7 @@ public class AuthorizationController : ControllerBase
         _subjectTokenValidator = subjectTokenValidator;
         _principalFactory = principalFactory;
         _dcrGate = dcrGate;
+        _consentTickets = consentTickets;
         _logger = logger;
     }
 
@@ -124,13 +127,32 @@ public class AuthorizationController : ControllerBase
         var existingConsent = await _dbContext.UserConsents
             .FirstOrDefaultAsync(c => c.UserId == userId && c.ClientId == request.ClientId);
 
-        // Check if consent was just granted (redirect from consent page)
-        var consentGranted = Request.Query.ContainsKey("consent_granted") &&
-                             Request.Query["consent_granted"] == "true";
+        // Proof that the user just approved this exact request on the consent
+        // screen. Replaces the `consent_granted=true` query marker, which was
+        // client-controlled and therefore forgeable — appending it skipped the
+        // consent screen entirely (andy-auth#124).
+        var ticketedScopes = _consentTickets.Redeem(
+            Request.Query[ConsentTicketService.QueryParameterName],
+            userId,
+            request.ClientId,
+            request.RedirectUri);
 
         var hasValidConsent = existingConsent != null &&
                               existingConsent.IsValid &&
                               existingConsent.CoversScopes(requestedScopes);
+
+        // Scopes the user has actually approved, intersected with what this
+        // request asks for. A fresh ticket wins over a stored grant because it
+        // reflects the boxes just ticked, including any the user unticked.
+        // Previously every branch issued `request.GetScopes()` wholesale, so a
+        // partial approval still produced a fully-scoped token.
+        var approvedScopes = ticketedScopes is not null
+            ? requestedScopes.Where(ticketedScopes.Contains).ToList()
+            : existingConsent is not null && existingConsent.IsValid
+                ? requestedScopes.Where(existingConsent.ScopesList.Contains).ToList()
+                : requestedScopes;
+
+        var consentJustGranted = ticketedScopes is not null;
 
         switch (await _applicationManager.GetConsentTypeAsync(application))
         {
@@ -150,7 +172,7 @@ public class AuthorizationController : ControllerBase
             // return an authorization response without displaying the consent form
             case ConsentTypes.Implicit:
             case ConsentTypes.External when authorizations.Any():
-                var principal = await CreateClaimsPrincipalAsync(user, request.GetScopes());
+                var principal = await CreateClaimsPrincipalAsync(user, requestedScopes);
 
                 // Always include andy-docs-api audience for andy-docs-web client
                 if (request.ClientId == "andy-docs-web")
@@ -170,8 +192,8 @@ public class AuthorizationController : ControllerBase
             // For explicit consent, check if user has already granted consent
             case ConsentTypes.Explicit when authorizations.Any():
             case ConsentTypes.Explicit when hasValidConsent:
-            case ConsentTypes.Explicit when consentGranted:
-                var principalExplicit = await CreateClaimsPrincipalAsync(user, request.GetScopes());
+            case ConsentTypes.Explicit when consentJustGranted:
+                var principalExplicit = await CreateClaimsPrincipalAsync(user, approvedScopes);
 
                 // Always include andy-docs-api audience for andy-docs-web client
                 if (request.ClientId == "andy-docs-web")
@@ -212,9 +234,9 @@ public class AuthorizationController : ControllerBase
             // Default case: check for existing consent or redirect to consent page
             default:
                 // If user has valid consent, proceed
-                if (hasValidConsent || consentGranted)
+                if (hasValidConsent || consentJustGranted)
                 {
-                    var principalDefault = await CreateClaimsPrincipalAsync(user, request.GetScopes());
+                    var principalDefault = await CreateClaimsPrincipalAsync(user, approvedScopes);
                     return SignIn(principalDefault, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
                 }
 

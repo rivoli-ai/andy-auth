@@ -5,6 +5,10 @@ using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
+using Microsoft.AspNetCore.Authentication;
+using OpenIddict.Server;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -70,6 +74,7 @@ public class AuthorizationControllerTests
                     Microsoft.Extensions.Options.Options.Create(new RolePermissionOptions())),
                 _dbContext),
             new DcrClientGate(_dbContext),
+            TestConsent.CreateConsentTicketService(),
             _mockLogger.Object);
 
         _httpContext = new DefaultHttpContext();
@@ -324,6 +329,162 @@ public class AuthorizationControllerTests
         // Assert
         var redirectResult = Assert.IsType<RedirectResult>(result);
         Assert.Equal("/", redirectResult.Url);
+    }
+
+    #endregion
+
+
+    #region Consent Bypass (andy-auth#124)
+
+    /// <summary>
+    /// Drives /connect/authorize for an explicit-consent client with the given
+    /// query string, standing in for the OpenIddict transaction the ASP.NET
+    /// host would normally have attached.
+    /// </summary>
+    private async Task<IActionResult> AuthorizeWithQueryAsync(
+        ApplicationUser user,
+        Dictionary<string, StringValues> query)
+    {
+        var request = new OpenIddictRequest
+        {
+            ClientId = "test-client",
+            RedirectUri = "https://client.example/callback",
+            Scope = "openid profile email",
+            ResponseType = "code",
+        };
+
+        _httpContext.Features.Set(new OpenIddictServerAspNetCoreFeature
+        {
+            Transaction = new OpenIddictServerTransaction { Request = request }
+        });
+        _httpContext.Request.Path = "/connect/authorize";
+        _httpContext.Request.Query = new QueryCollection(query);
+
+        // The user is signed in via the Identity cookie.
+        var identityPrincipal = new ClaimsPrincipal(
+            new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, user.Id) },
+                IdentityConstants.ApplicationScheme));
+
+        var authService = new Mock<IAuthenticationService>();
+        authService
+            .Setup(x => x.AuthenticateAsync(_httpContext, IdentityConstants.ApplicationScheme))
+            .ReturnsAsync(AuthenticateResult.Success(
+                new AuthenticationTicket(identityPrincipal, IdentityConstants.ApplicationScheme)));
+
+        var services = new ServiceCollection();
+        services.AddSingleton(authService.Object);
+        _httpContext.RequestServices = services.BuildServiceProvider();
+
+        _mockUserManager.Setup(m => m.GetUserAsync(It.IsAny<ClaimsPrincipal>())).ReturnsAsync(user);
+        _mockUserManager.Setup(m => m.GetUserIdAsync(user)).ReturnsAsync(user.Id);
+        _mockUserManager.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string>());
+
+        var application = new object();
+        _mockAppManager.Setup(m => m.FindByClientIdAsync("test-client", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+        _mockAppManager.Setup(m => m.GetIdAsync(application, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("app-1");
+        _mockAppManager.Setup(m => m.GetConsentTypeAsync(application, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ConsentTypes.Explicit);
+        _mockAuthorizationManager.Setup(m => m.FindAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<ImmutableArray<string>>(), It.IsAny<CancellationToken>()))
+            .Returns(EmptyAsync<object>());
+        _mockScopeManager.Setup(m => m.ListResourcesAsync(
+                It.IsAny<ImmutableArray<string>>(), It.IsAny<CancellationToken>()))
+            .Returns(EmptyAsync<string>());
+        _mockSignInManager.Setup(m => m.CreateUserPrincipalAsync(user))
+            .ReturnsAsync(() => new ClaimsPrincipal(
+                new ClaimsIdentity(Array.Empty<Claim>(), "Identity.Application", Claims.Name, Claims.Role)));
+
+        return await _controller.Authorize();
+    }
+
+    private static async IAsyncEnumerable<T> EmptyAsync<T>()
+    {
+        await Task.CompletedTask;
+        yield break;
+    }
+
+    private static ApplicationUser ConsentTestUser() => new()
+    {
+        Id = "user-1",
+        Email = "user@test.local",
+        UserName = "user@test.local",
+        IsActive = true,
+    };
+
+    [Fact]
+    public async Task Authorize_ForgedConsentGrantedMarker_StillRedirectsToConsent()
+    {
+        // The bug: `consent_granted=true` was read straight off the query
+        // string as proof of approval, and the whole authorization request is
+        // client-controlled — so appending it skipped the consent screen.
+        var result = await AuthorizeWithQueryAsync(ConsentTestUser(), new()
+        {
+            ["consent_granted"] = "true",
+        });
+
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.StartsWith("/Consent", redirect.Url);
+    }
+
+    [Fact]
+    public async Task Authorize_ForgedConsentTokenValue_StillRedirectsToConsent()
+    {
+        var result = await AuthorizeWithQueryAsync(ConsentTestUser(), new()
+        {
+            ["consent_token"] = "not-a-real-ticket",
+        });
+
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.StartsWith("/Consent", redirect.Url);
+    }
+
+    [Fact]
+    public async Task Authorize_NoConsentEvidence_RedirectsToConsent()
+    {
+        var result = await AuthorizeWithQueryAsync(ConsentTestUser(), new());
+
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.StartsWith("/Consent", redirect.Url);
+    }
+
+    [Fact]
+    public async Task Authorize_ValidConsentTicket_IssuesTheCode()
+    {
+        var user = ConsentTestUser();
+        var ticket = TestConsent.CreateConsentTicketService()
+            .Issue(user.Id, "test-client", "https://client.example/callback",
+                new[] { "openid", "profile", "email" });
+
+        var result = await AuthorizeWithQueryAsync(user, new()
+        {
+            ["consent_token"] = ticket,
+        });
+
+        Assert.IsType<Microsoft.AspNetCore.Mvc.SignInResult>(result);
+    }
+
+    [Fact]
+    public async Task Authorize_PartialConsentTicket_IssuesOnlyTheApprovedScopes()
+    {
+        // Every branch used to sign in with request.GetScopes() wholesale, so
+        // unticking a scope on the consent screen still produced a fully-scoped
+        // token.
+        var user = ConsentTestUser();
+        var ticket = TestConsent.CreateConsentTicketService()
+            .Issue(user.Id, "test-client", "https://client.example/callback",
+                new[] { "openid" });
+
+        var result = await AuthorizeWithQueryAsync(user, new()
+        {
+            ["consent_token"] = ticket,
+        });
+
+        var signIn = Assert.IsType<Microsoft.AspNetCore.Mvc.SignInResult>(result);
+        var scopes = signIn.Principal!.GetScopes();
+        Assert.Equal(new[] { "openid" }, scopes);
     }
 
     #endregion

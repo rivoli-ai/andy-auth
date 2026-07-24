@@ -45,6 +45,7 @@ public class ConsentControllerTests : IDisposable
             _scopeManagerMock.Object,
             _context,
             _userManagerMock.Object,
+            TestConsent.CreateConsentTicketService(),
             _loggerMock.Object);
 
         SetupHttpContext();
@@ -253,7 +254,10 @@ public class ConsentControllerTests : IDisposable
 
         // Assert
         var redirect = result.Should().BeOfType<RedirectResult>().Subject;
-        redirect.Url.Should().Contain("consent_granted=true");
+        // andy-auth#124: an authenticated ticket, not the forgeable
+        // `consent_granted=true` marker anyone could append themselves.
+        redirect.Url.Should().Contain("consent_token=");
+        redirect.Url.Should().NotContain("consent_granted");
 
         var savedConsent = await _context.UserConsents
             .FirstOrDefaultAsync(c => c.UserId == _testUserId && c.ClientId == "test-client");
@@ -265,9 +269,49 @@ public class ConsentControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Index_Post_NoRemember_ConsentDoesNotExpire()
+    public async Task Index_Post_NoRemember_PersistsNoStandingGrant()
     {
-        // Arrange
+        // This previously stored the decision with ExpiresAt = null, which
+        // UserConsent.IsValid reads as "never expires" — so ticking "don't
+        // remember me" produced a *permanent* grant, the exact opposite of what
+        // the checkbox says. The one-shot approval now rides entirely on the
+        // short-lived signed ticket (andy-auth#124).
+        var model = new ConsentInputModel
+        {
+            ReturnUrl = "/authorize?client_id=test-client&scope=openid",
+            Decision = "allow",
+            ScopesConsented = new List<string> { "openid" },
+            RememberConsent = false
+        };
+
+        // Act
+        var result = await _controller.Index(model);
+
+        // Assert
+        var savedConsent = await _context.UserConsents
+            .FirstOrDefaultAsync(c => c.UserId == _testUserId && c.ClientId == "test-client");
+        savedConsent.Should().BeNull();
+
+        // ...but the request still proceeds, via the ticket.
+        result.Should().BeOfType<RedirectResult>()
+            .Which.Url.Should().Contain("consent_token=");
+    }
+
+    [Fact]
+    public async Task Index_Post_NoRemember_RevokesAnEarlierStandingGrant()
+    {
+        // Arrange — a previous "remember me" grant is on file.
+        var existing = new UserConsent
+        {
+            UserId = _testUserId,
+            ClientId = "test-client",
+            RememberConsent = true,
+            ExpiresAt = DateTime.UtcNow.AddDays(90)
+        };
+        existing.SetScopes(new List<string> { "openid", "profile" });
+        _context.UserConsents.Add(existing);
+        await _context.SaveChangesAsync();
+
         var model = new ConsentInputModel
         {
             ReturnUrl = "/authorize?client_id=test-client&scope=openid",
@@ -279,12 +323,11 @@ public class ConsentControllerTests : IDisposable
         // Act
         await _controller.Index(model);
 
-        // Assert
+        // Assert — the user actively declined to be remembered, so the old
+        // standing grant must not keep authorizing them silently.
         var savedConsent = await _context.UserConsents
             .FirstOrDefaultAsync(c => c.UserId == _testUserId && c.ClientId == "test-client");
-        savedConsent.Should().NotBeNull();
-        savedConsent!.RememberConsent.Should().BeFalse();
-        savedConsent.ExpiresAt.Should().BeNull();
+        savedConsent.Should().BeNull();
     }
 
     [Fact]
@@ -331,7 +374,7 @@ public class ConsentControllerTests : IDisposable
             ReturnUrl = "/authorize?client_id=test-client&scope=openid profile",
             Decision = "allow",
             ScopesConsented = new List<string> { "profile" }, // User didn't check openid but it was requested
-            RememberConsent = false
+            RememberConsent = true
         };
 
         // Act
