@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using FluentAssertions;
 using Andy.Auth.Server.Controllers;
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Models;
@@ -41,6 +43,7 @@ public class AccountControllerTests
             _mockUserManager.Object,
             _mockAuditService.Object,
             _sessionService,
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build(),
             _mockLogger.Object);
 
         // Setup controller context for URL helper
@@ -128,7 +131,7 @@ public class AccountControllerTests
         Assert.Same(model, viewResult.Model);
         Assert.False(_controller.ModelState.IsValid);
         Assert.Contains(_controller.ModelState.Values,
-            v => v.Errors.Any(e => e.ErrorMessage == "Invalid login attempt."));
+            v => v.Errors.Any(e => e.ErrorMessage == "Invalid login attempt. If the problem persists, contact your administrator."));
     }
 
     [Fact]
@@ -158,7 +161,9 @@ public class AccountControllerTests
         Assert.Same(model, viewResult.Model);
         Assert.False(_controller.ModelState.IsValid);
         Assert.Contains(_controller.ModelState.Values,
-            v => v.Errors.Any(e => e.ErrorMessage == "This account has been disabled."));
+            // andy-auth#50: a disabled account must be indistinguishable from a
+            // wrong password, or the form confirms which emails are real.
+            v => v.Errors.Any(e => e.ErrorMessage == "Invalid login attempt. If the problem persists, contact your administrator."));
     }
 
     [Fact]
@@ -263,7 +268,9 @@ public class AccountControllerTests
         Assert.Same(model, viewResult.Model);
         Assert.False(_controller.ModelState.IsValid);
         Assert.Contains(_controller.ModelState.Values,
-            v => v.Errors.Any(e => e.ErrorMessage.Contains("locked out")));
+            // Lockout is disclosed to the log and audit trail, not the form:
+            // "locked out" is only reachable for an account that exists.
+            v => v.Errors.Any(e => e.ErrorMessage == "Invalid login attempt. If the problem persists, contact your administrator."));
     }
 
     [Fact]
@@ -296,7 +303,7 @@ public class AccountControllerTests
         Assert.Same(model, viewResult.Model);
         Assert.False(_controller.ModelState.IsValid);
         Assert.Contains(_controller.ModelState.Values,
-            v => v.Errors.Any(e => e.ErrorMessage == "Invalid login attempt."));
+            v => v.Errors.Any(e => e.ErrorMessage == "Invalid login attempt. If the problem persists, contact your administrator."));
     }
 
     #endregion
@@ -718,4 +725,130 @@ public class AccountControllerTests
     }
 
     #endregion
+
+    // ==================== andy-auth#50 / #119 ====================
+
+    [Fact]
+    public async Task Login_Post_AllFailureModes_ReportTheSameMessage()
+    {
+        // The oracle wasn't one message — it was the *difference* between them.
+        // "no such account", "disabled" and "wrong password" each identified
+        // which emails are real. This is the invariant, so assert it directly
+        // rather than three separate strings that can drift apart again.
+        var messages = new List<string>();
+
+        // (a) no such account
+        _mockUserManager.Setup(m => m.FindByEmailAsync("ghost@example.com"))
+            .ReturnsAsync((ApplicationUser?)null);
+        await RunLoginAndCollect("ghost@example.com", messages);
+
+        // (b) account exists but is suspended
+        var suspended = new ApplicationUser
+        {
+            Id = "u2", Email = "suspended@example.com", IsActive = true, IsSuspended = true
+        };
+        _mockUserManager.Setup(m => m.FindByEmailAsync("suspended@example.com")).ReturnsAsync(suspended);
+        await RunLoginAndCollect("suspended@example.com", messages);
+
+        // (c) account exists, password wrong
+        var healthy = new ApplicationUser { Id = "u3", Email = "real@example.com", IsActive = true };
+        _mockUserManager.Setup(m => m.FindByEmailAsync("real@example.com")).ReturnsAsync(healthy);
+        _mockSignInManager.Setup(m => m.PasswordSignInAsync(
+                healthy, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Failed);
+        await RunLoginAndCollect("real@example.com", messages);
+
+        // (d) account exists, locked out
+        var locked = new ApplicationUser { Id = "u4", Email = "locked@example.com", IsActive = true };
+        _mockUserManager.Setup(m => m.FindByEmailAsync("locked@example.com")).ReturnsAsync(locked);
+        _mockSignInManager.Setup(m => m.PasswordSignInAsync(
+                locked, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.LockedOut);
+        await RunLoginAndCollect("locked@example.com", messages);
+
+        messages.Should().HaveCount(4);
+        messages.Distinct().Should().ContainSingle(
+            "every failure mode must be indistinguishable to the caller");
+    }
+
+    private async Task RunLoginAndCollect(string email, List<string> messages)
+    {
+        _controller.ModelState.Clear();
+        var result = await _controller.Login(new LoginViewModel
+        {
+            Email = email,
+            Password = "WrongPassword123!"
+        });
+
+        Assert.IsType<ViewResult>(result);
+        messages.Add(_controller.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .Single());
+    }
+
+    [Fact]
+    public async Task ExternalLoginCallback_ExistingLocalAccount_RefusesToAutoLink()
+    {
+        // andy-auth#119: this used to attach the provider identity to the
+        // existing account and sign the caller straight in, on a matching email
+        // alone — account takeover against any provider that doesn't verify
+        // email ownership.
+        var existing = new ApplicationUser
+        {
+            Id = "victim", Email = "victim@example.com", IsActive = true
+        };
+        _mockUserManager.Setup(m => m.FindByEmailAsync("victim@example.com")).ReturnsAsync(existing);
+
+        var externalClaims = new List<Claim>
+        {
+            new(ClaimTypes.Email, "victim@example.com"),
+            new("email_verified", "true"),
+            new(ClaimTypes.Name, "Someone Else"),
+        };
+        var externalPrincipal = new ClaimsPrincipal(new ClaimsIdentity(externalClaims, "TestProvider"));
+        var info = new ExternalLoginInfo(externalPrincipal, "TestProvider", "provider-key-1", "TestProvider");
+
+        _mockSignInManager.Setup(m => m.GetExternalLoginInfoAsync(It.IsAny<string>())).ReturnsAsync(info);
+        _mockSignInManager.Setup(m => m.ExternalLoginSignInAsync(
+                "TestProvider", "provider-key-1", false, false))
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Failed);
+
+        var result = await _controller.ExternalLoginCallback();
+
+        // Refused, and specifically NOT signed in or linked.
+        var view = Assert.IsType<ViewResult>(result);
+        view.ViewName.Should().Be("Login");
+        _mockUserManager.Verify(
+            m => m.AddLoginAsync(It.IsAny<ApplicationUser>(), It.IsAny<UserLoginInfo>()), Times.Never);
+        _mockSignInManager.Verify(
+            m => m.SignInAsync(It.IsAny<ApplicationUser>(), It.IsAny<bool>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExternalLoginCallback_UnverifiedEmail_IsRefused()
+    {
+        _mockUserManager.Setup(m => m.FindByEmailAsync(It.IsAny<string>()))
+            .ReturnsAsync((ApplicationUser?)null);
+
+        var externalClaims = new List<Claim>
+        {
+            new(ClaimTypes.Email, "unverified@example.com"),
+            // no email_verified claim
+        };
+        var externalPrincipal = new ClaimsPrincipal(new ClaimsIdentity(externalClaims, "TestProvider"));
+        var info = new ExternalLoginInfo(externalPrincipal, "TestProvider", "provider-key-2", "TestProvider");
+
+        _mockSignInManager.Setup(m => m.GetExternalLoginInfoAsync(It.IsAny<string>())).ReturnsAsync(info);
+        _mockSignInManager.Setup(m => m.ExternalLoginSignInAsync(
+                "TestProvider", "provider-key-2", false, false))
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Failed);
+
+        var result = await _controller.ExternalLoginCallback();
+
+        var view = Assert.IsType<ViewResult>(result);
+        view.ViewName.Should().Be("Login");
+        _mockUserManager.Verify(
+            m => m.CreateAsync(It.IsAny<ApplicationUser>()), Times.Never);
+    }
 }

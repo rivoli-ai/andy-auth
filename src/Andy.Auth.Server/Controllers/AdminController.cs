@@ -9,6 +9,16 @@ using OpenIddict.Abstractions;
 namespace Andy.Auth.Server.Controllers;
 
 [Authorize(Roles = "Admin", AuthenticationSchemes = "Identity.Application")]
+// Antiforgery at controller scope rather than per action (andy-auth#51).
+// Nine destructive POSTs — SuspendUser, UnsuspendUser, SetExpiration,
+// DeleteUser, UpdateUserName, ResetPassword, RevokeToken, RevokeUserTokens,
+// RevokeAllTokens — had no [ValidateAntiForgeryToken] while their neighbours
+// did, so a logged-in admin visiting a malicious page could be made to reset
+// passwords or revoke every issued token. SameSite=Lax does not block a
+// top-level POST. Applying it here means a new action is covered by default
+// instead of depending on the author remembering; every admin form is a Razor
+// asp-action form, so the token is already emitted.
+[AutoValidateAntiforgeryToken]
 public class AdminController : Controller
 {
     private readonly ApplicationDbContext _context;

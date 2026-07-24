@@ -24,10 +24,34 @@ namespace Andy.Auth.Server.Controllers;
 // implicit default protecting it.
 public class AccountController : Controller
 {
+    /// <summary>
+    /// The only failure message the login form ever shows. Distinguishing
+    /// "no such account" / "disabled" / "wrong password" / "locked out" told an
+    /// attacker which emails are real (andy-auth#50); the specific reason goes
+    /// to the log and the audit trail instead.
+    /// </summary>
+    /// <remarks>
+    /// This deliberately costs the locked-out user their explanation. Without a
+    /// configured mail sender there is no side channel to deliver it, so the
+    /// disclosure has to go rather than move. Revisit when email ships.
+    /// </remarks>
+    private const string GenericLoginFailureMessage =
+        "Invalid login attempt. If the problem persists, contact your administrator.";
+
+    /// <summary>
+    /// A real PBKDF2 hash, verified against when the account doesn't exist so
+    /// the response takes comparable time either way (andy-auth#50).
+    /// </summary>
+    private static readonly PasswordHasher<ApplicationUser> TimingEqualizer = new();
+
+    private static readonly string DummyPasswordHash =
+        TimingEqualizer.HashPassword(new ApplicationUser(), "andy-auth-timing-equalizer");
+
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IAuditService _auditService;
     private readonly SessionService _sessionService;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
@@ -35,12 +59,14 @@ public class AccountController : Controller
         UserManager<ApplicationUser> userManager,
         IAuditService auditService,
         SessionService sessionService,
+        IConfiguration configuration,
         ILogger<AccountController> logger)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _auditService = auditService;
         _sessionService = sessionService;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -72,23 +98,44 @@ public class AccountController : Controller
             return View(model);
         }
 
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
         var user = await _userManager.FindByEmailAsync(model.Email);
+
         if (user == null)
         {
-            ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+            // Burn the same PBKDF2 work a real verification would (andy-auth#50).
+            // Returning early here made "no such account" answer in a fraction
+            // of the time a wrong password took, which enumerates valid emails
+            // just as reliably as a distinct error message does.
+            // Uses its own hasher rather than _userManager.PasswordHasher so the
+            // work happens identically regardless of how UserManager is wired.
+            TimingEqualizer.VerifyHashedPassword(
+                new ApplicationUser(), DummyPasswordHash, model.Password);
+
+            _logger.LogWarning("Login refused: no account for {Email}", model.Email);
+            await _auditService.LogAsync(
+                "UserLoginFailed", null, model.Email, null, null,
+                "No account for the supplied email", ipAddress);
+
+            ModelState.AddModelError(string.Empty, GenericLoginFailureMessage);
             return View(model);
         }
 
         // Lifecycle gate (andy-auth#146). AndyAuthSignInManager enforces the
-        // same predicate inside PasswordSignInAsync, but checking first lets us
-        // report the disabled-account message the UI expects instead of a bare
-        // IsNotAllowed result. The specific reason is logged, not shown.
+        // same predicate inside PasswordSignInAsync; checking first keeps the
+        // disabled case out of the lockout counter. The specific reason is
+        // logged and audited, never shown — "this account has been disabled"
+        // confirms the account exists (andy-auth#50).
         var denialReason = UserLifecycle.GetDenialReason(user);
         if (denialReason is not null)
         {
             _logger.LogWarning(
                 "Login refused for {Email}: {Reason}", user.Email, denialReason);
-            ModelState.AddModelError(string.Empty, "This account has been disabled.");
+            await _auditService.LogAsync(
+                "UserLoginFailed", user.Id, user.Email ?? model.Email, user.Id, user.Email,
+                $"Login refused: {denialReason}", ipAddress);
+
+            ModelState.AddModelError(string.Empty, GenericLoginFailureMessage);
             return View(model);
         }
 
@@ -97,8 +144,6 @@ public class AccountController : Controller
             model.Password,
             model.RememberMe,
             lockoutOnFailure: true);
-
-        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
         if (result.Succeeded)
         {
@@ -150,7 +195,7 @@ public class AccountController : Controller
                 "Account locked out due to failed login attempts",
                 ipAddress);
 
-            ModelState.AddModelError(string.Empty, "This account has been locked out. Please try again later.");
+            ModelState.AddModelError(string.Empty, GenericLoginFailureMessage);
             return View(model);
         }
 
@@ -164,7 +209,7 @@ public class AccountController : Controller
             "Invalid password",
             ipAddress);
 
-        ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+        ModelState.AddModelError(string.Empty, GenericLoginFailureMessage);
         return View(model);
     }
 
@@ -535,11 +580,14 @@ public class AccountController : Controller
         }
 
         // Try to sign in with the external login provider
+        // Local 2FA is not bypassed (andy-auth#119). The upstream provider's
+        // own MFA is its business; if this user enrolled a second factor *here*,
+        // arriving via an external identity must not skip it.
         var signInResult = await _signInManager.ExternalLoginSignInAsync(
             info.LoginProvider,
             info.ProviderKey,
             isPersistent: false,
-            bypassTwoFactor: true);
+            bypassTwoFactor: false);
 
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
@@ -572,6 +620,11 @@ public class AccountController : Controller
             return RedirectToAction("Index", "Home");
         }
 
+        if (signInResult.RequiresTwoFactor)
+        {
+            return RedirectToAction(nameof(LoginWith2fa), new { returnUrl, rememberMe = false });
+        }
+
         if (signInResult.IsLockedOut)
         {
             _logger.LogWarning("User account locked out.");
@@ -592,10 +645,56 @@ public class AccountController : Controller
             return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
         }
 
+        // An email the provider hasn't verified proves nothing about who owns
+        // it, and everything below keys off it (andy-auth#119). Providers that
+        // don't emit the claim can be accepted per-deployment via
+        // ExternalLogin:RequireVerifiedEmail=false, which is a deliberate
+        // downgrade and should only be set for an IdP known to verify.
+        var requireVerifiedEmail = _configuration.GetValue(
+            "ExternalLogin:RequireVerifiedEmail", true);
+        var emailVerified = string.Equals(
+            info.Principal.FindFirstValue("email_verified"), "true", StringComparison.OrdinalIgnoreCase);
+
+        if (requireVerifiedEmail && !emailVerified)
+        {
+            _logger.LogWarning(
+                "External login refused: {Provider} did not assert a verified email for {Email}",
+                info.LoginProvider, email);
+            await _auditService.LogAsync(
+                "ExternalLinkRejected", null, email, null, null,
+                $"{info.LoginProvider} did not assert email_verified", ipAddress);
+
+            ModelState.AddModelError(string.Empty,
+                "Your identity provider did not confirm ownership of this email address.");
+            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+        }
+
         // Check if user already exists with this email
         var user = await _userManager.FindByEmailAsync(email);
 
-        if (user == null)
+        if (user != null)
+        {
+            // THE FIX (andy-auth#119). This used to attach the external identity
+            // to the existing account and sign the caller straight in, on the
+            // strength of a matching email alone. Against any provider that
+            // lets an attacker assert someone else's address — or simply
+            // doesn't verify — that is account takeover.
+            //
+            // Linking is now a separate, deliberate act performed *from* an
+            // authenticated local session: see LinkExternalLogin below.
+            _logger.LogWarning(
+                "External login refused: {Email} already has a local account; linking must be " +
+                "initiated from an authenticated session", email);
+            await _auditService.LogAsync(
+                "ExternalLinkRejected", user.Id, user.Email ?? email, user.Id, user.Email,
+                $"Auto-link from {info.LoginProvider} refused; local account already exists", ipAddress);
+
+            ModelState.AddModelError(string.Empty,
+                "An account already exists for this email address. Sign in with your password first, " +
+                "then link your external account from your profile.");
+            return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
+        }
+
         {
             // Create a new user account
             user = new ApplicationUser
@@ -639,30 +738,13 @@ public class AccountController : Controller
                 $"New user registered via {info.LoginProvider}",
                 ipAddress);
         }
-        else
-        {
-            // User exists - check the account lifecycle gate (andy-auth#146)
-            var externalDenial = UserLifecycle.GetDenialReason(user);
-            if (externalDenial is not null)
-            {
-                _logger.LogWarning(
-                    "External login refused for {Email}: {Reason}", user.Email, externalDenial);
-                ModelState.AddModelError(string.Empty, "This account has been disabled.");
-                return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
-            }
 
-            // Update last login time
-            user.LastLoginAt = DateTime.UtcNow;
-            await _userManager.UpdateAsync(user);
-
-            _logger.LogInformation("Linked {Provider} login to existing user {Email}.", info.LoginProvider, email);
-        }
-
-        // Link the external login to the user account
+        // Attach the provider identity to the account we just created. This is
+        // the only remaining auto-link, and it is safe because the account did
+        // not exist a moment ago — there is no pre-existing owner to displace.
         var addLoginResult = await _userManager.AddLoginAsync(user, info);
         if (!addLoginResult.Succeeded)
         {
-            // Login might already be linked (e.g., if user registered with same email)
             _logger.LogWarning("Failed to add external login for {Email}: {Errors}",
                 email, string.Join(", ", addLoginResult.Errors.Select(e => e.Description)));
         }
@@ -671,7 +753,6 @@ public class AccountController : Controller
         await _signInManager.SignInAsync(user, isPersistent: false);
         _logger.LogInformation("User {Email} signed in via {Provider}.", email, info.LoginProvider);
 
-        // Log external login (for existing user linking)
         await _auditService.LogAsync(
             "UserLoginExternal",
             user.Id,
@@ -685,6 +766,111 @@ public class AccountController : Controller
         {
             return Redirect(returnUrl);
         }
+        return RedirectToAction("Index", "Home");
+    }
+
+    /// <summary>
+    /// Starts linking an external identity to the <em>already signed-in</em>
+    /// account.
+    /// </summary>
+    /// <remarks>
+    /// andy-auth#119. <c>ExternalLoginCallback</c> no longer attaches a
+    /// provider identity to an existing account just because the email
+    /// matches, so this is the supported path: prove you hold the local
+    /// account first, then attach. Requires a fresh password re-authentication
+    /// so a borrowed browser session can't silently graft a permanent
+    /// alternative credential onto the account.
+    /// </remarks>
+    [HttpPost]
+    [Authorize(AuthenticationSchemes = "Identity.Application")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> LinkExternalLogin(string provider, string currentPassword)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null)
+        {
+            return RedirectToAction(nameof(Login));
+        }
+
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        // Re-authenticate. An open session is not proof that the person at the
+        // keyboard owns the account.
+        if (!await _userManager.CheckPasswordAsync(user, currentPassword ?? string.Empty))
+        {
+            _logger.LogWarning(
+                "External link refused for {UserId}: re-authentication failed", user.Id);
+            await _auditService.LogAsync(
+                "ExternalLinkRejected", user.Id, user.Email ?? "Unknown", user.Id, user.Email,
+                $"Re-authentication failed while linking {provider}", ipAddress);
+
+            TempData["ErrorMessage"] = "Password incorrect. External account not linked.";
+            return RedirectToAction("Index", "Home");
+        }
+
+        await _auditService.LogAsync(
+            "ExternalLinkRequested", user.Id, user.Email ?? "Unknown", user.Id, user.Email,
+            $"Link to {provider} requested", ipAddress);
+
+        var redirectUrl = Url.Action(nameof(LinkExternalLoginCallback), "Account");
+        var properties = _signInManager.ConfigureExternalAuthenticationProperties(
+            provider, redirectUrl, _userManager.GetUserId(User));
+        return Challenge(properties, provider);
+    }
+
+    /// <summary>
+    /// Completes the link started by <see cref="LinkExternalLogin"/>, attaching
+    /// the provider identity to the session that initiated it.
+    /// </summary>
+    [HttpGet]
+    [Authorize(AuthenticationSchemes = "Identity.Application")]
+    public async Task<IActionResult> LinkExternalLoginCallback()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null)
+        {
+            return RedirectToAction(nameof(Login));
+        }
+
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var info = await _signInManager.GetExternalLoginInfoAsync(await _userManager.GetUserIdAsync(user));
+
+        if (info is null)
+        {
+            await _auditService.LogAsync(
+                "ExternalLinkRejected", user.Id, user.Email ?? "Unknown", user.Id, user.Email,
+                "External login information was unavailable on callback", ipAddress);
+
+            TempData["ErrorMessage"] = "Could not read the external login information.";
+            return RedirectToAction("Index", "Home");
+        }
+
+        var result = await _userManager.AddLoginAsync(user, info);
+        if (!result.Succeeded)
+        {
+            // Most often: this provider identity is already attached to a
+            // different account. Refusing keeps one external identity bound to
+            // one local account.
+            _logger.LogWarning("Failed to link {Provider} for {UserId}: {Errors}",
+                info.LoginProvider, user.Id,
+                string.Join(", ", result.Errors.Select(e => e.Description)));
+            await _auditService.LogAsync(
+                "ExternalLinkRejected", user.Id, user.Email ?? "Unknown", user.Id, user.Email,
+                $"Link to {info.LoginProvider} refused: {string.Join(", ", result.Errors.Select(e => e.Description))}",
+                ipAddress);
+
+            TempData["ErrorMessage"] = "That external account could not be linked.";
+            return RedirectToAction("Index", "Home");
+        }
+
+        await _auditService.LogAsync(
+            "ExternalLinkSucceeded", user.Id, user.Email ?? "Unknown", user.Id, user.Email,
+            $"Linked to {info.LoginProvider}", ipAddress);
+
+        // Drop the temporary external cookie the challenge left behind.
+        await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+
+        TempData["SuccessMessage"] = $"{info.LoginProvider} account linked.";
         return RedirectToAction("Index", "Home");
     }
 

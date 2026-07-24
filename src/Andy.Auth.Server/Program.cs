@@ -9,6 +9,7 @@ using AspNetCoreRateLimit;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using OpenIddict.Validation.AspNetCore;
 using OpenTelemetry.Trace;
 
@@ -32,13 +33,18 @@ else
     builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 }
 
-// Configure forwarded headers for Railway's HTTPS proxy
+// Configure forwarded headers. The trust boundary is explicit per deployment
+// rather than "accept from anyone", which let a caller choose the IP the server
+// saw — and that IP keys the rate limiter, account lockout and audit records
+// (andy-auth#125). See ProxyTrustSettings.
+var proxyTrust = builder.Configuration
+    .GetSection(ProxyTrustSettings.SectionName)
+    .Get<ProxyTrustSettings>() ?? new ProxyTrustSettings();
+
+string proxyTrustDescription = "unset";
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
-                               Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
-    options.KnownNetworks.Clear();
-    options.KnownProxies.Clear();
+    proxyTrustDescription = proxyTrust.Apply(options);
 });
 
 // Add services to the container
@@ -550,6 +556,23 @@ var app = builder.Build();
 
 // Use forwarded headers - must be first
 app.UseForwardedHeaders();
+
+// Surface the trust boundary at startup: "who may set X-Forwarded-For" decides
+// whose IP the rate limiter and audit log believe (andy-auth#125).
+{
+    // Force the options to materialize so the description is populated.
+    _ = app.Services.GetRequiredService<IOptions<ForwardedHeadersOptions>>().Value;
+    if (proxyTrust.TrustAllProxies)
+    {
+        app.Logger.LogWarning(
+            "Forwarded-header trust: {Description}", proxyTrustDescription);
+    }
+    else
+    {
+        app.Logger.LogInformation(
+            "Forwarded-header trust: {Description}", proxyTrustDescription);
+    }
+}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())

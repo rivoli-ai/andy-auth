@@ -83,6 +83,33 @@ OpenIddict__Issuer=https://auth.example.com/
 OpenIddict__SigningKeys__Path=/data/keys
 ```
 
+### Proxy trust (required reading)
+
+The server derives the client IP from `X-Forwarded-For`, and that IP is what
+the rate limiter keys on, what account lockout is attributed to, and what lands
+in audit records. Which peers may set it is configured explicitly under
+`ForwardedHeaders` (andy-auth#125):
+
+| Setting | Use |
+|---|---|
+| `ForwardedHeaders__KnownProxies` | Comma-free JSON array of proxy IPs. Tightest option; prefer it when proxy addressing is stable. |
+| `ForwardedHeaders__KnownNetworks` | Proxy networks in CIDR form, e.g. `10.0.0.0/8`. |
+| `ForwardedHeaders__TrustAllProxies` | Accept forwarding headers from any peer. |
+| `ForwardedHeaders__ForwardLimit` | Hops to walk back. Defaults to `1` — the address the edge appended. |
+
+Configure none of them and the framework default applies: loopback only, which
+is correct for local development and Conductor's embedded mode.
+
+**`TrustAllProxies=true` is only sound when the edge overwrites or appends
+inbound `X-Forwarded-For`,** so a client cannot choose the address the server
+sees. Railway satisfies this, which is why `appsettings.Production.json` sets
+it. If you move to an edge that passes inbound forwarding headers through
+untouched, switch to `KnownProxies`/`KnownNetworks` — otherwise every rate
+limit and every audit attribution becomes spoofable by setting one header.
+
+The startup log states the resolved trust boundary on every boot; it is logged
+at Warning level when `TrustAllProxies` is on.
+
 > Startup fails in Production unless either `OpenIddict__SigningKeys__Path` or
 > `OpenIddict__UseEphemeralKeys=true` is set. Prefer the path: ephemeral keys
 > rotate on every restart and invalidate every token in flight, which is only
