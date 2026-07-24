@@ -46,6 +46,20 @@ tests/
     └── test_token_operations.py
 ```
 
+## Prerequisites
+
+The server integration tests reach a real PostgreSQL at the Development
+connection string, so start it before running the suite:
+
+```bash
+docker-compose up -d postgres
+```
+
+Without it, `OAuthIntegrationTests` and `AuditLogIntegrationTests` fail on a
+refused connection. CI supplies the same database through
+`ConnectionStrings__DefaultConnection`. Making the suite hermetic so this step
+is unnecessary is tracked in andy-auth#131.
+
 ## Running Tests
 
 ### All .NET Tests (Unit + E2E)

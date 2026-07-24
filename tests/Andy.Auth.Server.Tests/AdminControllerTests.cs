@@ -374,8 +374,12 @@ public class AdminControllerTests : IDisposable
         // Arrange
         var user = new ApplicationUser { Id = "user-1", Email = "user@test.com" };
         _userManagerMock.Setup(x => x.FindByIdAsync("user-1")).ReturnsAsync(user);
-        _userManagerMock.Setup(x => x.RemovePasswordAsync(user)).ReturnsAsync(IdentityResult.Success);
-        _userManagerMock.Setup(x => x.AddPasswordAsync(user, "NewPassword123!")).ReturnsAsync(IdentityResult.Success);
+        // Atomic reset-token path (andy-auth#156). The previous
+        // RemovePasswordAsync + AddPasswordAsync pair could leave the account
+        // with no password hash at all if the second call failed.
+        _userManagerMock.Setup(x => x.GeneratePasswordResetTokenAsync(user)).ReturnsAsync("reset-token");
+        _userManagerMock.Setup(x => x.ResetPasswordAsync(user, "reset-token", "NewPassword123!"))
+            .ReturnsAsync(IdentityResult.Success);
         _userManagerMock.Setup(x => x.UpdateSecurityStampAsync(user)).ReturnsAsync(IdentityResult.Success);
         _userManagerMock.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
 
@@ -389,6 +393,27 @@ public class AdminControllerTests : IDisposable
         // Assert
         var redirect = result.Should().BeOfType<RedirectToActionResult>().Subject;
         user.MustChangePassword.Should().BeTrue();
+        _userManagerMock.Verify(x => x.RemovePasswordAsync(It.IsAny<ApplicationUser>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ResetPassword_FailedReset_LeavesExistingPasswordIntact()
+    {
+        // Arrange
+        var user = new ApplicationUser { Id = "user-1", Email = "user@test.com" };
+        _userManagerMock.Setup(x => x.FindByIdAsync("user-1")).ReturnsAsync(user);
+        _userManagerMock.Setup(x => x.GeneratePasswordResetTokenAsync(user)).ReturnsAsync("reset-token");
+        _userManagerMock.Setup(x => x.ResetPasswordAsync(user, "reset-token", "NewPassword123!"))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "nope" }));
+
+        // Act
+        var result = await _controller.ResetPassword("user-1", "NewPassword123!");
+
+        // Assert — no password was removed, so the account stays usable.
+        result.Should().BeOfType<RedirectToActionResult>();
+        _controller.TempData["ErrorMessage"].Should().NotBeNull();
+        user.MustChangePassword.Should().BeFalse();
+        _userManagerMock.Verify(x => x.RemovePasswordAsync(It.IsAny<ApplicationUser>()), Times.Never);
     }
 
     [Fact]

@@ -5,15 +5,19 @@ services:
     image: postgres:16-alpine
     container_name: andy-auth-postgres
     environment:
+      # Must match ConnectionStrings:DefaultConnection in
+      # src/Andy.Auth.Server/appsettings.Development.json — they disagreed, so
+      # the documented `docker-compose up -d` + `dotnet run` quick start failed
+      # password authentication (andy-auth#157).
       POSTGRES_DB: andy_auth_dev
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: andy_auth
+      POSTGRES_PASSWORD: andy_auth_dev_password
     ports:
       - "7435:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U andy_auth -d andy_auth_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,7 +32,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=https://+:5001;http://+:5000
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=andy_auth_dev;Username=postgres;Password=postgres
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=andy_auth_dev;Username=andy_auth;Password=andy_auth_dev_password
       # Registration manifests — read at startup to seed OAuth clients + scopes.
       # The monorepo is mounted read-only at /monorepo so each sibling service
       # contributes its config/registration.json. See andy-service-template/docs/registration.schema.json.

@@ -74,10 +74,25 @@ ConnectionStrings__DefaultConnection=${{Postgres.DATABASE_URL}}
 ASPNETCORE_ENVIRONMENT=Production
 ASPNETCORE_URLS=http://0.0.0.0:${{PORT}}
 
-# OpenIddict Signing Keys (generate with: openssl rand -base64 32)
-OpenIddict__Server__EncryptionKey=<32-char-encryption-key>
-OpenIddict__Server__SigningKey=<32-char-signing-key>
+# Issuer — must match the public URL clients reach this server on
+OpenIddict__Issuer=https://auth.example.com/
+
+# Signing keys. Point this at a mounted volume so the RSA keypair — and
+# therefore the JWKS `kid` — survives redeploys and previously-issued JWTs
+# keep validating.
+OpenIddict__SigningKeys__Path=/data/keys
 ```
+
+> Startup fails in Production unless either `OpenIddict__SigningKeys__Path` or
+> `OpenIddict__UseEphemeralKeys=true` is set. Prefer the path: ephemeral keys
+> rotate on every restart and invalidate every token in flight, which is only
+> acceptable for stateless pods where every consumer can re-authenticate on
+> demand.
+>
+> There is no `OpenIddict__Server__SigningKey` / `__EncryptionKey`. Those
+> variables were documented for a long time but read by nothing — setting them
+> produced a false sense of security. They have been removed and the server now
+> refuses to start if they are present (andy-auth#152).
 
 **Optional:**
 ```bash

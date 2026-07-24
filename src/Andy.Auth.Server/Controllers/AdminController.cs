@@ -177,6 +177,9 @@ public class AdminController : Controller
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Token);
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Introspection);
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Revocation);
+        // Required for RP-initiated logout to reach the end-session
+        // endpoint registered in andy-auth#151.
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.EndSession);
 
         if (model.AllowAuthorizationCodeFlow)
         {
@@ -307,6 +310,9 @@ public class AdminController : Controller
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Token);
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Introspection);
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Revocation);
+        // Required for RP-initiated logout to reach the end-session
+        // endpoint registered in andy-auth#151.
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.EndSession);
 
         if (model.AllowAuthorizationCodeFlow)
         {
@@ -615,20 +621,17 @@ public class AdminController : Controller
             return RedirectToAction(nameof(Users));
         }
 
-        // Remove existing password and set new one
-        var removeResult = await _userManager.RemovePasswordAsync(user);
-        if (!removeResult.Succeeded)
+        // Reset atomically. The previous RemovePasswordAsync + AddPasswordAsync
+        // pair left the account with NO password hash if the second call failed
+        // — unusable until another admin reset it (andy-auth#156). Identity's
+        // reset-token path either fully succeeds or leaves the old password in
+        // place, and is what DbSeeder already uses.
+        var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var resetResult = await _userManager.ResetPasswordAsync(user, resetToken, newPassword);
+        if (!resetResult.Succeeded)
         {
-            var errors = string.Join(", ", removeResult.Errors.Select(e => e.Description));
+            var errors = string.Join(", ", resetResult.Errors.Select(e => e.Description));
             TempData["ErrorMessage"] = $"Failed to reset password: {errors}";
-            return RedirectToAction(nameof(Users));
-        }
-
-        var addResult = await _userManager.AddPasswordAsync(user, newPassword);
-        if (!addResult.Succeeded)
-        {
-            var errors = string.Join(", ", addResult.Errors.Select(e => e.Description));
-            TempData["ErrorMessage"] = $"Failed to set new password: {errors}";
             return RedirectToAction(nameof(Users));
         }
 

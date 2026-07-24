@@ -79,8 +79,11 @@ See [docs/LIBRARY.md](./docs/LIBRARY.md) for complete documentation.
 - Introspection endpoint (`/connect/introspect`)
 - Revocation endpoint (`/connect/revoke`)
 - Dynamic Client Registration (`/connect/register`)
+- End-session / RP-initiated logout (`/connect/logout`)
+- Device authorization (`/connect/device`, `/connect/verify`)
 - OpenID Discovery (`/.well-known/openid-configuration`)
 - JWKS endpoint (`/.well-known/jwks`)
+- Protected resource metadata (`/.well-known/oauth-protected-resource`)
 
 ### Admin Dashboard
 - **Users**: View, suspend, expire, soft delete users
@@ -107,8 +110,8 @@ Access at: **/Admin**
 - Rate limiting on all auth endpoints
 - Account lockout (30 min after 5 failed attempts)
 - Password requirements (8+ chars, uppercase, lowercase, digit)
-- Security headers (CSP, X-Frame-Options, HSTS)
-- CSRF protection on all forms
+- Security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS). CSP ships **disabled** by default — enable with `SecurityHeaders:EnableCsp` (tracked in [#128](https://github.com/rivoli-ai/andy-auth/issues/128))
+- CSRF protection on OAuth client, DCR and user-creation forms. Several destructive admin POSTs are still unprotected (tracked in [#51](https://github.com/rivoli-ai/andy-auth/issues/51))
 - SQL injection protection (EF Core)
 - XSS protection (Razor auto-encoding)
 - HTTPS enforcement in production
@@ -119,7 +122,7 @@ See [docs/SECURITY.md](./docs/SECURITY.md) for complete security documentation.
 
 - **Framework**: ASP.NET Core 8.0
 - **Authentication**: ASP.NET Core Identity
-- **OAuth/OIDC**: OpenIddict 5.x
+- **OAuth/OIDC**: OpenIddict 7.x
 - **Database**: PostgreSQL 16
 - **ORM**: Entity Framework Core
 - **UI**: Razor Views with custom CSS
@@ -139,10 +142,16 @@ See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for complete deployment guide.
 
 ### Docker
 
+The Dockerfile trusts corporate root CAs from `certs/`, supplied as a named
+build context. Without it the build fails at the `COPY --from=certs` step:
+
 ```bash
-docker build -t andy-auth .
+docker build --build-context certs=./certs -t andy-auth .
 docker run -p 8080:8080 andy-auth
 ```
+
+`docker compose build` passes the context automatically (see
+`additional_contexts` in `docker-compose.yml`).
 
 ## Examples
 
@@ -182,6 +191,9 @@ Run all examples tests:
 
 Run all tests:
 ```bash
+# Integration tests need the dev PostgreSQL from docker-compose
+docker-compose up -d postgres
+
 # .NET unit tests
 dotnet test
 

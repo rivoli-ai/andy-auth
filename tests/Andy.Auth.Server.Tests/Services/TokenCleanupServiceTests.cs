@@ -1,5 +1,7 @@
+using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Services;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -44,6 +46,19 @@ public class TokenCleanupServiceTests
             .Returns(_tokenManagerMock.Object);
         scopeProviderMock.Setup(x => x.GetService(typeof(IOpenIddictAuthorizationManager)))
             .Returns(_authorizationManagerMock.Object);
+
+        // The cleanup pass also closes out lapsed sessions (andy-auth#154), so
+        // the scope has to be able to resolve SessionService or the sweep aborts
+        // before it starts and these tests would stop covering the real path.
+        var dbOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase($"TokenCleanup_{Guid.NewGuid()}")
+            .Options;
+        var sessionService = new SessionService(
+            new ApplicationDbContext(dbOptions),
+            new Mock<ILogger<SessionService>>().Object,
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build());
+        scopeProviderMock.Setup(x => x.GetService(typeof(SessionService)))
+            .Returns(sessionService);
 
         scopeMock.Setup(x => x.ServiceProvider).Returns(scopeProviderMock.Object);
 
@@ -345,7 +360,7 @@ public class TokenCleanupServiceTests
     // ==================== Prune Timestamp Tests ====================
 
     [Fact]
-    public async Task ExecuteAsync_PassesCurrentTimeToManagers()
+    public async Task ExecuteAsync_PassesRetentionWindowedThresholdToManagers()
     {
         // Arrange
         SetupServiceScope();
@@ -372,10 +387,16 @@ public class TokenCleanupServiceTests
 
         var afterExecution = DateTimeOffset.UtcNow;
 
-        // Assert - Times should be within execution window
-        capturedTokenTime.Should().BeOnOrAfter(beforeExecution);
-        capturedTokenTime.Should().BeOnOrBefore(afterExecution);
-        capturedAuthTime.Should().BeOnOrAfter(beforeExecution);
+        // Assert - the threshold must sit a retention window in the PAST.
+        // Passing UtcNow pruned codes and refresh tokens the moment they were
+        // redeemed, destroying the trail reuse detection needs and emptying the
+        // admin Tokens view (andy-auth#156). Default retention is 14 days.
+        var expectedFloor = beforeExecution.AddDays(-14);
+        var expectedCeiling = afterExecution.AddDays(-14);
+
+        capturedTokenTime.Should().BeOnOrAfter(expectedFloor);
+        capturedTokenTime.Should().BeOnOrBefore(expectedCeiling);
+        capturedAuthTime.Should().BeOnOrAfter(expectedFloor);
         capturedAuthTime.Should().BeOnOrBefore(afterExecution);
     }
 }
