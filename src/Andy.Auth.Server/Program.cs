@@ -753,15 +753,19 @@ app.Use(async (context, next) =>
     await next();
 
     if (context.Response.StatusCode == StatusCodes.Status401Unauthorized &&
-        context.Request.Path.StartsWithSegments("/mcp") &&
-        !context.Response.Headers.ContainsKey("WWW-Authenticate"))
+        context.Request.Path.StartsWithSegments("/mcp"))
     {
         var metadataUrl =
             $"{context.Request.Scheme}://{context.Request.Host}{context.Request.PathBase}" +
             "/.well-known/oauth-protected-resource";
 
-        context.Response.Headers.WWWAuthenticate =
-            $"Bearer resource_metadata=\"{metadataUrl}\"";
+        var challenge = ProtectedResourceChallenge.Compose(
+            context.Response.Headers.WWWAuthenticate.ToString(), metadataUrl);
+
+        if (challenge is not null)
+        {
+            context.Response.Headers.WWWAuthenticate = challenge;
+        }
     }
 });
 
