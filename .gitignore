@@ -90,3 +90,6 @@ certs/*.crt
 certs/*.pem
 certs/*.cer
 certs/*.key
+
+# Claude Code session state (worktrees, local settings)
+.claude/

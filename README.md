@@ -144,16 +144,33 @@ See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for complete deployment guide.
 
 ### Docker
 
-The Dockerfile trusts corporate root CAs from `certs/`, supplied as a named
-build context. Without it the build fails at the `COPY --from=certs` step:
-
 ```bash
 docker build --build-context certs=./certs -t andy-auth .
 docker run -p 8080:8080 andy-auth
 ```
 
-`docker compose build` passes the context automatically (see
-`additional_contexts` in `docker-compose.yml`).
+`certs` is a named build context the Dockerfile expects; `docker compose build`
+supplies it automatically (see `additional_contexts` in `docker-compose.yml`).
+
+The image runs as a **non-root** user (`app`, uid 1654) and contains no build
+tooling. Two paths are writable by that user: `/data/keys` for the persisted
+OpenIddict signing keypair, and `/https` for the development certificate used
+by the compose stack.
+
+Corporate TLS interception is opt-in rather than the default — the image used
+to ship with NuGet signature verification and certificate revocation checking
+disabled outright:
+
+```bash
+docker build --build-context certs=./certs \
+  --build-arg TRUST_CORPORATE_CA=true \
+  --build-arg NUGET_CERT_REVOCATION_MODE=offline \
+  -t andy-auth .
+```
+
+Base images are pinned to explicit patch tags (`DOTNET_SDK_TAG`,
+`DOTNET_RUNTIME_TAG`) so a rebuild is reproducible and a bump is a reviewable
+commit.
 
 ## Examples
 
