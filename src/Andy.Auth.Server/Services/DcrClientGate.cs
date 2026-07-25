@@ -34,10 +34,18 @@ public class DcrClientGate
             .Select(d => new { d.IsApproved, d.IsDisabled, d.ClientSecretExpiresAt })
             .FirstOrDefaultAsync();
 
-        // Not a DCR client => no DCR-based restrictions.
         if (dcr == null)
         {
-            return null;
+            // Fail closed on an orphan (andy-auth#120). A client_id carrying the
+            // DCR-issued prefix but with no DynamicClientRegistration metadata is
+            // an incomplete or partially-rolled-back registration — it must not
+            // fall through to the permissive "not a DCR client" path and be
+            // allowed to authorize or mint tokens. Genuine first-party clients
+            // are seeded from manifests and never carry the prefix, so they keep
+            // the permissive path.
+            return DcrService.IsDcrIssuedClientId(clientId)
+                ? "The client registration is incomplete."
+                : null;
         }
 
         if (!dcr.IsApproved || dcr.IsDisabled)

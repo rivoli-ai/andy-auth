@@ -80,14 +80,17 @@ public class AuthorizationControllerTests
         };
     }
 
-    #region IsDcrClientActiveAsync Fail-Closed Tests (#120)
+    #region DCR Fail-Closed Tests (#120)
+
+    // The controller's private IsDcrClientActiveAsync became the shared
+    // DcrClientGate in andy-auth#153; these exercise it there instead.
 
     [Fact]
     public async Task IsDcrClientActiveAsync_NonDcrClient_NoMetadata_IsAllowed()
     {
         // Seeded first-party clients carry no DCR metadata and no dcr_ prefix;
         // DCR restrictions must not apply to them.
-        (await _controller.IsDcrClientActiveAsync("first-party-web")).Should().BeTrue();
+        (await new DcrClientGate(_dbContext).IsActiveAsync("first-party-web")).Should().BeTrue();
     }
 
     [Fact]
@@ -96,7 +99,7 @@ public class AuthorizationControllerTests
         // #120: an application whose client_id looks DCR-created but has no
         // DynamicClientRegistration metadata is an orphaned/incomplete
         // registration and must be denied.
-        (await _controller.IsDcrClientActiveAsync("dcr_orphan_incomplete")).Should().BeFalse();
+        (await new DcrClientGate(_dbContext).IsActiveAsync("dcr_orphan_incomplete")).Should().BeFalse();
     }
 
     [Fact]
@@ -110,7 +113,7 @@ public class AuthorizationControllerTests
         });
         await _dbContext.SaveChangesAsync();
 
-        (await _controller.IsDcrClientActiveAsync("dcr_active")).Should().BeTrue();
+        (await new DcrClientGate(_dbContext).IsActiveAsync("dcr_active")).Should().BeTrue();
     }
 
     [Theory]
@@ -126,7 +129,7 @@ public class AuthorizationControllerTests
         });
         await _dbContext.SaveChangesAsync();
 
-        (await _controller.IsDcrClientActiveAsync("dcr_restricted")).Should().BeFalse();
+        (await new DcrClientGate(_dbContext).IsActiveAsync("dcr_restricted")).Should().BeFalse();
     }
 
     #endregion
