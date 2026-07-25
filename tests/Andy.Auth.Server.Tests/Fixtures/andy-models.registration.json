@@ -1,0 +1,12 @@
+{
+  "//": "TEST FIXTURE — declares the urn:andy-models-api audience so it is registered as an OpenIddict resource (Program.cs seeds RegisterResources from manifest audiences) and gets a scope. TokenExchangeIntegrationTests targets this audience as the downstream resource of an OBO exchange; without it OpenIddict would reject with invalid_target before the token-exchange handler runs. No OAuth client — this service only needs to be a valid token-exchange target here.",
+  "service": {
+    "name": "andy-models",
+    "displayName": "Andy Models",
+    "description": "Test fixture manifest registering the urn:andy-models-api audience for token-exchange integration tests.",
+    "embeddedProxyPrefix": "/models"
+  },
+  "auth": {
+    "audience": "urn:andy-models-api"
+  }
+}

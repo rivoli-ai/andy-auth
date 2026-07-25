@@ -45,14 +45,6 @@ public class DcrScopePermissionTests : IClassFixture<CustomWebApplicationFactory
         var response = await _client.PostAsync("/connect/register", content);
         var responseContent = await response.Content.ReadAsStringAsync();
 
-        // Skip if DCR is disabled or database not available
-        if (response.StatusCode == HttpStatusCode.Forbidden ||
-            response.StatusCode == HttpStatusCode.InternalServerError)
-        {
-            Assert.True(true, $"Skipping - DCR may be disabled or server unavailable: {responseContent}");
-            return;
-        }
-
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
@@ -106,14 +98,6 @@ public class DcrScopePermissionTests : IClassFixture<CustomWebApplicationFactory
         var response = await _client.PostAsync("/connect/register", content);
         var responseContent = await response.Content.ReadAsStringAsync();
 
-        // Skip if DCR is disabled or database not available
-        if (response.StatusCode == HttpStatusCode.Forbidden ||
-            response.StatusCode == HttpStatusCode.InternalServerError)
-        {
-            Assert.True(true, $"Skipping - DCR may be disabled or server unavailable: {responseContent}");
-            return;
-        }
-
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
@@ -164,14 +148,6 @@ public class DcrScopePermissionTests : IClassFixture<CustomWebApplicationFactory
         // Act
         var response = await _client.PostAsync("/connect/register", content);
         var responseContent = await response.Content.ReadAsStringAsync();
-
-        // Skip if DCR is disabled or database not available
-        if (response.StatusCode == HttpStatusCode.Forbidden ||
-            response.StatusCode == HttpStatusCode.InternalServerError)
-        {
-            Assert.True(true, $"Skipping - DCR may be disabled or server unavailable: {responseContent}");
-            return;
-        }
 
         // Assert - custom URI schemes should be allowed for native apps
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);

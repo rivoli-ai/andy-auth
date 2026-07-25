@@ -1,6 +1,4 @@
 using FluentAssertions;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OpenIddict.Server;
@@ -12,14 +10,15 @@ namespace Andy.Auth.Server.Tests;
 // authorization-code flow. Asserts the configured OpenIddict
 // server options instead of poking the HTTP surface, so the
 // test does not depend on Postgres being up or on cookie
-// state from an authenticated session.
+// state from an authenticated session. Uses the hermetic
+// CustomWebApplicationFactory (isolated SQLite) so it never
+// reaches for a developer-local Postgres.
 public class PkceEnforcementTests
 {
     [Fact]
     public void OpenIddictServerOptions_RequireProofKeyForCodeExchange_IsTrue()
     {
-        using var factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(b => b.UseEnvironment("Development"));
+        using var factory = new CustomWebApplicationFactory();
         using var scope = factory.Services.CreateScope();
 
         var options = scope.ServiceProvider

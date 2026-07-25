@@ -51,28 +51,8 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         var response = await _client.PostAsync("/connect/token", tokenRequest);
         var content = await response.Content.ReadAsStringAsync();
 
-        // Skip if server error (database not available in CI)
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-        {
-            Assert.True(true, "Skipping - server returned 500 (database may not be available)");
-            return;
-        }
-
-        // Skip test if the andy-docs-api client isn't seeded.
-        //
-        // The client is manifest-driven (DbSeeder.cs:303 — was hardcoded
-        // pre-#85, now sourced from andy-docs/config/registration.json).
-        // CI doesn't check out sibling repos, so the manifest loader
-        // finds nothing and falls back to legacy hardcoded seeding which
-        // doesn't include andy-docs-api at all → invalid_client. OpenIddict
-        // 7.x returns 401 Unauthorized for this; pre-7 returned 400.
-        if ((response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.Unauthorized) &&
-            content.Contains("invalid_client"))
-        {
-            Assert.True(true, $"Skipping test - andy-docs-api client not seeded (manifest unavailable): {content}");
-            return;
-        }
-
+        // andy-docs-api is seeded from the fixture manifest wired in by
+        // CustomWebApplicationFactory, so this flow runs for real.
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -125,13 +105,6 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         // Act
         var response = await _client.PostAsync("/connect/token", tokenRequest);
 
-        // Skip if server error (database not available in CI)
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-        {
-            Assert.True(true, "Skipping - server returned 500 (database may not be available)");
-            return;
-        }
-
         // Assert - OAuth returns Unauthorized or BadRequest for unknown client
         Assert.True(
             response.StatusCode == HttpStatusCode.Unauthorized ||
@@ -176,12 +149,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         var tokenResponse = await _client.PostAsync("/connect/token", tokenRequest);
         var tokenContent = await tokenResponse.Content.ReadAsStringAsync();
 
-        // Skip test if token acquisition fails (e.g., database not seeded)
-        if (tokenResponse.StatusCode != HttpStatusCode.OK)
-        {
-            Assert.True(true, $"Skipping test - token acquisition failed with: {tokenContent}");
-            return;
-        }
+        Assert.Equal(HttpStatusCode.OK, tokenResponse.StatusCode);
 
         var tokenJson = JsonDocument.Parse(tokenContent);
         Assert.True(tokenJson.RootElement.TryGetProperty("access_token", out var accessTokenElement),
@@ -222,22 +190,6 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         // Act
         var response = await _client.PostAsync("/connect/introspect", introspectRequest);
         var content = await response.Content.ReadAsStringAsync();
-
-        // Skip if server error (database not available in CI)
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-        {
-            Assert.True(true, "Skipping - server returned 500 (database may not be available)");
-            return;
-        }
-
-        // Skip when andy-docs-api isn't seeded — see ClientCredentialsFlow_WithValidCredentials_ReturnsAccessToken
-        // for the manifest-loader / sibling-repo trade-off.
-        if ((response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.Unauthorized) &&
-            content.Contains("invalid_client"))
-        {
-            Assert.True(true, $"Skipping test - andy-docs-api client not seeded: {content}");
-            return;
-        }
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -286,12 +238,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         var tokenResponse = await _client.PostAsync("/connect/token", tokenRequest);
         var tokenContent = await tokenResponse.Content.ReadAsStringAsync();
 
-        // Skip test if token acquisition fails (e.g., database not seeded)
-        if (tokenResponse.StatusCode != HttpStatusCode.OK)
-        {
-            Assert.True(true, $"Skipping test - token acquisition failed with: {tokenContent}");
-            return;
-        }
+        Assert.Equal(HttpStatusCode.OK, tokenResponse.StatusCode);
 
         var tokenJson = JsonDocument.Parse(tokenContent);
         Assert.True(tokenJson.RootElement.TryGetProperty("access_token", out var accessTokenElement),
@@ -325,24 +272,6 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 
         // Act
         var response = await _client.PostAsync("/connect/revoke", revokeRequest);
-        var content = await response.Content.ReadAsStringAsync();
-
-        // Skip if server error (database not available in CI)
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-        {
-            Assert.True(true, "Skipping - server returned 500 (database may not be available)");
-            return;
-        }
-
-        // Skip when andy-docs-api isn't seeded — see
-        // ClientCredentialsFlow_WithValidCredentials_ReturnsAccessToken
-        // for the manifest-loader / sibling-repo trade-off.
-        if ((response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.Unauthorized) &&
-            content.Contains("invalid_client"))
-        {
-            Assert.True(true, $"Skipping test - andy-docs-api client not seeded: {content}");
-            return;
-        }
 
         // Assert - Per RFC 7009, should return 200 even for invalid tokens
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -363,12 +292,7 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         var tokenResponse = await _client.PostAsync("/connect/token", tokenRequest);
         var tokenContent = await tokenResponse.Content.ReadAsStringAsync();
 
-        // Skip test if token acquisition fails (e.g., database not seeded)
-        if (tokenResponse.StatusCode != HttpStatusCode.OK)
-        {
-            Assert.True(true, $"Skipping test - token acquisition failed with: {tokenContent}");
-            return;
-        }
+        Assert.Equal(HttpStatusCode.OK, tokenResponse.StatusCode);
 
         var tokenJson = JsonDocument.Parse(tokenContent);
         Assert.True(tokenJson.RootElement.TryGetProperty("access_token", out var accessTokenElement),
@@ -452,19 +376,11 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         var tokenResponse = await _client.PostAsync("/connect/token", tokenRequest);
         var tokenContent = await tokenResponse.Content.ReadAsStringAsync();
 
-        // Skip test if token acquisition fails
-        if (tokenResponse.StatusCode != HttpStatusCode.OK)
-        {
-            Assert.True(true, $"Skipping test - token acquisition failed with: {tokenContent}");
-            return;
-        }
+        Assert.Equal(HttpStatusCode.OK, tokenResponse.StatusCode);
 
         var tokenJson = JsonDocument.Parse(tokenContent);
-        if (!tokenJson.RootElement.TryGetProperty("access_token", out var accessTokenElement))
-        {
-            Assert.True(true, $"Skipping test - no access_token in response: {tokenContent}");
-            return;
-        }
+        Assert.True(tokenJson.RootElement.TryGetProperty("access_token", out var accessTokenElement),
+            $"Response did not contain access_token. Content: {tokenContent}");
         var accessToken = accessTokenElement.GetString();
 
         // Act - Try to access userinfo with client credentials token
@@ -490,16 +406,16 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         var content = await response.Content.ReadAsStringAsync();
         var discovery = JsonDocument.Parse(content);
 
-        // Assert - UserInfo endpoint should exist in discovery
-        // Note: Some OpenIddict configurations may not include userinfo_endpoint
+        // The discovery document must always be valid JSON with an issuer.
+        Assert.True(discovery.RootElement.TryGetProperty("issuer", out _));
+
+        // userinfo_endpoint is optional in OpenIddict's metadata (this
+        // deployment does not advertise it even though /connect/userinfo is
+        // routable — see the UserInfo_* tests that exercise it directly).
+        // When it IS advertised, it must point at the canonical path.
         if (discovery.RootElement.TryGetProperty("userinfo_endpoint", out var userinfoEndpoint))
         {
             Assert.Contains("/connect/userinfo", userinfoEndpoint.GetString());
-        }
-        else
-        {
-            // UserInfo endpoint not in discovery is acceptable for some configurations
-            Assert.True(true, "UserInfo endpoint not included in discovery");
         }
     }
 

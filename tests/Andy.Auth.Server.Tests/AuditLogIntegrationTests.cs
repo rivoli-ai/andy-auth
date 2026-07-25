@@ -11,222 +11,144 @@ namespace Andy.Auth.Server.Tests;
 /// <summary>
 /// Integration tests for the Audit Log functionality.
 /// Verifies that user actions are properly logged to the AuditLogs table.
+///
+/// These run fully hermetically against the isolated SQLite database that
+/// <see cref="CustomWebApplicationFactory"/> provisions and the deterministic
+/// admin user it seeds (<see cref="CustomWebApplicationFactory.AdminEmail"/>).
+/// The AuditLogs table always exists (EnsureCreated builds the whole model),
+/// so there is no "table not seeded" branch to skip.
 /// </summary>
 public class AuditLogIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly CustomWebApplicationFactory _factory;
-    private readonly HttpClient _client;
 
     public AuditLogIntegrationTests(CustomWebApplicationFactory factory)
     {
         _factory = factory;
-        _client = factory.CreateClient(new WebApplicationFactoryClientOptions
+    }
+
+    /// <summary>
+    /// A client that persists cookies across requests (so the anti-forgery
+    /// cookie from the login GET is presented on the POST) and does not
+    /// auto-follow redirects (so a successful login surfaces as its 302).
+    /// The base address is https so the app's HTTPS-redirection middleware
+    /// doesn't 307 every request (which would otherwise be swallowed as a
+    /// redirect instead of the response we assert on).
+    /// </summary>
+    private HttpClient CreateCookieClient() =>
+        _factory.CreateClient(new WebApplicationFactoryClientOptions
         {
-            AllowAutoRedirect = false
+            AllowAutoRedirect = false,
+            HandleCookies = true,
+            BaseAddress = new Uri("https://localhost"),
         });
+
+    /// <summary>
+    /// Drives the Razor login form: GETs the page, extracts the anti-forgery
+    /// token, and POSTs the credentials on the same cookie-bearing client.
+    /// Returns the POST response (302 on success, 200 with the re-rendered
+    /// form on failure).
+    /// </summary>
+    private static async Task<HttpResponseMessage> LoginAsync(
+        HttpClient client, string email, string password)
+    {
+        var loginPage = await client.GetAsync("/Account/Login");
+        loginPage.EnsureSuccessStatusCode();
+        var html = await loginPage.Content.ReadAsStringAsync();
+
+        var tokenMatch = Regex.Match(
+            html,
+            @"<input[^>]*name=""__RequestVerificationToken""[^>]*value=""([^""]+)""");
+        Assert.True(tokenMatch.Success,
+            "Login page must render an anti-forgery token hidden input.");
+
+        var form = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "Email", email },
+            { "Password", password },
+            { "RememberMe", "false" },
+            { "__RequestVerificationToken", tokenMatch.Groups[1].Value },
+        });
+
+        return await client.PostAsync("/Account/Login", form);
     }
 
     [Fact]
     public async Task SuccessfulLogin_CreatesUserLoginAuditLog()
     {
-        // Arrange - Get the login page to get the anti-forgery token
-        var loginPageResponse = await _client.GetAsync("/Account/Login");
-        var loginPageContent = await loginPageResponse.Content.ReadAsStringAsync();
+        var client = CreateCookieClient();
 
-        // Extract the anti-forgery token
-        var tokenMatch = Regex.Match(loginPageContent, @"<input[^>]*name=""__RequestVerificationToken""[^>]*value=""([^""]+)""");
-        if (!tokenMatch.Success)
-        {
-            Assert.True(true, "Skipping test - could not extract anti-forgery token");
-            return;
-        }
-        var antiForgeryToken = tokenMatch.Groups[1].Value;
+        var loginResponse = await LoginAsync(
+            client, CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
 
-        // Get cookies from login page
-        var cookies = loginPageResponse.Headers.GetValues("Set-Cookie").ToList();
+        // A successful sign-in redirects away from the login form.
+        Assert.Equal(HttpStatusCode.Redirect, loginResponse.StatusCode);
 
-        // Act - Login with test credentials
-        var loginRequest = new HttpRequestMessage(HttpMethod.Post, "/Account/Login");
-        loginRequest.Content = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "Email", "admin@andy.local" },
-            { "Password", "Admin123!" },
-            { "RememberMe", "false" },
-            { "__RequestVerificationToken", antiForgeryToken }
-        });
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        // Add cookies to request
-        foreach (var cookie in cookies)
-        {
-            var cookiePart = cookie.Split(';')[0];
-            loginRequest.Headers.Add("Cookie", cookiePart);
-        }
+        var recentLoginLog = await dbContext.AuditLogs
+            .Where(l => l.Action == "UserLogin"
+                        && l.PerformedByEmail == CustomWebApplicationFactory.AdminEmail)
+            .OrderByDescending(l => l.PerformedAt)
+            .FirstOrDefaultAsync();
 
-        var loginResponse = await _client.SendAsync(loginRequest);
-
-        // Skip test if credentials are invalid (test user not seeded)
-        if (loginResponse.StatusCode != HttpStatusCode.Redirect &&
-            loginResponse.StatusCode != HttpStatusCode.OK)
-        {
-            Assert.True(true, $"Skipping test - login failed with status {loginResponse.StatusCode}");
-            return;
-        }
-
-        // Assert - Check audit log was created
-        try
-        {
-            using var scope = _factory.Services.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-            var recentLoginLog = await dbContext.AuditLogs
-                .Where(l => l.Action == "UserLogin" && l.PerformedByEmail == "admin@andy.local")
-                .OrderByDescending(l => l.PerformedAt)
-                .FirstOrDefaultAsync();
-
-            Assert.NotNull(recentLoginLog);
-            Assert.Equal("UserLogin", recentLoginLog.Action);
-            Assert.Equal("admin@andy.local", recentLoginLog.PerformedByEmail);
-            Assert.Contains("Successful login", recentLoginLog.Details);
-        }
-        catch (Npgsql.PostgresException ex) when (ex.SqlState == "42P01")
-        {
-            // Table doesn't exist - skip in CI where migrations may not have run
-            Assert.True(true, "Skipping - AuditLogs table does not exist");
-        }
+        Assert.NotNull(recentLoginLog);
+        Assert.Equal("UserLogin", recentLoginLog!.Action);
+        Assert.Equal(CustomWebApplicationFactory.AdminEmail, recentLoginLog.PerformedByEmail);
+        Assert.Contains("Successful login", recentLoginLog.Details);
     }
 
     [Fact]
     public async Task FailedLogin_CreatesUserLoginFailedAuditLog()
     {
-        // Arrange - Get the login page to get the anti-forgery token
-        var loginPageResponse = await _client.GetAsync("/Account/Login");
-        var loginPageContent = await loginPageResponse.Content.ReadAsStringAsync();
-
-        // Extract the anti-forgery token
-        var tokenMatch = Regex.Match(loginPageContent, @"<input[^>]*name=""__RequestVerificationToken""[^>]*value=""([^""]+)""");
-        if (!tokenMatch.Success)
+        int existingFailedLoginCount;
+        using (var scopeBefore = _factory.Services.CreateScope())
         {
-            Assert.True(true, "Skipping test - could not extract anti-forgery token");
-            return;
-        }
-        var antiForgeryToken = tokenMatch.Groups[1].Value;
-
-        // Get cookies from login page
-        var cookies = loginPageResponse.Headers.GetValues("Set-Cookie").ToList();
-
-        // Get existing log count for comparison
-        int existingFailedLoginCount = 0;
-        try
-        {
-            using var scopeBefore = _factory.Services.CreateScope();
             var dbContextBefore = scopeBefore.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             existingFailedLoginCount = await dbContextBefore.AuditLogs
-                .Where(l => l.Action == "UserLoginFailed" && l.PerformedByEmail == "admin@andy.local")
+                .Where(l => l.Action == "UserLoginFailed"
+                            && l.PerformedByEmail == CustomWebApplicationFactory.AdminEmail)
                 .CountAsync();
         }
-        catch (Npgsql.PostgresException ex) when (ex.SqlState == "42P01")
-        {
-            // Table doesn't exist - skip in CI where migrations may not have run
-            Assert.True(true, "Skipping - AuditLogs table does not exist");
-            return;
-        }
 
-        // Act - Login with wrong password
-        var loginRequest = new HttpRequestMessage(HttpMethod.Post, "/Account/Login");
-        loginRequest.Content = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "Email", "admin@andy.local" },
-            { "Password", "WrongPassword123!" },
-            { "RememberMe", "false" },
-            { "__RequestVerificationToken", antiForgeryToken }
-        });
+        var client = CreateCookieClient();
 
-        // Add cookies to request
-        foreach (var cookie in cookies)
-        {
-            var cookiePart = cookie.Split(';')[0];
-            loginRequest.Headers.Add("Cookie", cookiePart);
-        }
+        // A real, seeded user with the wrong password — the controller only
+        // records UserLoginFailed for users that actually exist.
+        var loginResponse = await LoginAsync(
+            client, CustomWebApplicationFactory.AdminEmail, "WrongPassword123!");
 
-        var loginResponse = await _client.SendAsync(loginRequest);
+        // Failed login re-renders the form (200), it does not redirect.
+        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
 
-        // Assert - Check audit log was created
-        try
-        {
-            using var scope = _factory.Services.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-            var newFailedLoginCount = await dbContext.AuditLogs
-                .Where(l => l.Action == "UserLoginFailed" && l.PerformedByEmail == "admin@andy.local")
-                .CountAsync();
+        var newFailedLoginCount = await dbContext.AuditLogs
+            .Where(l => l.Action == "UserLoginFailed"
+                        && l.PerformedByEmail == CustomWebApplicationFactory.AdminEmail)
+            .CountAsync();
 
-            // Verify a new failed login log was created
-            Assert.True(newFailedLoginCount > existingFailedLoginCount,
-                "A new UserLoginFailed audit log entry should have been created");
-        }
-        catch (Npgsql.PostgresException ex) when (ex.SqlState == "42P01")
-        {
-            // Table doesn't exist - skip in CI where migrations may not have run
-            Assert.True(true, "Skipping - AuditLogs table does not exist");
-        }
+        Assert.True(newFailedLoginCount > existingFailedLoginCount,
+            "A new UserLoginFailed audit log entry should have been created");
     }
 
     [Fact]
     public async Task AuditLogsPage_DisplaysLogs()
     {
-        // Arrange - First login as admin
-        var loginPageResponse = await _client.GetAsync("/Account/Login");
-        var loginPageContent = await loginPageResponse.Content.ReadAsStringAsync();
+        var client = CreateCookieClient();
 
-        var tokenMatch = Regex.Match(loginPageContent, @"<input[^>]*name=""__RequestVerificationToken""[^>]*value=""([^""]+)""");
-        if (!tokenMatch.Success)
-        {
-            Assert.True(true, "Skipping test - could not extract anti-forgery token");
-            return;
-        }
-        var antiForgeryToken = tokenMatch.Groups[1].Value;
+        var loginResponse = await LoginAsync(
+            client, CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+        Assert.Equal(HttpStatusCode.Redirect, loginResponse.StatusCode);
 
-        // Get cookies from login page
-        IEnumerable<string> setCookies;
-        if (!loginPageResponse.Headers.TryGetValues("Set-Cookie", out setCookies!))
-        {
-            Assert.True(true, "Skipping test - no cookies returned");
-            return;
-        }
-        var cookies = setCookies.ToList();
-
-        // Create a new client that follows redirects and maintains cookies
-        var clientWithCookies = _factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = true,
-            HandleCookies = true
-        });
-
-        // Login as admin
-        var loginRequest = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "Email", "admin@andy.local" },
-            { "Password", "Admin123!" },
-            { "RememberMe", "false" },
-            { "__RequestVerificationToken", antiForgeryToken }
-        });
-
-        // Add cookies to the request through the handler
-        var loginResponse = await clientWithCookies.PostAsync("/Account/Login", loginRequest);
-
-        // If login was unsuccessful (redirected back to login), skip test
-        if (loginResponse.RequestMessage?.RequestUri?.PathAndQuery.Contains("/Account/Login") == true)
-        {
-            Assert.True(true, "Skipping test - admin login failed");
-            return;
-        }
-
-        // Act - Access the Audit Logs page
-        var auditLogsResponse = await clientWithCookies.GetAsync("/Admin/AuditLogs");
+        // Act - Access the admin-only Audit Logs page with the authenticated
+        // session cookie the login established.
+        var auditLogsResponse = await client.GetAsync("/Admin/AuditLogs");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, auditLogsResponse.StatusCode);
-
         var auditLogsContent = await auditLogsResponse.Content.ReadAsStringAsync();
         Assert.Contains("Audit Logs", auditLogsContent);
     }
@@ -234,43 +156,33 @@ public class AuditLogIntegrationTests : IClassFixture<CustomWebApplicationFactor
     [Fact]
     public async Task AuditLog_ContainsExpectedProperties()
     {
-        // Arrange - Ensure there's at least one audit log
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        // Check if AuditLogs table exists (skip if database not migrated)
-        try
+        // Create a test audit log if none exist.
+        if (!await dbContext.AuditLogs.AnyAsync())
         {
-            // Create a test audit log if none exist
-            if (!await dbContext.AuditLogs.AnyAsync())
+            dbContext.AuditLogs.Add(new AuditLog
             {
-                dbContext.AuditLogs.Add(new AuditLog
-                {
-                    Action = "TestAction",
-                    PerformedById = "test-user-id",
-                    PerformedByEmail = "test@example.com",
-                    TargetUserId = "target-user-id",
-                    TargetUserEmail = "target@example.com",
-                    Details = "Test audit log entry",
-                    PerformedAt = DateTime.UtcNow,
-                    IpAddress = "127.0.0.1"
-                });
-                await dbContext.SaveChangesAsync();
-            }
-
-            // Act
-            var auditLog = await dbContext.AuditLogs.FirstAsync();
-
-            // Assert
-            Assert.NotNull(auditLog.Action);
-            Assert.NotNull(auditLog.PerformedById);
-            Assert.NotNull(auditLog.PerformedByEmail);
-            Assert.NotEqual(default, auditLog.PerformedAt);
+                Action = "TestAction",
+                PerformedById = "test-user-id",
+                PerformedByEmail = "test@example.com",
+                TargetUserId = "target-user-id",
+                TargetUserEmail = "target@example.com",
+                Details = "Test audit log entry",
+                PerformedAt = DateTime.UtcNow,
+                IpAddress = "127.0.0.1"
+            });
+            await dbContext.SaveChangesAsync();
         }
-        catch (Npgsql.PostgresException ex) when (ex.SqlState == "42P01")
-        {
-            // Table doesn't exist - skip test in CI environment where migrations may not have run
-            Assert.True(true, "Skipping test - AuditLogs table does not exist");
-        }
+
+        // Act
+        var auditLog = await dbContext.AuditLogs.FirstAsync();
+
+        // Assert
+        Assert.NotNull(auditLog.Action);
+        Assert.NotNull(auditLog.PerformedById);
+        Assert.NotNull(auditLog.PerformedByEmail);
+        Assert.NotEqual(default, auditLog.PerformedAt);
     }
 }

@@ -53,23 +53,6 @@ public class TokenExchangeIntegrationTests : IClassFixture<CustomWebApplicationF
         return new FormUrlEncodedContent(dict);
     }
 
-    /// <summary>
-    /// Some CI runs land here without the seeded clients because the
-    /// service manifests come from sibling repos that aren't checked
-    /// out. The existing <c>OAuthIntegrationTests</c> uses the same
-    /// pattern to skip when seeding hasn't happened.
-    /// </summary>
-    private static bool ShouldSkip(HttpStatusCode status, string body)
-    {
-        if (status == HttpStatusCode.InternalServerError) return true;
-        if ((status == HttpStatusCode.BadRequest || status == HttpStatusCode.Unauthorized)
-            && body.Contains("invalid_client", StringComparison.Ordinal))
-        {
-            return true;
-        }
-        return false;
-    }
-
     [Fact]
     public async Task Returns_BadRequest_WhenSubjectTokenMissing()
     {
@@ -84,12 +67,6 @@ public class TokenExchangeIntegrationTests : IClassFixture<CustomWebApplicationF
 
         var response = await _client.PostAsync("/connect/token", form);
         var body = await response.Content.ReadAsStringAsync();
-        if (ShouldSkip(response.StatusCode, body))
-        {
-            Assert.True(true, $"Skipping — seed unavailable in CI: {body}");
-            return;
-        }
-
         // OpenIddict returns 400 with `error=invalid_request` or
         // similar for missing-parameter cases. Either invalid_grant
         // or invalid_request is acceptable here — the important bit
@@ -114,12 +91,6 @@ public class TokenExchangeIntegrationTests : IClassFixture<CustomWebApplicationF
 
         var response = await _client.PostAsync("/connect/token", form);
         var body = await response.Content.ReadAsStringAsync();
-        if (ShouldSkip(response.StatusCode, body))
-        {
-            Assert.True(true, $"Skipping — seed unavailable in CI: {body}");
-            return;
-        }
-
         Assert.True(
             response.StatusCode == HttpStatusCode.BadRequest
             || response.StatusCode == HttpStatusCode.Forbidden,
@@ -138,12 +109,6 @@ public class TokenExchangeIntegrationTests : IClassFixture<CustomWebApplicationF
 
         var response = await _client.PostAsync("/connect/token", form);
         var body = await response.Content.ReadAsStringAsync();
-        if (ShouldSkip(response.StatusCode, body))
-        {
-            Assert.True(true, $"Skipping — seed unavailable in CI: {body}");
-            return;
-        }
-
         Assert.True(
             response.StatusCode == HttpStatusCode.Forbidden
             || response.StatusCode == HttpStatusCode.BadRequest,
@@ -172,12 +137,6 @@ public class TokenExchangeIntegrationTests : IClassFixture<CustomWebApplicationF
 
         var response = await _client.PostAsync("/connect/token", form);
         var body = await response.Content.ReadAsStringAsync();
-        if (ShouldSkip(response.StatusCode, body))
-        {
-            Assert.True(true, $"Skipping — seed unavailable in CI: {body}");
-            return;
-        }
-
         // RFC 8693 says invalid_target for audience problems, but
         // OpenIddict may surface it as invalid_request — accept either.
         Assert.True(
