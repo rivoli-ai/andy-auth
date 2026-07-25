@@ -112,7 +112,7 @@ Access at: **/Admin**
 - Password requirements (8+ chars, uppercase, lowercase, digit)
 - Security headers including a nonce-based Content-Security-Policy (enabled by default in Production/UAT), X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS
 - Forwarded headers honored only from configured trusted proxies (per-mode `ForwardedHeaders` config)
-- CSRF protection on OAuth client, DCR and user-creation forms. Several destructive admin POSTs are still unprotected (tracked in [#51](https://github.com/rivoli-ai/andy-auth/issues/51))
+- CSRF protection on all forms, enforced at controller scope on the admin surface
 - SQL injection protection (EF Core)
 - XSS protection (Razor auto-encoding)
 - HTTPS enforcement in production
