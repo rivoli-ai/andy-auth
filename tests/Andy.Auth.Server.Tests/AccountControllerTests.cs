@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Andy.Auth.Server.Configuration;
+using FluentAssertions;
 using Andy.Auth.Server.Controllers;
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Models;
@@ -192,7 +193,7 @@ public class AccountControllerTests
         Assert.Same(model, viewResult.Model);
         Assert.False(_controller.ModelState.IsValid);
         Assert.Contains(_controller.ModelState.Values,
-            v => v.Errors.Any(e => e.ErrorMessage == "Invalid login attempt."));
+            v => v.Errors.Any(e => e.ErrorMessage == "Invalid login attempt. If the problem persists, contact your administrator."));
     }
 
     [Fact]
@@ -222,7 +223,9 @@ public class AccountControllerTests
         Assert.Same(model, viewResult.Model);
         Assert.False(_controller.ModelState.IsValid);
         Assert.Contains(_controller.ModelState.Values,
-            v => v.Errors.Any(e => e.ErrorMessage == "This account has been disabled."));
+            // andy-auth#50: without the correct password, a disabled account must
+            // be indistinguishable from a wrong one.
+            v => v.Errors.Any(e => e.ErrorMessage == "Invalid login attempt. If the problem persists, contact your administrator."));
     }
 
     [Fact]
@@ -327,7 +330,9 @@ public class AccountControllerTests
         Assert.Same(model, viewResult.Model);
         Assert.False(_controller.ModelState.IsValid);
         Assert.Contains(_controller.ModelState.Values,
-            v => v.Errors.Any(e => e.ErrorMessage.Contains("locked out")));
+            // Lockout goes to the log and audit trail; the form only says it to a
+            // caller who supplied the right password.
+            v => v.Errors.Any(e => e.ErrorMessage == "Invalid login attempt. If the problem persists, contact your administrator."));
     }
 
     [Fact]
@@ -360,7 +365,7 @@ public class AccountControllerTests
         Assert.Same(model, viewResult.Model);
         Assert.False(_controller.ModelState.IsValid);
         Assert.Contains(_controller.ModelState.Values,
-            v => v.Errors.Any(e => e.ErrorMessage == "Invalid login attempt."));
+            v => v.Errors.Any(e => e.ErrorMessage == "Invalid login attempt. If the problem persists, contact your administrator."));
     }
 
     #endregion
@@ -1233,4 +1238,138 @@ public class AccountControllerTests
     }
 
     #endregion
+
+    // ==================== andy-auth#50: no enumeration oracle ====================
+
+    [Fact]
+    public async Task Login_Post_AllFailureModes_ReportTheSameMessage()
+    {
+        // The oracle wasn't one message — it was the *difference* between them.
+        // "no such account", "disabled" and "wrong password" each identified
+        // which emails are real. This is the invariant, so assert it directly
+        // rather than three separate strings that can drift apart again.
+        var messages = new List<string>();
+
+        // (a) no such account
+        _mockUserManager.Setup(m => m.FindByEmailAsync("ghost@example.com"))
+            .ReturnsAsync((ApplicationUser?)null);
+        await RunLoginAndCollect("ghost@example.com", messages);
+
+        // (b) account exists but is suspended
+        var suspended = new ApplicationUser
+        {
+            Id = "u2", Email = "suspended@example.com", IsActive = true, IsSuspended = true
+        };
+        _mockUserManager.Setup(m => m.FindByEmailAsync("suspended@example.com")).ReturnsAsync(suspended);
+        await RunLoginAndCollect("suspended@example.com", messages);
+
+        // (c) account exists, password wrong
+        var healthy = new ApplicationUser { Id = "u3", Email = "real@example.com", IsActive = true };
+        _mockUserManager.Setup(m => m.FindByEmailAsync("real@example.com")).ReturnsAsync(healthy);
+        _mockSignInManager.Setup(m => m.PasswordSignInAsync(
+                healthy, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Failed);
+        await RunLoginAndCollect("real@example.com", messages);
+
+        // (d) account exists, locked out
+        var locked = new ApplicationUser { Id = "u4", Email = "locked@example.com", IsActive = true };
+        _mockUserManager.Setup(m => m.FindByEmailAsync("locked@example.com")).ReturnsAsync(locked);
+        _mockSignInManager.Setup(m => m.PasswordSignInAsync(
+                locked, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.LockedOut);
+        await RunLoginAndCollect("locked@example.com", messages);
+
+        messages.Should().HaveCount(4);
+        messages.Distinct().Should().ContainSingle(
+            "without the correct password, every failure mode must look identical");
+    }
+
+    [Fact]
+    public async Task Login_Post_LockedOut_WithCorrectPassword_ExplainsTheLockout()
+    {
+        // andy-auth#50: the disclosure is gated on knowing the password, not
+        // removed. Someone who can already authenticate learns nothing new from
+        // being told the account is locked — so they get a usable explanation
+        // instead of a dead end.
+        var locked = new ApplicationUser { Id = "u5", Email = "locked2@example.com", IsActive = true };
+        _mockUserManager.Setup(m => m.FindByEmailAsync("locked2@example.com")).ReturnsAsync(locked);
+        _mockUserManager.Setup(m => m.CheckPasswordAsync(locked, "CorrectPassword123!")).ReturnsAsync(true);
+        _mockSignInManager.Setup(m => m.PasswordSignInAsync(
+                locked, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.LockedOut);
+
+        await _controller.Login(new LoginViewModel
+        {
+            Email = "locked2@example.com",
+            Password = "CorrectPassword123!"
+        });
+
+        _controller.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Single().ErrorMessage
+            .Should().Contain("temporarily locked");
+    }
+
+    [Fact]
+    public async Task Login_Post_Disabled_WithCorrectPassword_ExplainsTheDisabledAccount()
+    {
+        var suspended = new ApplicationUser
+        {
+            Id = "u6", Email = "suspended2@example.com", IsActive = true, IsSuspended = true
+        };
+        _mockUserManager.Setup(m => m.FindByEmailAsync("suspended2@example.com")).ReturnsAsync(suspended);
+        _mockUserManager.Setup(m => m.CheckPasswordAsync(suspended, "CorrectPassword123!")).ReturnsAsync(true);
+
+        await _controller.Login(new LoginViewModel
+        {
+            Email = "suspended2@example.com",
+            Password = "CorrectPassword123!"
+        });
+
+        _controller.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Single().ErrorMessage
+            .Should().Contain("not currently able to sign in");
+    }
+
+    [Fact]
+    public async Task Login_Post_Disabled_WithWrongPassword_StaysGeneric()
+    {
+        // The other half of the invariant: an attacker probing a suspended
+        // account without its password must not be able to tell it apart from
+        // an address that was never registered.
+        var suspended = new ApplicationUser
+        {
+            Id = "u7", Email = "suspended3@example.com", IsActive = true, IsSuspended = true
+        };
+        _mockUserManager.Setup(m => m.FindByEmailAsync("suspended3@example.com")).ReturnsAsync(suspended);
+        _mockUserManager.Setup(m => m.CheckPasswordAsync(suspended, It.IsAny<string>())).ReturnsAsync(false);
+
+        await _controller.Login(new LoginViewModel
+        {
+            Email = "suspended3@example.com",
+            Password = "WrongPassword123!"
+        });
+
+        _controller.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Single().ErrorMessage
+            .Should().Be("Invalid login attempt. If the problem persists, contact your administrator.");
+    }
+
+    private async Task RunLoginAndCollect(string email, List<string> messages)
+    {
+        _controller.ModelState.Clear();
+        var result = await _controller.Login(new LoginViewModel
+        {
+            Email = email,
+            Password = "WrongPassword123!"
+        });
+
+        Assert.IsType<ViewResult>(result);
+        messages.Add(_controller.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .Single());
+    }
 }

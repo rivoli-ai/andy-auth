@@ -25,6 +25,33 @@ namespace Andy.Auth.Server.Controllers;
 // implicit default protecting it.
 public class AccountController : Controller
 {
+    /// <summary>
+    /// The only failure message the login form shows to a caller who has not
+    /// supplied the correct password. Distinguishing "no such account" /
+    /// "disabled" / "wrong password" / "locked out" told an attacker which
+    /// addresses are real (andy-auth#50).
+    /// </summary>
+    private const string GenericLoginFailureMessage =
+        "Invalid login attempt. If the problem persists, contact your administrator.";
+
+    /// <summary>Shown only once the correct password has been supplied.</summary>
+    private const string LockedOutMessage =
+        "This account is temporarily locked after too many failed sign-in attempts. " +
+        "Try again in 30 minutes, or contact your administrator.";
+
+    /// <summary>Shown only once the correct password has been supplied.</summary>
+    private const string AccountDisabledMessage =
+        "This account is not currently able to sign in. Contact your administrator.";
+
+    private static readonly PasswordHasher<ApplicationUser> TimingEqualizer = new();
+
+    /// <summary>
+    /// A real PBKDF2 hash, verified against when the account doesn't exist so
+    /// the response takes comparable time either way (andy-auth#50).
+    /// </summary>
+    private static readonly string DummyPasswordHash =
+        TimingEqualizer.HashPassword(new ApplicationUser(), "andy-auth-timing-equalizer");
+
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IAuditService _auditService;
@@ -76,23 +103,42 @@ public class AccountController : Controller
             return View(model);
         }
 
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
         var user = await _userManager.FindByEmailAsync(model.Email);
+
         if (user == null)
         {
-            ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+            // Burn the same PBKDF2 work a real verification would (andy-auth#50).
+            // Returning early made "no such account" answer in a fraction of the
+            // time a wrong password took, which enumerates valid addresses just
+            // as reliably as a distinct error message does. Uses its own hasher
+            // so the cost is identical however UserManager is wired.
+            TimingEqualizer.VerifyHashedPassword(
+                new ApplicationUser(), DummyPasswordHash, model.Password);
+
+            _logger.LogWarning("Login refused: no account for {Email}", model.Email);
+            await _auditService.LogAsync(
+                "UserLoginFailed", null, model.Email, null, null,
+                "No account for the supplied email", ipAddress);
+
+            ModelState.AddModelError(string.Empty, GenericLoginFailureMessage);
             return View(model);
         }
 
         // Lifecycle gate (andy-auth#146). AndyAuthSignInManager enforces the
-        // same predicate inside PasswordSignInAsync, but checking first lets us
-        // report the disabled-account message the UI expects instead of a bare
-        // IsNotAllowed result. The specific reason is logged, not shown.
+        // same predicate inside PasswordSignInAsync; checking first keeps the
+        // disabled case out of the lockout counter.
         var denialReason = UserLifecycle.GetDenialReason(user);
         if (denialReason is not null)
         {
             _logger.LogWarning(
                 "Login refused for {Email}: {Reason}", user.Email, denialReason);
-            ModelState.AddModelError(string.Empty, "This account has been disabled.");
+            await _auditService.LogAsync(
+                "UserLoginFailed", user.Id, user.Email ?? model.Email, user.Id, user.Email,
+                $"Login refused: {denialReason}", ipAddress);
+
+            ModelState.AddModelError(string.Empty,
+                await DescribeFailureAsync(user, model.Password, AccountDisabledMessage));
             return View(model);
         }
 
@@ -101,8 +147,6 @@ public class AccountController : Controller
             model.Password,
             model.RememberMe,
             lockoutOnFailure: true);
-
-        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
         if (result.Succeeded)
         {
@@ -154,7 +198,8 @@ public class AccountController : Controller
                 "Account locked out due to failed login attempts",
                 ipAddress);
 
-            ModelState.AddModelError(string.Empty, "This account has been locked out. Please try again later.");
+            ModelState.AddModelError(string.Empty,
+                await DescribeFailureAsync(user, model.Password, LockedOutMessage));
             return View(model);
         }
 
@@ -168,8 +213,32 @@ public class AccountController : Controller
             "Invalid password",
             ipAddress);
 
-        ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+        ModelState.AddModelError(string.Empty, GenericLoginFailureMessage);
         return View(model);
+    }
+
+    /// <summary>
+    /// Returns <paramref name="specificMessage"/> when <paramref name="password"/>
+    /// is the account's real password, and the generic message otherwise.
+    /// </summary>
+    /// <remarks>
+    /// andy-auth#50. The oracle was that "disabled" and "locked out" were
+    /// reachable <em>without</em> knowing the password — so an attacker could
+    /// separate real addresses from fake ones, and confirm an account existed
+    /// just by tripping its lockout. Gating the disclosure on a correct password
+    /// removes that while still telling a legitimate user why they can't get in.
+    /// <para>
+    /// <see cref="UserManager{TUser}.CheckPasswordAsync"/> verifies the hash
+    /// without touching the lockout counter, so probing here cannot itself lock
+    /// an account or extend a lockout. It also keeps every path at roughly one
+    /// PBKDF2 verification, which closes the timing side of the oracle.
+    /// </para>
+    /// </remarks>
+    private async Task<string> DescribeFailureAsync(
+        ApplicationUser user, string password, string specificMessage)
+    {
+        var passwordIsCorrect = await _userManager.CheckPasswordAsync(user, password ?? string.Empty);
+        return passwordIsCorrect ? specificMessage : GenericLoginFailureMessage;
     }
 
     [HttpGet]
