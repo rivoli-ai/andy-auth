@@ -1,4 +1,6 @@
 using Andy.Auth.Server.Data;
+using Andy.Auth.Server.Models;
+using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -112,39 +114,20 @@ public class TwoFactorController : Controller
 
         if (await _userManager.CountRecoveryCodesAsync(user) == 0)
         {
-            return RedirectToAction(nameof(ShowRecoveryCodes));
+            var codes = await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
+            return View("ShowRecoveryCodes", new ShowRecoveryCodesViewModel
+            {
+                RecoveryCodes = codes?.ToArray() ?? Array.Empty<string>()
+            });
         }
 
         return RedirectToAction(nameof(Index));
     }
 
     /// <summary>
-    /// Generates and shows recovery codes.
+    /// Confirmation page for regenerating recovery codes.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> ShowRecoveryCodes()
-    {
-        var user = await _userManager.GetUserAsync(User);
-        if (user == null)
-        {
-            return NotFound();
-        }
-
-        var recoveryCodes = await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
-
-        var model = new ShowRecoveryCodesViewModel
-        {
-            RecoveryCodes = recoveryCodes?.ToArray() ?? Array.Empty<string>()
-        };
-
-        return View(model);
-    }
-
-    /// <summary>
-    /// Regenerates recovery codes.
-    /// </summary>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> GenerateRecoveryCodes()
     {
         var user = await _userManager.GetUserAsync(User);
@@ -153,14 +136,61 @@ public class TwoFactorController : Controller
             return NotFound();
         }
 
-        var isTwoFactorEnabled = await _userManager.GetTwoFactorEnabledAsync(user);
-        if (!isTwoFactorEnabled)
+        if (!await _userManager.GetTwoFactorEnabledAsync(user))
         {
             TempData["ErrorMessage"] = "Cannot generate recovery codes as you do not have 2FA enabled.";
             return RedirectToAction(nameof(Index));
         }
 
-        return RedirectToAction(nameof(ShowRecoveryCodes));
+        return View("StepUp", await BuildStepUpAsync(user, new TwoFactorStepUpViewModel
+        {
+            ActionName = nameof(GenerateRecoveryCodes),
+            Title = "Generate new recovery codes",
+            Description = "Your existing recovery codes will stop working immediately. " +
+                          "Confirm it is you before we replace them.",
+            SubmitLabel = "Generate new codes",
+            IsDestructive = true,
+        }));
+    }
+
+    /// <summary>
+    /// Regenerates recovery codes and displays them.
+    /// </summary>
+    /// <remarks>
+    /// andy-auth#52. Generation used to live behind a GET (<c>ShowRecoveryCodes</c>),
+    /// so merely loading a URL — an image tag on any page, a prefetch — silently
+    /// voided the user's existing codes. Generation now happens only here, on a
+    /// POST carrying an antiforgery token and a re-authentication, and the codes
+    /// are rendered directly rather than surfaced through a follow-up GET.
+    /// </remarks>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GenerateRecoveryCodes(TwoFactorStepUpViewModel model)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        if (!await _userManager.GetTwoFactorEnabledAsync(user))
+        {
+            TempData["ErrorMessage"] = "Cannot generate recovery codes as you do not have 2FA enabled.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (!await VerifyStepUpAsync(user, model))
+        {
+            return View("StepUp", await BuildStepUpAsync(user, model));
+        }
+
+        var recoveryCodes = await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
+        _logger.LogInformation("User {UserId} regenerated their 2FA recovery codes.", user.Id);
+
+        return View("ShowRecoveryCodes", new ShowRecoveryCodesViewModel
+        {
+            RecoveryCodes = recoveryCodes?.ToArray() ?? Array.Empty<string>()
+        });
     }
 
     /// <summary>
@@ -180,7 +210,15 @@ public class TwoFactorController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        return View();
+        return View("StepUp", await BuildStepUpAsync(user, new TwoFactorStepUpViewModel
+        {
+            ActionName = nameof(Disable2faConfirmed),
+            Title = "Disable two-factor authentication",
+            Description = "Your account will be protected by your password alone. " +
+                          "Confirm it is you before we turn this off.",
+            SubmitLabel = "Disable 2FA",
+            IsDestructive = true,
+        }));
     }
 
     /// <summary>
@@ -188,12 +226,24 @@ public class TwoFactorController : Controller
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Disable2faConfirmed()
+    public async Task<IActionResult> Disable2faConfirmed(TwoFactorStepUpViewModel model)
     {
         var user = await _userManager.GetUserAsync(User);
         if (user == null)
         {
             return NotFound();
+        }
+
+        model.ActionName = nameof(Disable2faConfirmed);
+        model.Title = "Disable two-factor authentication";
+        model.Description = "Your account will be protected by your password alone. " +
+                            "Confirm it is you before we turn this off.";
+        model.SubmitLabel = "Disable 2FA";
+        model.IsDestructive = true;
+
+        if (!await VerifyStepUpAsync(user, model))
+        {
+            return View("StepUp", await BuildStepUpAsync(user, model));
         }
 
         var disable2faResult = await _userManager.SetTwoFactorEnabledAsync(user, false);
@@ -213,16 +263,51 @@ public class TwoFactorController : Controller
     }
 
     /// <summary>
-    /// Resets the authenticator key.
+    /// Confirmation page for resetting the authenticator key.
     /// </summary>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
+    [HttpGet]
     public async Task<IActionResult> ResetAuthenticator()
     {
         var user = await _userManager.GetUserAsync(User);
         if (user == null)
         {
             return NotFound();
+        }
+
+        return View("StepUp", await BuildStepUpAsync(user, new TwoFactorStepUpViewModel
+        {
+            ActionName = nameof(ResetAuthenticator),
+            Title = "Reset your authenticator key",
+            Description = "Your current authenticator app will stop working and 2FA will be " +
+                          "switched off until you finish setting up the new key.",
+            SubmitLabel = "Reset key",
+            IsDestructive = true,
+        }));
+    }
+
+    /// <summary>
+    /// Resets the authenticator key.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetAuthenticator(TwoFactorStepUpViewModel model)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        model.ActionName = nameof(ResetAuthenticator);
+        model.Title = "Reset your authenticator key";
+        model.Description = "Your current authenticator app will stop working and 2FA will be " +
+                            "switched off until you finish setting up the new key.";
+        model.SubmitLabel = "Reset key";
+        model.IsDestructive = true;
+
+        if (!await VerifyStepUpAsync(user, model))
+        {
+            return View("StepUp", await BuildStepUpAsync(user, model));
         }
 
         await _userManager.SetTwoFactorEnabledAsync(user, false);
@@ -232,6 +317,63 @@ public class TwoFactorController : Controller
         TempData["StatusMessage"] = "Your authenticator app key has been reset. You will need to configure your authenticator app using the new key.";
 
         return RedirectToAction(nameof(EnableAuthenticator));
+    }
+
+    /// <summary>
+    /// Fills in whether the authenticator-code field applies, which depends on
+    /// whether 2FA is currently on.
+    /// </summary>
+    private async Task<TwoFactorStepUpViewModel> BuildStepUpAsync(
+        ApplicationUser user, TwoFactorStepUpViewModel model)
+    {
+        model.RequiresAuthenticatorCode = await _userManager.GetTwoFactorEnabledAsync(user);
+        model.CurrentPassword = string.Empty;
+        model.TwoFactorCode = null;
+        return model;
+    }
+
+    /// <summary>
+    /// Re-authenticates the signed-in user before a 2FA change (andy-auth#52).
+    /// Adds a model error and returns false when the proof is insufficient.
+    /// </summary>
+    /// <remarks>
+    /// Always requires the password. Additionally requires a current
+    /// authenticator code while 2FA is enabled — otherwise someone holding both
+    /// a stolen cookie and a leaked password could still strip the second factor,
+    /// which is precisely the protection 2FA exists to provide.
+    /// <para>
+    /// Failures are deliberately reported as one message. Distinguishing "wrong
+    /// password" from "wrong code" tells an attacker which half they already
+    /// have.
+    /// </para>
+    /// </remarks>
+    private async Task<bool> VerifyStepUpAsync(ApplicationUser user, TwoFactorStepUpViewModel model)
+    {
+        var passwordOk = await _userManager.CheckPasswordAsync(user, model.CurrentPassword ?? string.Empty);
+
+        var codeOk = true;
+        if (await _userManager.GetTwoFactorEnabledAsync(user))
+        {
+            var code = (model.TwoFactorCode ?? string.Empty)
+                .Replace(" ", string.Empty)
+                .Replace("-", string.Empty);
+
+            codeOk = code.Length > 0 && await _userManager.VerifyTwoFactorTokenAsync(
+                user, _userManager.Options.Tokens.AuthenticatorTokenProvider, code);
+        }
+
+        if (passwordOk && codeOk)
+        {
+            return true;
+        }
+
+        _logger.LogWarning(
+            "2FA step-up failed for user {UserId} (password ok: {PasswordOk}, code ok: {CodeOk})",
+            user.Id, passwordOk, codeOk);
+
+        ModelState.AddModelError(string.Empty,
+            "We could not verify it is you. Check your password and authenticator code and try again.");
+        return false;
     }
 
     private async Task<EnableAuthenticatorViewModel> LoadSharedKeyAndQrCodeUriAsync(ApplicationUser user)

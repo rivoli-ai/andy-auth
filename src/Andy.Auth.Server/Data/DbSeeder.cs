@@ -1328,13 +1328,44 @@ public class DbSeeder
             }
         }
 
-        // Create test user in non-production environments (Development, UAT, Staging)
-        var environment = _configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") ??
-                          Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
-        var isNonProduction = environment != "Production";
+        // Seed the well-known test users in LOCAL environments only —
+        // Development, Docker, Embedded (andy-auth#54).
+        //
+        // This used to run in every non-Production environment, which included
+        // UAT and Staging. UAT is internet-facing, so every boot re-created
+        // `test@andy.local` with the published password `Test123!` and cleared
+        // its lockout: a permanent, pre-authenticated foothold that no amount of
+        // password policy could close, because the seeder put it back.
+        //
+        // Two further changes here. The gate reads IHostEnvironment rather than
+        // comparing a raw ASPNETCORE_ENVIRONMENT string — the old ordinal
+        // compare against "Production" let a lowercase "production", or an
+        // environment set through DOTNET_ENVIRONMENT instead, fall through to
+        // the seeding branch. And SEED_TEST_USERS provides a deliberate opt-in
+        // for anyone who genuinely needs them elsewhere (an ephemeral CI stack),
+        // so the decision is explicit rather than a side effect of the
+        // environment name.
+        var seedTestUsersOptIn = _configuration.GetValue("SEED_TEST_USERS", false);
+        var seedTestUsers = _environment.IsLocalOrEmbedded() || seedTestUsersOptIn;
 
-        if (isNonProduction)
+        if (!seedTestUsers)
         {
+            _logger.LogInformation(
+                "Skipping well-known test users in {Environment}. Set SEED_TEST_USERS=true to override.",
+                _environment.EnvironmentName);
+        }
+
+        if (seedTestUsers)
+        {
+            if (seedTestUsersOptIn && !_environment.IsLocalOrEmbedded())
+            {
+                _logger.LogWarning(
+                    "SEED_TEST_USERS is enabled in {Environment}. test@andy.local and viewer@andy.local " +
+                    "will be created with a published password. Never set this on an internet-facing " +
+                    "deployment (andy-auth#54).",
+                    _environment.EnvironmentName);
+            }
+
             const string testEmail = "test@andy.local";
             var existingTestUser = await userManager.FindByEmailAsync(testEmail);
 
@@ -1356,7 +1387,7 @@ public class DbSeeder
                 {
                     // Assign User role to test user (not Admin)
                     await userManager.AddToRoleAsync(testUser, "User");
-                    _logger.LogInformation("Created test user: {Email} with deterministic Id {UserId} in {Environment} environment", testEmail, testUser.Id, environment);
+                    _logger.LogInformation("Created test user: {Email} with deterministic Id {UserId} in {Environment} environment", testEmail, testUser.Id, _environment.EnvironmentName);
                 }
                 else
                 {
@@ -1425,7 +1456,7 @@ public class DbSeeder
                     await userManager.AddToRoleAsync(viewerUser, "User");
                     _logger.LogInformation(
                         "Created viewer test user: {Email} with deterministic Id {UserId} in {Environment} environment",
-                        viewerEmail, viewerUser.Id, environment);
+                        viewerEmail, viewerUser.Id, _environment.EnvironmentName);
                 }
                 else
                 {

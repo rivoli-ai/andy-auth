@@ -1,5 +1,6 @@
 using Andy.Auth.Server.Controllers;
 using Andy.Auth.Server.Data;
+using Andy.Auth.Server.Models;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -32,6 +33,9 @@ public class TwoFactorControllerTests
             _userManagerMock.Object, contextAccessor.Object, claimsFactory.Object, null!, null!, null!, null!);
 
         _loggerMock = new Mock<ILogger<TwoFactorController>>();
+
+        // VerifyStepUpAsync reads Options.Tokens.AuthenticatorTokenProvider.
+        _userManagerMock.Object.Options = new IdentityOptions();
 
         _controller = new TwoFactorController(
             _userManagerMock.Object,
@@ -257,7 +261,7 @@ public class TwoFactorControllerTests
     }
 
     [Fact]
-    public async Task EnableAuthenticator_Post_ValidCode_Enables2faAndRedirects()
+    public async Task EnableAuthenticator_Post_ValidCode_Enables2faAndShowsRecoveryCodes()
     {
         // Arrange
         _userManagerMock.Setup(x => x.VerifyTwoFactorTokenAsync(
@@ -270,14 +274,18 @@ public class TwoFactorControllerTests
         _userManagerMock.Setup(x => x.CountRecoveryCodesAsync(_testUser))
             .ReturnsAsync(0);
 
+        _userManagerMock.Setup(x => x.GenerateNewTwoFactorRecoveryCodesAsync(_testUser, 10))
+            .ReturnsAsync(new[] { "C1", "C2" });
+
         var model = new EnableAuthenticatorViewModel { Code = "123456" };
 
         // Act
         var result = await _controller.EnableAuthenticator(model);
 
-        // Assert
-        var redirect = result.Should().BeOfType<RedirectToActionResult>().Subject;
-        redirect.ActionName.Should().Be("ShowRecoveryCodes");
+        // Assert — rendered directly rather than redirecting to a GET that
+        // generated codes as a side effect (andy-auth#52).
+        var view = result.Should().BeOfType<ViewResult>().Subject;
+        view.ViewName.Should().Be("ShowRecoveryCodes");
         _userManagerMock.Verify(x => x.SetTwoFactorEnabledAsync(_testUser, true), Times.Once);
     }
 
@@ -332,234 +340,201 @@ public class TwoFactorControllerTests
             "123456"), Times.Once);
     }
 
-    // ==================== ShowRecoveryCodes Tests ====================
+    // ==================== 2FA step-up (andy-auth#52) ====================
 
-    [Fact]
-    public async Task ShowRecoveryCodes_UserNotFound_ReturnsNotFound()
+    private const string CorrectPassword = "CorrectHorse1!";
+    private const string CorrectCode = "123456";
+
+    /// <summary>Mocks a user with 2FA on and a step-up that will succeed.</summary>
+    private void ArrangeValidStepUp(bool twoFactorEnabled = true)
     {
-        // Arrange
-        _userManagerMock.Setup(x => x.GetUserAsync(It.IsAny<ClaimsPrincipal>()))
-            .ReturnsAsync((ApplicationUser?)null);
-
-        // Act
-        var result = await _controller.ShowRecoveryCodes();
-
-        // Assert
-        result.Should().BeOfType<NotFoundResult>();
-    }
-
-    [Fact]
-    public async Task ShowRecoveryCodes_GeneratesAndReturnsRecoveryCodes()
-    {
-        // Arrange
-        var recoveryCodes = new[] { "CODE1", "CODE2", "CODE3", "CODE4", "CODE5",
-            "CODE6", "CODE7", "CODE8", "CODE9", "CODE10" };
-        _userManagerMock.Setup(x => x.GenerateNewTwoFactorRecoveryCodesAsync(_testUser, 10))
-            .ReturnsAsync(recoveryCodes);
-
-        // Act
-        var result = await _controller.ShowRecoveryCodes();
-
-        // Assert
-        var viewResult = result.Should().BeOfType<ViewResult>().Subject;
-        var model = viewResult.Model.Should().BeOfType<ShowRecoveryCodesViewModel>().Subject;
-        model.RecoveryCodes.Should().HaveCount(10);
-        model.RecoveryCodes.Should().BeEquivalentTo(recoveryCodes);
-    }
-
-    [Fact]
-    public async Task ShowRecoveryCodes_NullRecoveryCodes_ReturnsEmptyArray()
-    {
-        // Arrange
-        _userManagerMock.Setup(x => x.GenerateNewTwoFactorRecoveryCodesAsync(_testUser, 10))
-            .ReturnsAsync((IEnumerable<string>?)null);
-
-        // Act
-        var result = await _controller.ShowRecoveryCodes();
-
-        // Assert
-        var viewResult = result.Should().BeOfType<ViewResult>().Subject;
-        var model = viewResult.Model.Should().BeOfType<ShowRecoveryCodesViewModel>().Subject;
-        model.RecoveryCodes.Should().BeEmpty();
-    }
-
-    // ==================== GenerateRecoveryCodes Tests ====================
-
-    [Fact]
-    public async Task GenerateRecoveryCodes_UserNotFound_ReturnsNotFound()
-    {
-        // Arrange
-        _userManagerMock.Setup(x => x.GetUserAsync(It.IsAny<ClaimsPrincipal>()))
-            .ReturnsAsync((ApplicationUser?)null);
-
-        // Act
-        var result = await _controller.GenerateRecoveryCodes();
-
-        // Assert
-        result.Should().BeOfType<NotFoundResult>();
-    }
-
-    [Fact]
-    public async Task GenerateRecoveryCodes_2faNotEnabled_RedirectsWithError()
-    {
-        // Arrange
-        _userManagerMock.Setup(x => x.GetTwoFactorEnabledAsync(_testUser))
+        _userManagerMock.Setup(x => x.GetTwoFactorEnabledAsync(_testUser)).ReturnsAsync(twoFactorEnabled);
+        _userManagerMock.Setup(x => x.CheckPasswordAsync(_testUser, CorrectPassword)).ReturnsAsync(true);
+        _userManagerMock.Setup(x => x.CheckPasswordAsync(_testUser, It.Is<string>(p => p != CorrectPassword)))
             .ReturnsAsync(false);
-
-        // Act
-        var result = await _controller.GenerateRecoveryCodes();
-
-        // Assert
-        var redirect = result.Should().BeOfType<RedirectToActionResult>().Subject;
-        redirect.ActionName.Should().Be("Index");
-        _controller.TempData["ErrorMessage"].Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task GenerateRecoveryCodes_2faEnabled_RedirectsToShowRecoveryCodes()
-    {
-        // Arrange
-        _userManagerMock.Setup(x => x.GetTwoFactorEnabledAsync(_testUser))
+        _userManagerMock.Setup(x => x.VerifyTwoFactorTokenAsync(_testUser, It.IsAny<string>(), CorrectCode))
             .ReturnsAsync(true);
-
-        // Act
-        var result = await _controller.GenerateRecoveryCodes();
-
-        // Assert
-        var redirect = result.Should().BeOfType<RedirectToActionResult>().Subject;
-        redirect.ActionName.Should().Be("ShowRecoveryCodes");
-    }
-
-    // ==================== Disable2fa GET Tests ====================
-
-    [Fact]
-    public async Task Disable2fa_Get_UserNotFound_ReturnsNotFound()
-    {
-        // Arrange
-        _userManagerMock.Setup(x => x.GetUserAsync(It.IsAny<ClaimsPrincipal>()))
-            .ReturnsAsync((ApplicationUser?)null);
-
-        // Act
-        var result = await _controller.Disable2fa();
-
-        // Assert
-        result.Should().BeOfType<NotFoundResult>();
-    }
-
-    [Fact]
-    public async Task Disable2fa_Get_2faNotEnabled_RedirectsToIndex()
-    {
-        // Arrange
-        _userManagerMock.Setup(x => x.GetTwoFactorEnabledAsync(_testUser))
+        _userManagerMock.Setup(x => x.VerifyTwoFactorTokenAsync(
+                _testUser, It.IsAny<string>(), It.Is<string>(c => c != CorrectCode)))
             .ReturnsAsync(false);
+    }
 
-        // Act
-        var result = await _controller.Disable2fa();
+    private static TwoFactorStepUpViewModel ValidStepUp() => new()
+    {
+        CurrentPassword = CorrectPassword,
+        TwoFactorCode = CorrectCode,
+    };
 
-        // Assert
-        var redirect = result.Should().BeOfType<RedirectToActionResult>().Subject;
-        redirect.ActionName.Should().Be("Index");
+    [Fact]
+    public void ShowRecoveryCodes_IsNoLongerAReachableAction()
+    {
+        // The GET generated a fresh set of codes as a side effect, so merely
+        // loading the URL — an <img> on any page, a link prefetch — silently
+        // voided the user's existing codes. Generation now lives only on the
+        // antiforgery-protected POST.
+        typeof(TwoFactorController).GetMethod("ShowRecoveryCodes").Should().BeNull();
     }
 
     [Fact]
-    public async Task Disable2fa_Get_2faEnabled_ReturnsView()
+    public async Task GenerateRecoveryCodes_Get_DoesNotGenerateAnything()
     {
-        // Arrange
-        _userManagerMock.Setup(x => x.GetTwoFactorEnabledAsync(_testUser))
-            .ReturnsAsync(true);
+        ArrangeValidStepUp();
 
-        // Act
-        var result = await _controller.Disable2fa();
+        var result = await _controller.GenerateRecoveryCodes();
 
-        // Assert
-        result.Should().BeOfType<ViewResult>();
+        result.Should().BeOfType<ViewResult>()
+            .Which.ViewName.Should().Be("StepUp");
+        _userManagerMock.Verify(
+            x => x.GenerateNewTwoFactorRecoveryCodesAsync(It.IsAny<ApplicationUser>(), It.IsAny<int>()),
+            Times.Never);
     }
 
-    // ==================== Disable2faConfirmed Tests ====================
+    [Fact]
+    public async Task GenerateRecoveryCodes_Post_WrongPassword_DoesNotGenerate()
+    {
+        ArrangeValidStepUp();
+
+        var result = await _controller.GenerateRecoveryCodes(new TwoFactorStepUpViewModel
+        {
+            CurrentPassword = "WrongPassword1!",
+            TwoFactorCode = CorrectCode,
+        });
+
+        result.Should().BeOfType<ViewResult>().Which.ViewName.Should().Be("StepUp");
+        _userManagerMock.Verify(
+            x => x.GenerateNewTwoFactorRecoveryCodesAsync(It.IsAny<ApplicationUser>(), It.IsAny<int>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GenerateRecoveryCodes_Post_WrongAuthenticatorCode_DoesNotGenerate()
+    {
+        // The password alone must not be enough while 2FA is on — otherwise a
+        // leaked password plus a stolen cookie still strips the second factor.
+        ArrangeValidStepUp();
+
+        var result = await _controller.GenerateRecoveryCodes(new TwoFactorStepUpViewModel
+        {
+            CurrentPassword = CorrectPassword,
+            TwoFactorCode = "000000",
+        });
+
+        result.Should().BeOfType<ViewResult>().Which.ViewName.Should().Be("StepUp");
+        _userManagerMock.Verify(
+            x => x.GenerateNewTwoFactorRecoveryCodesAsync(It.IsAny<ApplicationUser>(), It.IsAny<int>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GenerateRecoveryCodes_Post_ValidStepUp_ReturnsTheCodes()
+    {
+        ArrangeValidStepUp();
+        var codes = new[] { "C1", "C2", "C3" };
+        _userManagerMock.Setup(x => x.GenerateNewTwoFactorRecoveryCodesAsync(_testUser, 10))
+            .ReturnsAsync(codes);
+
+        var result = await _controller.GenerateRecoveryCodes(ValidStepUp());
+
+        var view = result.Should().BeOfType<ViewResult>().Subject;
+        view.ViewName.Should().Be("ShowRecoveryCodes");
+        view.Model.Should().BeOfType<ShowRecoveryCodesViewModel>()
+            .Which.RecoveryCodes.Should().BeEquivalentTo(codes);
+    }
+
+    [Fact]
+    public async Task Disable2faConfirmed_WithoutStepUp_DoesNotDisable()
+    {
+        ArrangeValidStepUp();
+
+        var result = await _controller.Disable2faConfirmed(new TwoFactorStepUpViewModel
+        {
+            CurrentPassword = "WrongPassword1!",
+        });
+
+        result.Should().BeOfType<ViewResult>().Which.ViewName.Should().Be("StepUp");
+        _userManagerMock.Verify(
+            x => x.SetTwoFactorEnabledAsync(It.IsAny<ApplicationUser>(), false), Times.Never);
+    }
+
+    [Fact]
+    public async Task Disable2faConfirmed_ValidStepUp_Disables2faAndResetsKey()
+    {
+        ArrangeValidStepUp();
+        _userManagerMock.Setup(x => x.SetTwoFactorEnabledAsync(_testUser, false))
+            .ReturnsAsync(IdentityResult.Success);
+        _userManagerMock.Setup(x => x.ResetAuthenticatorKeyAsync(_testUser))
+            .ReturnsAsync(IdentityResult.Success);
+
+        var result = await _controller.Disable2faConfirmed(ValidStepUp());
+
+        result.Should().BeOfType<RedirectToActionResult>();
+        _userManagerMock.Verify(x => x.SetTwoFactorEnabledAsync(_testUser, false), Times.Once);
+        _userManagerMock.Verify(x => x.ResetAuthenticatorKeyAsync(_testUser), Times.Once);
+    }
 
     [Fact]
     public async Task Disable2faConfirmed_UserNotFound_ReturnsNotFound()
     {
-        // Arrange
         _userManagerMock.Setup(x => x.GetUserAsync(It.IsAny<ClaimsPrincipal>()))
             .ReturnsAsync((ApplicationUser?)null);
 
-        // Act
-        var result = await _controller.Disable2faConfirmed();
+        var result = await _controller.Disable2faConfirmed(ValidStepUp());
 
-        // Assert
         result.Should().BeOfType<NotFoundResult>();
     }
 
     [Fact]
-    public async Task Disable2faConfirmed_DisableFails_RedirectsWithError()
+    public async Task ResetAuthenticator_Get_DoesNotResetAnything()
     {
-        // Arrange
-        _userManagerMock.Setup(x => x.SetTwoFactorEnabledAsync(_testUser, false))
-            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Error" }));
+        ArrangeValidStepUp();
 
-        // Act
-        var result = await _controller.Disable2faConfirmed();
+        var result = await _controller.ResetAuthenticator();
 
-        // Assert
-        var redirect = result.Should().BeOfType<RedirectToActionResult>().Subject;
-        redirect.ActionName.Should().Be("Index");
-        _controller.TempData["ErrorMessage"].Should().NotBeNull();
+        result.Should().BeOfType<ViewResult>().Which.ViewName.Should().Be("StepUp");
+        _userManagerMock.Verify(x => x.ResetAuthenticatorKeyAsync(It.IsAny<ApplicationUser>()), Times.Never);
     }
 
     [Fact]
-    public async Task Disable2faConfirmed_Success_Disables2faAndResetsKey()
+    public async Task ResetAuthenticator_Post_WithoutStepUp_DoesNotReset()
     {
-        // Arrange
+        // The attack this closes: a stolen cookie swapping the authenticator
+        // secret over to the attacker's device.
+        ArrangeValidStepUp();
+
+        var result = await _controller.ResetAuthenticator(new TwoFactorStepUpViewModel
+        {
+            CurrentPassword = "WrongPassword1!",
+            TwoFactorCode = CorrectCode,
+        });
+
+        result.Should().BeOfType<ViewResult>().Which.ViewName.Should().Be("StepUp");
+        _userManagerMock.Verify(x => x.ResetAuthenticatorKeyAsync(It.IsAny<ApplicationUser>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ResetAuthenticator_Post_ValidStepUp_Disables2faAndResetsKey()
+    {
+        ArrangeValidStepUp();
         _userManagerMock.Setup(x => x.SetTwoFactorEnabledAsync(_testUser, false))
             .ReturnsAsync(IdentityResult.Success);
         _userManagerMock.Setup(x => x.ResetAuthenticatorKeyAsync(_testUser))
             .ReturnsAsync(IdentityResult.Success);
 
-        // Act
-        var result = await _controller.Disable2faConfirmed();
+        var result = await _controller.ResetAuthenticator(ValidStepUp());
 
-        // Assert
-        var redirect = result.Should().BeOfType<RedirectToActionResult>().Subject;
-        redirect.ActionName.Should().Be("Index");
-        _controller.TempData["StatusMessage"].Should().NotBeNull();
+        result.Should().BeOfType<RedirectToActionResult>();
         _userManagerMock.Verify(x => x.SetTwoFactorEnabledAsync(_testUser, false), Times.Once);
         _userManagerMock.Verify(x => x.ResetAuthenticatorKeyAsync(_testUser), Times.Once);
     }
 
-    // ==================== ResetAuthenticator Tests ====================
-
     [Fact]
-    public async Task ResetAuthenticator_UserNotFound_ReturnsNotFound()
+    public async Task ResetAuthenticator_Post_UserNotFound_ReturnsNotFound()
     {
-        // Arrange
         _userManagerMock.Setup(x => x.GetUserAsync(It.IsAny<ClaimsPrincipal>()))
             .ReturnsAsync((ApplicationUser?)null);
 
-        // Act
-        var result = await _controller.ResetAuthenticator();
+        var result = await _controller.ResetAuthenticator(ValidStepUp());
 
-        // Assert
         result.Should().BeOfType<NotFoundResult>();
-    }
-
-    [Fact]
-    public async Task ResetAuthenticator_Disables2faAndResetsKey()
-    {
-        // Arrange
-        _userManagerMock.Setup(x => x.SetTwoFactorEnabledAsync(_testUser, false))
-            .ReturnsAsync(IdentityResult.Success);
-        _userManagerMock.Setup(x => x.ResetAuthenticatorKeyAsync(_testUser))
-            .ReturnsAsync(IdentityResult.Success);
-
-        // Act
-        var result = await _controller.ResetAuthenticator();
-
-        // Assert
-        var redirect = result.Should().BeOfType<RedirectToActionResult>().Subject;
-        redirect.ActionName.Should().Be("EnableAuthenticator");
-        _controller.TempData["StatusMessage"].Should().NotBeNull();
-        _userManagerMock.Verify(x => x.SetTwoFactorEnabledAsync(_testUser, false), Times.Once);
-        _userManagerMock.Verify(x => x.ResetAuthenticatorKeyAsync(_testUser), Times.Once);
     }
 }

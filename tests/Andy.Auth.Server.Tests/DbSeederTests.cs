@@ -1166,12 +1166,18 @@ public class DbSeederTests : IDisposable
     /// <summary>
     /// Helper method to create a real IConfiguration instance
     /// </summary>
-    private static IConfiguration CreateConfiguration(string environment)
+    private static IConfiguration CreateConfiguration(
+        string environment, params (string Key, string Value)[] extra)
     {
         var configValues = new Dictionary<string, string?>
         {
             { "ASPNETCORE_ENVIRONMENT", environment }
         };
+
+        foreach (var (key, value) in extra)
+        {
+            configValues[key] = value;
+        }
 
         return new ConfigurationBuilder()
             .AddInMemoryCollection(configValues)
@@ -1227,5 +1233,80 @@ public class DbSeederTests : IDisposable
         var store = new Mock<IRoleStore<IdentityRole>>();
         return new Mock<RoleManager<IdentityRole>>(
             store.Object, null, null, null, null);
+    }
+
+    // ==================== andy-auth#54: test-user seeding scope ====================
+
+    [Theory]
+    [InlineData("UAT")]
+    [InlineData("Staging")]
+    public async Task SeedAsync_DoesNotCreateTestUsers_InInternetFacingEnvironments(string environment)
+    {
+        // The bug: the gate was `environment != "Production"`, so UAT and
+        // Staging seeded test@andy.local with the published password Test123!
+        // and cleared its lockout on every boot. UAT is internet-facing, which
+        // made that a permanent pre-authenticated foothold no password policy
+        // could close — the seeder simply put it back.
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
+            .ReturnsAsync(new object());
+
+        var configuration = CreateConfiguration(environment);
+        var seeder = new DbSeeder(
+            _serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment(environment));
+
+        await seeder.SeedAsync();
+
+        _mockUserManager.Verify(m => m.FindByEmailAsync("test@andy.local"), Times.Never);
+        _mockUserManager.Verify(m => m.FindByEmailAsync("viewer@andy.local"), Times.Never);
+        _mockUserManager.Verify(m => m.CreateAsync(
+            It.Is<ApplicationUser>(u => u.Email == "test@andy.local" || u.Email == "viewer@andy.local"),
+            It.IsAny<string>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("production")]
+    [InlineData("PRODUCTION")]
+    public async Task SeedAsync_DoesNotCreateTestUsers_WhenEnvironmentNameCasingDiffers(string environment)
+    {
+        // The old check was an ordinal compare against the literal "Production",
+        // so a lowercase environment name fell straight through to the seeding
+        // branch. IHostEnvironment's own checks are case-insensitive.
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
+            .ReturnsAsync(new object());
+
+        var configuration = CreateConfiguration(environment);
+        var seeder = new DbSeeder(
+            _serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment(environment));
+
+        await seeder.SeedAsync();
+
+        _mockUserManager.Verify(m => m.CreateAsync(
+            It.Is<ApplicationUser>(u => u.Email == "test@andy.local" || u.Email == "viewer@andy.local"),
+            It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SeedAsync_CreatesTestUsers_WhenExplicitlyOptedIn()
+    {
+        // An ephemeral CI stack can still ask for them — but it has to say so,
+        // rather than getting them as a side effect of its environment name.
+        _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
+            .ReturnsAsync(new object());
+        _mockUserManager.Setup(m => m.FindByEmailAsync("test@andy.local"))
+            .ReturnsAsync((ApplicationUser?)null);
+        _mockUserManager.Setup(m => m.FindByEmailAsync("viewer@andy.local"))
+            .ReturnsAsync((ApplicationUser?)null);
+        _mockUserManager.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>(), "Test123!"))
+            .ReturnsAsync(IdentityResult.Success);
+
+        var configuration = CreateConfiguration("UAT", ("SEED_TEST_USERS", "true"));
+        var seeder = new DbSeeder(
+            _serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("UAT"));
+
+        await seeder.SeedAsync();
+
+        _mockUserManager.Verify(m => m.CreateAsync(
+            It.Is<ApplicationUser>(u => u.Email == "test@andy.local"),
+            "Test123!"), Times.Once);
     }
 }

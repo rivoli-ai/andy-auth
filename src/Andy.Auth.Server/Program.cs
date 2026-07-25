@@ -634,17 +634,20 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowWebClients", policy =>
     {
+        // Fail closed when nothing is configured (andy-auth#55).
+        //
+        // The old fallback allowed *any* http(s)://localhost:* origin with
+        // AllowCredentials, which means any process on the machine — a browser
+        // extension, an Electron app, a dev server someone happened to run —
+        // could issue credentialed cross-origin requests and read the
+        // authenticated responses. Combined with open DCR, a hostile local app
+        // could self-register a client and pivot from there. An unconfigured
+        // deployment now simply has no cross-origin access, which is the safe
+        // direction to be wrong in; localhost origins are enumerated explicitly
+        // in appsettings.Development.json.
         if (allowedOrigins.Length > 0)
         {
             policy.WithOrigins(allowedOrigins)
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();
-        }
-        else
-        {
-            // Fallback: Allow localhost for development if no origins configured
-            policy.SetIsOriginAllowed(origin => origin.StartsWith("http://localhost:") || origin.StartsWith("https://localhost:"))
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials();
@@ -664,6 +667,13 @@ var app = builder.Build();
 
 // Use forwarded headers - must be first
 app.UseForwardedHeaders();
+
+if (allowedOrigins.Length == 0)
+{
+    app.Logger.LogWarning(
+        "CorsOrigins:AllowedOrigins is empty — no cross-origin browser client can call this server. " +
+        "Set it for every origin that needs access (andy-auth#55).");
+}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
