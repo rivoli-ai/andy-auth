@@ -126,7 +126,8 @@ public class AuthenticationIntegrationTests
             },
             Clerk = new ClerkOptions
             {
-                Domain = "test.clerk.accounts.dev"
+                Domain = "test.clerk.accounts.dev",
+                Audience = "test-api"
             }
         };
 
