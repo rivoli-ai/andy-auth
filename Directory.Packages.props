@@ -1,0 +1,61 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <!--
+    Central Package Management (CPM).
+    All PackageReference versions for the solution are declared here; individual
+    csproj files must NOT carry Version= attributes.
+
+    Test/shared tooling is intentionally unified to a single version across every
+    test project:
+      - Microsoft.NET.Test.Sdk 17.12.0 (was 17.8.0 / 17.11.1 / 17.12.0)
+      - xunit 2.9.2               (was 2.5.3 / 2.9.2)
+      - xunit.runner.visualstudio 2.8.2 (was 2.5.3 / 2.8.2)
+      - Moq 4.20.72              (was 4.20.70 / 4.20.72)
+      - coverlet.collector 6.0.2 (was 6.0.0 / 6.0.2)
+      - FluentAssertions 6.12.0  (was 6.12.0 / 8.8.0)
+        Pinned to 6.x, the last Apache-2.0 / free release. FluentAssertions v8
+        introduced a commercial (Xceed) license; only classic `.Should()` APIs
+        are used, so 6.x is a drop-in replacement that removes the license warning.
+  -->
+  <ItemGroup>
+    <!-- Source library / server dependencies -->
+    <PackageVersion Include="Andy.Telemetry" Version="0.2.9" />
+    <PackageVersion Include="AspNetCoreRateLimit" Version="5.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="8.0.11" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+    <PackageVersion Include="ModelContextProtocol" Version="0.2.0-preview.2" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.2.0-preview.2" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
+    <PackageVersion Include="OpenIddict.AspNetCore" Version="7.2.0" />
+    <PackageVersion Include="OpenIddict.EntityFrameworkCore" Version="7.2.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.0.0-beta.12" />
+    <PackageVersion Include="QRCoder" Version="1.4.3" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="7.3.1" />
+
+    <!-- Test-only dependencies (unified across all test projects) -->
+    <PackageVersion Include="coverlet.collector" Version="6.0.2" />
+    <PackageVersion Include="FluentAssertions" Version="6.12.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.49.0" />
+    <PackageVersion Include="Moq" Version="4.20.72" />
+    <PackageVersion Include="xunit" Version="2.9.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+</Project>
