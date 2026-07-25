@@ -4,6 +4,8 @@ using System.Text;
 using System.Text.Json;
 using Andy.Auth.Server.Configuration;
 using FluentAssertions;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
