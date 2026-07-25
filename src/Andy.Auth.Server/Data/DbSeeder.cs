@@ -1279,8 +1279,18 @@ public class DbSeeder
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to create admin user {Email}: {Errors}",
-                        userInfo.Email, string.Join(", ", result.Errors.Select(e => e.Description)));
+                    // Admin users are required seed data. A failed CreateAsync (e.g. a
+                    // malformed/rejected ADMIN_PASSWORD_* that violates the Identity
+                    // password policy) previously only logged a warning, leaving the DB
+                    // with no admin user while startup still reported ready. Throw so the
+                    // startup catch marks readiness failed and /ready stays 503 (#130).
+                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                    _logger.LogError("Failed to create required admin user {Email}: {Errors}",
+                        userInfo.Email, errors);
+                    throw new InvalidOperationException(
+                        $"Required admin user '{userInfo.Email}' could not be seeded: {errors}. " +
+                        $"Check the configured password (e.g. {userInfo.PasswordEnvVar}) against the " +
+                        "Identity password policy.");
                 }
             }
             else

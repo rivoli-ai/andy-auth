@@ -70,8 +70,9 @@ public class CrossModeDiscoveryTests : IDisposable
             .EnumerateArray()
             .Select(e => e.GetString())
             .ToList();
-        methods.Should().Contain("S256",
-            "PKCE S256 is the only accepted method server-wide (closes #46)");
+        methods.Should().BeEquivalentTo(new[] { "S256" },
+            "S256 is the only accepted PKCE method server-wide, in every mode " +
+            "(closes #46 / #122); `plain` must never be advertised");
 
         doc.RootElement.GetProperty("jwks_uri").GetString()
             .Should().NotBeNullOrEmpty("every mode must publish a jwks_uri");

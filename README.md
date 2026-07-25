@@ -107,14 +107,16 @@ Access at: **/Admin**
 
 ## Security Features
 
-- Rate limiting on all auth endpoints
+- Rate limiting on all auth endpoints (keyed on the trusted, proxy-normalized client IP — not a spoofable header)
 - Account lockout (30 min after 5 failed attempts)
 - Password requirements (8+ chars, uppercase, lowercase, digit)
-- Security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS). CSP ships **disabled** by default — enable with `SecurityHeaders:EnableCsp` (tracked in [#128](https://github.com/rivoli-ai/andy-auth/issues/128))
+- Security headers including a nonce-based Content-Security-Policy (enabled by default in Production/UAT), X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS
+- Forwarded headers honored only from configured trusted proxies (per-mode `ForwardedHeaders` config)
 - CSRF protection on OAuth client, DCR and user-creation forms. Several destructive admin POSTs are still unprotected (tracked in [#51](https://github.com/rivoli-ai/andy-auth/issues/51))
 - SQL injection protection (EF Core)
 - XSS protection (Razor auto-encoding)
 - HTTPS enforcement in production
+- Liveness (`/health`) and readiness (`/ready`) probes; readiness gates traffic on successful migration + seeding
 
 See [docs/SECURITY.md](./docs/SECURITY.md) for complete security documentation.
 
