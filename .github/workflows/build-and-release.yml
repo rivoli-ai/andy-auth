@@ -116,6 +116,65 @@ jobs:
         path: ./artifacts/*.nupkg
         retention-days: 7
 
+  container-smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build production image
+      run: docker build --build-context certs=./certs -t andy-auth:ci .
+
+    # andy-auth#126 acceptance: the image must run unprivileged and must not
+    # carry build tooling into the runtime layer.
+    - name: Assert the runtime user is not root
+      run: |
+        uid=$(docker run --rm --entrypoint sh andy-auth:ci -c 'id -u')
+        echo "runtime uid: $uid"
+        [ "$uid" != "0" ] || { echo "::error::container runs as root"; exit 1; }
+
+    - name: Assert no build tooling in the runtime image
+      run: |
+        for tool in curl wget git gcc dotnet-sdk; do
+          if docker run --rm --entrypoint sh andy-auth:ci -c "command -v $tool" >/dev/null 2>&1; then
+            echo "::error::$tool present in runtime image"; exit 1
+          fi
+        done
+
+    - name: Assert persisted key path is writable by the runtime user
+      run: docker run --rm --entrypoint sh andy-auth:ci -c 'touch /data/keys/.probe'
+
+    # Health (liveness) and readiness (gated on migration + required seeding)
+    # are validated against a real container, not just asserted in a unit test.
+    - name: Probe health and readiness
+      run: |
+        docker run -d --name andy-ci -p 5000:5000 \
+          -e ASPNETCORE_ENVIRONMENT=Development \
+          -e ASPNETCORE_URLS=http://+:5000 \
+          -e Database__Provider=Sqlite \
+          -e ConnectionStrings__DefaultConnection="Data Source=/data/andy-auth.db" \
+          -e OpenIddict__Issuer=http://localhost:5000/ \
+          andy-auth:ci
+
+        for i in $(seq 1 30); do
+          if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5000/health)" = "200" ]; then
+            break
+          fi
+          sleep 2
+        done
+
+        health=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5000/health)
+        ready=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5000/ready)
+        echo "health=$health ready=$ready"
+        docker logs andy-ci
+
+        [ "$health" = "200" ] || { echo "::error::/health returned $health"; exit 1; }
+        [ "$ready" = "200" ]  || { echo "::error::/ready returned $ready"; exit 1; }
+
+    - name: Tear down
+      if: always()
+      run: docker rm -f andy-ci || true
+
   publish-prerelease:
     needs: build
     runs-on: ubuntu-latest
