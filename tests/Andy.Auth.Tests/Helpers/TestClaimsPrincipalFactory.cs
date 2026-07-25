@@ -65,37 +65,4 @@ public static class TestClaimsPrincipalFactory
         var identity = new ClaimsIdentity(claims, "TestAuth");
         return new ClaimsPrincipal(identity);
     }
-
-    public static ClaimsPrincipal CreateClerkPrincipal(
-        string userId = "user_2abcdef123456",
-        string? email = "test@example.com",
-        string? name = "Test User",
-        string? picture = "https://example.com/avatar.jpg")
-    {
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, userId),
-            new("sub", userId)
-        };
-
-        if (email != null)
-        {
-            claims.Add(new Claim(ClaimTypes.Email, email));
-            claims.Add(new Claim("email", email));
-        }
-
-        if (name != null)
-        {
-            claims.Add(new Claim(ClaimTypes.Name, name));
-            claims.Add(new Claim("name", name));
-        }
-
-        if (picture != null)
-        {
-            claims.Add(new Claim("picture", picture));
-        }
-
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        return new ClaimsPrincipal(identity);
-    }
 }

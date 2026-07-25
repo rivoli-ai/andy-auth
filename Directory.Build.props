@@ -15,7 +15,7 @@
     <RepositoryUrl>https://github.com/rivoli-ai/andy-auth</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>authentication;oauth;openid;identity;aspnetcore;azuread;clerk</PackageTags>
+    <PackageTags>authentication;oauth;openid;identity;aspnetcore;azuread</PackageTags>
 
     <!-- Versioning -->
     <VersionPrefix>1.0.0</VersionPrefix>

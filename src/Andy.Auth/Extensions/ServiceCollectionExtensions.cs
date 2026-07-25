@@ -70,15 +70,15 @@ public static class ServiceCollectionExtensions
 
         provider.ConfigureAuthentication(authBuilder, options);
 
+        // Ensure logging is available for authentication/authorization services
+        services.AddLogging();
+
         // Add authorization
         services.AddAuthorization();
 
         // Add current user service
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
-
-        // Add HttpClient for providers that need it (Clerk opaque tokens)
-        services.AddHttpClient();
 
         return services;
     }
@@ -92,7 +92,6 @@ public static class ServiceCollectionExtensions
         {
             AuthProvider.AndyAuth => new AndyAuthProvider(),
             AuthProvider.AzureAD => new AzureAdProvider(),
-            AuthProvider.Clerk => new ClerkProvider(),
             AuthProvider.Custom => throw new NotImplementedException(
                 "Custom provider not implemented. Extend IAuthProvider and register it manually."),
             _ => throw new ArgumentException($"Unknown auth provider: {options.Provider}")

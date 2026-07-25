@@ -65,31 +65,6 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddAndyAuth_WithClerkProvider_ShouldRegisterServices()
-    {
-        // Arrange
-        var services = new ServiceCollection();
-        var options = new AndyAuthOptions
-        {
-            Provider = AuthProvider.Clerk,
-            Clerk = new ClerkOptions
-            {
-                Domain = "test.clerk.accounts.dev",
-                Audience = "test-api"
-            }
-        };
-
-        // Act
-        services.AddAndyAuth(options);
-        var serviceProvider = services.BuildServiceProvider();
-
-        // Assert
-        var authProvider = serviceProvider.GetService<IAuthProvider>();
-        authProvider.Should().NotBeNull();
-        authProvider.Should().BeOfType<ClerkProvider>();
-    }
-
-    [Fact]
     public void AddAndyAuth_WithConfiguration_ShouldBindOptions()
     {
         // Arrange
@@ -163,30 +138,6 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddAndyAuth_ShouldRegisterHttpClientForClerk()
-    {
-        // Arrange
-        var services = new ServiceCollection();
-        var options = new AndyAuthOptions
-        {
-            Provider = AuthProvider.Clerk,
-            Clerk = new ClerkOptions
-            {
-                Domain = "test.clerk.accounts.dev",
-                Audience = "test-api"
-            }
-        };
-
-        // Act
-        services.AddAndyAuth(options);
-        var serviceProvider = services.BuildServiceProvider();
-
-        // Assert
-        var httpClientFactory = serviceProvider.GetService<IHttpClientFactory>();
-        httpClientFactory.Should().NotBeNull();
-    }
-
-    [Fact]
     public void AddAndyAuth_WithCustomProvider_ShouldThrowNotImplementedException()
     {
         // Arrange
@@ -207,7 +158,6 @@ public class ServiceCollectionExtensionsTests
     [Theory]
     [InlineData(AuthProvider.AndyAuth)]
     [InlineData(AuthProvider.AzureAD)]
-    [InlineData(AuthProvider.Clerk)]
     public void AddAndyAuth_ShouldRegisterAuthorizationServices(AuthProvider provider)
     {
         // Arrange
@@ -221,11 +171,6 @@ public class ServiceCollectionExtensionsTests
             {
                 TenantId = "test-tenant",
                 ClientId = "test-client"
-            },
-            Clerk = new ClerkOptions
-            {
-                Domain = "test.clerk.accounts.dev",
-                Audience = "test-api"
             }
         };
 

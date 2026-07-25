@@ -42,11 +42,6 @@ public class AndyAuthOptions
     public AzureAdOptions? AzureAd { get; set; }
 
     /// <summary>
-    /// Clerk configuration (required when Provider = Clerk)
-    /// </summary>
-    public ClerkOptions? Clerk { get; set; }
-
-    /// <summary>
     /// Enable automatic user provisioning (Just-In-Time provisioning)
     /// When enabled, users will be automatically created in your database on first login
     /// </summary>
@@ -92,11 +87,6 @@ public enum AuthProvider
     /// Microsoft Azure Active Directory
     /// </summary>
     AzureAD,
-
-    /// <summary>
-    /// Clerk authentication service
-    /// </summary>
-    Clerk,
 
     /// <summary>
     /// Custom OpenID Connect provider

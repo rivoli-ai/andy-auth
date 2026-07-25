@@ -6,7 +6,7 @@ using System.Security.Claims;
 namespace Andy.Auth.Providers;
 
 /// <summary>
-/// Abstraction for authentication providers (Andy Auth, Azure AD, Clerk, etc.)
+/// Abstraction for authentication providers (Andy Auth, Azure AD, etc.)
 /// </summary>
 public interface IAuthProvider
 {
