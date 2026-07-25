@@ -528,6 +528,13 @@ builder.Services.AddScoped<IUserAccessRevoker, UserAccessRevoker>();
 // Register audit logging service
 builder.Services.AddScoped<IAuditService, AuditService>();
 
+// Register external-login / account-linking policy (andy-auth#119). Governs the
+// verified-email + tenant/issuer requirements and the local-vs-upstream 2FA
+// policy for federated sign-in. See docs/SECURITY.md ("External Login &
+// Account Linking").
+builder.Services.Configure<ExternalLoginOptions>(
+    builder.Configuration.GetSection(ExternalLoginOptions.SectionName));
+
 // Register Dynamic Client Registration (RFC 7591)
 builder.Services.Configure<DcrSettings>(builder.Configuration.GetSection(DcrSettings.SectionName));
 builder.Services.AddScoped<DcrService>();
