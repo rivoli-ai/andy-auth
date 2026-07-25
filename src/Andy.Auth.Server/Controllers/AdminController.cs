@@ -8,6 +8,13 @@ using OpenIddict.Abstractions;
 
 namespace Andy.Auth.Server.Controllers;
 
+// CSRF protection for every unsafe (POST/PUT/PATCH/DELETE) action on this
+// controller. All admin mutations are triggered by Razor form-tag-helper
+// forms, which already emit the antiforgery hidden field, so validating at
+// controller scope closes the gap on the destructive POSTs
+// (SuspendUser/DeleteUser/ResetPassword/RevokeAllTokens/…) without breaking
+// the read-only GET actions. See andy-auth#51.
+[AutoValidateAntiforgeryToken]
 [Authorize(Roles = "Admin", AuthenticationSchemes = "Identity.Application")]
 public class AdminController : Controller
 {
@@ -113,7 +120,6 @@ public class AdminController : Controller
     }
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateClient(CreateClientViewModel model)
     {
         if (!ModelState.IsValid)
@@ -257,7 +263,6 @@ public class AdminController : Controller
     }
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditClient(EditClientViewModel model)
     {
         if (!ModelState.IsValid)
@@ -346,7 +351,6 @@ public class AdminController : Controller
     }
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteClient(string clientId)
     {
         var application = await _applicationManager.FindByClientIdAsync(clientId);
@@ -368,7 +372,6 @@ public class AdminController : Controller
     }
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> RegenerateClientSecret(string clientId)
     {
         var application = await _applicationManager.FindByClientIdAsync(clientId);
@@ -655,7 +658,6 @@ public class AdminController : Controller
     }
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateUser(CreateUserViewModel model)
     {
         if (!ModelState.IsValid)
@@ -726,7 +728,6 @@ public class AdminController : Controller
     }
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> ChangeUserRole(string userId, string role)
     {
         if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(role))
@@ -1022,7 +1023,6 @@ public class AdminController : Controller
     }
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> ApproveDcrClient(string clientId)
     {
         var dcr = await _context.DynamicClientRegistrations
@@ -1048,7 +1048,6 @@ public class AdminController : Controller
     }
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> DisableDcrClient(string clientId, string? reason)
     {
         var dcr = await _context.DynamicClientRegistrations
@@ -1075,7 +1074,6 @@ public class AdminController : Controller
     }
 
     [HttpPost]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> EnableDcrClient(string clientId)
     {
         var dcr = await _context.DynamicClientRegistrations
