@@ -21,15 +21,18 @@ public class UsersApiController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IAuditService _auditService;
+    private readonly IUserAccessRevoker _accessRevoker;
     private readonly ILogger<UsersApiController> _logger;
 
     public UsersApiController(
         UserManager<ApplicationUser> userManager,
         IAuditService auditService,
+        IUserAccessRevoker accessRevoker,
         ILogger<UsersApiController> logger)
     {
         _userManager = userManager;
         _auditService = auditService;
+        _accessRevoker = accessRevoker;
         _logger = logger;
     }
 
@@ -223,6 +226,15 @@ public class UsersApiController : ControllerBase
         }
 
         await _userManager.UpdateAsync(user);
+
+        // Deactivating or back-dating the expiry through the generic update
+        // path disables the account just as surely as /suspend does
+        // (andy-auth#146).
+        if (!UserLifecycle.CanAuthenticate(user))
+        {
+            await _accessRevoker.RevokeAllAccessAsync(user, "Account disabled via update");
+        }
+
         await LogAuditAsync("UserUpdatedViaApi", user.Id, user.Email);
 
         var roles = await _userManager.GetRolesAsync(user);
@@ -260,6 +272,8 @@ public class UsersApiController : ControllerBase
         user.IsActive = false;
         await _userManager.UpdateAsync(user);
 
+        await _accessRevoker.RevokeAllAccessAsync(user, "Account deleted");
+
         await LogAuditAsync("UserDeletedViaApi", user.Id, user.Email);
         return NoContent();
     }
@@ -282,6 +296,9 @@ public class UsersApiController : ControllerBase
         user.SuspensionReason = request.Reason;
         user.SuspendedAt = DateTime.UtcNow;
         await _userManager.UpdateAsync(user);
+
+        // Suspension must also kill credentials already in flight (andy-auth#146).
+        await _accessRevoker.RevokeAllAccessAsync(user, "Account suspended");
 
         await LogAuditAsync("UserSuspendedViaApi", user.Id, user.Email, $"Reason: {request.Reason}");
 

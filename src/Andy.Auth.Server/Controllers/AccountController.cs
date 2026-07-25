@@ -75,8 +75,15 @@ public class AccountController : Controller
             return View(model);
         }
 
-        if (!user.IsActive)
+        // Lifecycle gate (andy-auth#146). AndyAuthSignInManager enforces the
+        // same predicate inside PasswordSignInAsync, but checking first lets us
+        // report the disabled-account message the UI expects instead of a bare
+        // IsNotAllowed result. The specific reason is logged, not shown.
+        var denialReason = UserLifecycle.GetDenialReason(user);
+        if (denialReason is not null)
         {
+            _logger.LogWarning(
+                "Login refused for {Email}: {Reason}", user.Email, denialReason);
             ModelState.AddModelError(string.Empty, "This account has been disabled.");
             return View(model);
         }
@@ -629,9 +636,12 @@ public class AccountController : Controller
         }
         else
         {
-            // User exists - check if account is active
-            if (!user.IsActive)
+            // User exists - check the account lifecycle gate (andy-auth#146)
+            var externalDenial = UserLifecycle.GetDenialReason(user);
+            if (externalDenial is not null)
             {
+                _logger.LogWarning(
+                    "External login refused for {Email}: {Reason}", user.Email, externalDenial);
                 ModelState.AddModelError(string.Empty, "This account has been disabled.");
                 return View("Login", new LoginViewModel { ReturnUrl = returnUrl });
             }
@@ -697,7 +707,7 @@ public class AccountController : Controller
         }
 
         var user = await _userManager.FindByEmailAsync(email);
-        if (user == null || !user.IsActive)
+        if (user == null || !UserLifecycle.CanAuthenticate(user))
         {
             return BadRequest(new { error = "Invalid credentials or inactive account" });
         }

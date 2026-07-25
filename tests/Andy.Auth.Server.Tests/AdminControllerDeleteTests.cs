@@ -21,6 +21,7 @@ public class AdminControllerDeleteTests
 {
     private readonly Mock<UserManager<ApplicationUser>> _mockUserManager;
     private readonly Mock<IAuditService> _mockAuditService;
+    private readonly Mock<IUserAccessRevoker> _accessRevokerMock;
     private readonly Mock<ILogger<AdminController>> _mockLogger;
     private readonly Mock<IOpenIddictApplicationManager> _mockApplicationManager;
     private readonly Mock<IOpenIddictTokenManager> _mockTokenManager;
@@ -31,6 +32,7 @@ public class AdminControllerDeleteTests
     {
         _mockUserManager = MockUserManager();
         _mockAuditService = new Mock<IAuditService>();
+        _accessRevokerMock = new Mock<IUserAccessRevoker>();
         _mockLogger = new Mock<ILogger<AdminController>>();
         _mockApplicationManager = new Mock<IOpenIddictApplicationManager>();
         _mockTokenManager = new Mock<IOpenIddictTokenManager>();
@@ -49,6 +51,7 @@ public class AdminControllerDeleteTests
             _mockTokenManager.Object,
             _mockAuthorizationManager.Object,
             _mockAuditService.Object,
+            _accessRevokerMock.Object,
             _mockLogger.Object);
 
         // Setup controller context with authenticated user

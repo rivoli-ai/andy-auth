@@ -12,6 +12,11 @@ using Microsoft.EntityFrameworkCore;
 using OpenIddict.Validation.AspNetCore;
 using OpenTelemetry.Trace;
 
+// Authorization policy gating the MCP tool endpoint. Declared here so the
+// registration site (AddAuthorization) and the mapping site (MapMcp) can't
+// drift apart.
+const string McpAdminPolicy = "McpAdmin";
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure Railway PORT environment variable
@@ -79,6 +84,9 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.SignIn.RequireConfirmedEmail = false; // Set to true when email is configured
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
+// Enforces the account lifecycle flags (suspended / expired / soft-deleted)
+// that stock CanSignInAsync ignores — see UserLifecycle (andy-auth#146).
+.AddSignInManager<AndyAuthSignInManager>()
 .AddDefaultTokenProviders();
 
 // Configure cookie authentication paths
@@ -364,10 +372,28 @@ builder.Services.AddAuthentication(options =>
 });
 
 // Configure authorization
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // The MCP tool surface (Mcp/AuthMcpTools.cs) is an admin surface: it can
+    // create/delete groups and add or remove any user from any group. Group
+    // membership is projected into the `groups` claim at token issuance and
+    // downstream services authorize on it, so an unauthenticated-role-checked
+    // /mcp let any token holder grant itself any group (andy-auth#145).
+    // Mirror the guard the equivalent REST controllers already carry:
+    // [Authorize(AuthenticationSchemes = OpenIddict validation, Roles = "Admin")].
+    options.AddPolicy(McpAdminPolicy, policy => policy
+        .AddAuthenticationSchemes(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
+        .RequireRole("Admin"));
+});
 
 // Register session management service
 builder.Services.AddScoped<SessionService>();
+
+// Tears down tokens/authorizations/sessions when an admin disables an account
+// (andy-auth#146) — blocking future sign-ins alone leaves existing refresh
+// tokens minting access tokens indefinitely.
+builder.Services.AddScoped<IUserAccessRevoker, UserAccessRevoker>();
 
 // Register audit logging service
 builder.Services.AddScoped<IAuditService, AuditService>();
@@ -575,7 +601,7 @@ app.MapAndyTelemetry();
 // Require authorization so clients (e.g., Claude Desktop) receive an OAuth challenge
 app.MapMcp("/mcp")
     .RequireCors("AllowMcpClients")
-    .RequireAuthorization();
+    .RequireAuthorization(McpAdminPolicy);
 
 // Seed database on startup
 using (var scope = app.Services.CreateScope())

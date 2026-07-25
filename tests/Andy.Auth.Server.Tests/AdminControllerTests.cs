@@ -24,6 +24,7 @@ public class AdminControllerTests : IDisposable
     private readonly Mock<IOpenIddictTokenManager> _tokenManagerMock;
     private readonly Mock<IOpenIddictAuthorizationManager> _authorizationManagerMock;
     private readonly Mock<IAuditService> _auditServiceMock;
+    private readonly Mock<IUserAccessRevoker> _accessRevokerMock;
     private readonly Mock<ILogger<AdminController>> _loggerMock;
     private readonly AdminController _controller;
 
@@ -43,6 +44,7 @@ public class AdminControllerTests : IDisposable
         _tokenManagerMock = new Mock<IOpenIddictTokenManager>();
         _authorizationManagerMock = new Mock<IOpenIddictAuthorizationManager>();
         _auditServiceMock = new Mock<IAuditService>();
+        _accessRevokerMock = new Mock<IUserAccessRevoker>();
         _loggerMock = new Mock<ILogger<AdminController>>();
 
         _controller = new AdminController(
@@ -52,6 +54,7 @@ public class AdminControllerTests : IDisposable
             _tokenManagerMock.Object,
             _authorizationManagerMock.Object,
             _auditServiceMock.Object,
+            _accessRevokerMock.Object,
             _loggerMock.Object);
 
         // Setup HttpContext with admin user
@@ -130,6 +133,10 @@ public class AdminControllerTests : IDisposable
         user.IsSuspended.Should().BeTrue();
         user.SuspensionReason.Should().Be("Policy violation");
         user.SuspendedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        // andy-auth#146: flagging the account is not enough — the credentials
+        // it already holds have to be torn down too.
+        _accessRevokerMock.Verify(
+            x => x.RevokeAllAccessAsync(user, It.IsAny<string>()), Times.Once);
         _controller.TempData["SuccessMessage"].Should().NotBeNull();
     }
 
@@ -203,6 +210,8 @@ public class AdminControllerTests : IDisposable
         redirect.ActionName.Should().Be("Users");
         user.DeletedAt.Should().NotBeNull();
         user.IsActive.Should().BeFalse();
+        _accessRevokerMock.Verify(
+            x => x.RevokeAllAccessAsync(user, It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
@@ -272,6 +281,27 @@ public class AdminControllerTests : IDisposable
         // Assert
         var redirect = result.Should().BeOfType<RedirectToActionResult>().Subject;
         user.ExpiresAt.Should().Be(expiresAt);
+        // A future expiry does not disable the account yet, so live
+        // credentials stay valid until the date passes (andy-auth#146).
+        _accessRevokerMock.Verify(
+            x => x.RevokeAllAccessAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SetExpiration_InThePast_RevokesAccessImmediately()
+    {
+        // Arrange
+        var user = new ApplicationUser { Id = "user-1", Email = "user@test.com" };
+        var expiresAt = DateTime.UtcNow.AddMinutes(-1);
+        _userManagerMock.Setup(x => x.FindByIdAsync("user-1")).ReturnsAsync(user);
+        _userManagerMock.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        await _controller.SetExpiration("user-1", expiresAt);
+
+        // Assert
+        _accessRevokerMock.Verify(
+            x => x.RevokeAllAccessAsync(user, It.IsAny<string>()), Times.Once);
     }
 
     [Fact]

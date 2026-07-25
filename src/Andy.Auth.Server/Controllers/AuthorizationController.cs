@@ -485,6 +485,23 @@ public class AuthorizationController : ControllerBase
                 "subject_token is not a valid access token issued by this server.");
         }
 
+        // 4b. The subject token proves only that this server minted it, not
+        //     that the account behind it is still permitted to authenticate.
+        //     Access tokens are unencrypted JWTs validated offline, so without
+        //     this lookup a token held from before a suspension/soft-delete
+        //     stayed exchangeable for the rest of its lifetime
+        //     (andy-auth#147). Same gate the other grants get via
+        //     AndyAuthSignInManager.CanSignInAsync.
+        var subjectUser = await _userManager.FindByIdAsync(validation.Subject);
+        if (subjectUser is null || !await _signInManager.CanSignInAsync(subjectUser))
+        {
+            _logger.LogWarning(
+                "Token-exchange rejected: subject {Subject} is unknown or may no longer sign in (actor {ActorClientId})",
+                validation.Subject, actorClientId);
+            return TokenExchangeError(Errors.InvalidGrant,
+                "subject_token is not a valid access token issued by this server.");
+        }
+
         // 5. Scope handling. If the policy has an explicit AllowedScopes
         //    list, the requested scopes (or, if none requested, the
         //    subject token's scopes) must be a subset of that list.
