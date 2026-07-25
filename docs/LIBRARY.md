@@ -809,7 +809,7 @@ Applications that previously used `Provider = AuthProvider.Clerk` must migrate t
 
 ## Support
 
-- **Documentation**: [docs/](../docs/)
+- **Documentation**: [docs/](./)
 - **Issues**: [GitHub Issues](https://github.com/rivoli-ai/andy-auth/issues)
 - **Server Docs**: [Andy.Auth.Server Documentation](./DEPLOYMENT.md)
 

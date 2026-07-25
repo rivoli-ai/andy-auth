@@ -388,14 +388,15 @@ HTTP Request
 ## Monitoring & Observability
 
 ### Logging
-- **Serilog** (future): Structured logging
+- **Microsoft.Extensions.Logging**: Structured logging via the default ASP.NET Core providers
 - **Log Levels**: Information, Warning, Error
 - **Audit Logs**: All auth events logged to database
 
-### Metrics
+### Metrics & Tracing
 - **Health Checks**: `/health` endpoint
-- **OpenTelemetry** (future): Distributed tracing
-- **Application Insights** (future): Performance monitoring
+- **OpenTelemetry**: Wired via `Andy.Telemetry` (`Program.cs` `AddAndyTelemetry`) — traces + metrics + Prometheus scrape; OTLP exports to Conductor's local receiver at `:4318` when running embedded
+- **Custom Activity Source / Meter**: `AuthTelemetry.ActivitySourceName` / `AuthTelemetry.MeterName` (see `Telemetry/AuthTelemetry.cs`)
+- **Application Insights** (future): Hosted APM
 
 ### Alerts
 - **Railway**: Built-in monitoring
