@@ -2,6 +2,7 @@ using Andy.Auth.Server.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
+using System.Security.Claims;
 
 namespace Andy.Auth.Server.Services;
 
@@ -39,6 +40,64 @@ public class AndyAuthSignInManager : SignInManager<ApplicationUser>
         IUserConfirmation<ApplicationUser> confirmation)
         : base(userManager, contextAccessor, claimsFactory, optionsAccessor, logger, schemes, confirmation)
     {
+    }
+
+    /// <summary>
+    /// The claim type carrying the stable per-sign-in session identifier.
+    /// </summary>
+    public const string SessionIdClaimType = "session_id";
+
+    /// <summary>
+    /// Stamps a stable <c>session_id</c> onto the principal.
+    /// </summary>
+    /// <remarks>
+    /// andy-auth#154. `SessionTrackingMiddleware`, `SessionController` and
+    /// `SessionApiController` all read a `session_id` claim, but nothing ever
+    /// issued one — so the middleware fell back to hashing the raw Identity
+    /// cookie. Sliding expiration re-issues that cookie, the hash changed, and
+    /// the middleware treated each renewal as a brand-new session: a fresh
+    /// UserSessions row, and the concurrency limit evicting the user's older
+    /// rows. Normal browsing manufactured and self-evicted sessions, and
+    /// logout couldn't correlate the rows it was meant to close.
+    /// <para>
+    /// Minting it here means it is baked into the auth cookie at sign-in and
+    /// survives every subsequent request. Re-issues of the principal —
+    /// `RefreshSignInAsync` after a password change, the periodic
+    /// security-stamp validation — carry the existing value forward from the
+    /// current request rather than starting a new session.
+    /// </para>
+    /// </remarks>
+    public override async Task<ClaimsPrincipal> CreateUserPrincipalAsync(ApplicationUser user)
+    {
+        var principal = await base.CreateUserPrincipalAsync(user);
+
+        if (principal.Identity is ClaimsIdentity identity &&
+            identity.FindFirst(SessionIdClaimType) is null)
+        {
+            identity.AddClaim(new Claim(
+                SessionIdClaimType,
+                CurrentSessionId() ?? Guid.NewGuid().ToString("N")));
+        }
+
+        return principal;
+    }
+
+    /// <summary>
+    /// The session id on the in-flight request, if any. Accessed defensively:
+    /// <see cref="SignInManager{TUser}.Context"/> throws when there is no
+    /// HttpContext, which is the normal case in unit tests and in any
+    /// background principal construction.
+    /// </summary>
+    private string? CurrentSessionId()
+    {
+        try
+        {
+            return Context?.User?.FindFirst(SessionIdClaimType)?.Value;
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
     }
 
     public override async Task<bool> CanSignInAsync(ApplicationUser user)

@@ -29,9 +29,12 @@ public class SessionTrackingMiddleware
 
     public async Task InvokeAsync(HttpContext context, SessionService sessionService, ApplicationDbContext dbContext)
     {
-        // Skip tracking for static files and health checks
-        var path = context.Request.Path.Value?.ToLowerInvariant() ?? "";
-        if (SkipPaths.Any(p => path.StartsWith(p)))
+        // Skip tracking for static files and health checks.
+        // StartsWithSegments, not string.StartsWith: the raw prefix compare also
+        // matched /healthz-internal, /connections, /jsonapi and anything else
+        // sharing a prefix, silently dropping them from session tracking
+        // (andy-auth#156).
+        if (SkipPaths.Any(p => IsSkipped(context.Request.Path, p)))
         {
             await _next(context);
             return;
@@ -45,11 +48,13 @@ public class SessionTrackingMiddleware
 
             if (!string.IsNullOrEmpty(sessionId) && !string.IsNullOrEmpty(userId))
             {
-                // Check if session exists in database
-                var sessionExists = await dbContext.UserSessions
-                    .AnyAsync(s => s.SessionId == sessionId);
+                // One load instead of an existence probe followed by a second
+                // read inside IsSessionValidAsync — this runs on every
+                // non-skipped authenticated request (andy-auth#154).
+                var session = await dbContext.UserSessions
+                    .FirstOrDefaultAsync(s => s.SessionId == sessionId);
 
-                if (!sessionExists)
+                if (session is null)
                 {
                     // Auto-create session for authenticated user (first request after login)
                     var ipAddress = context.Connection.RemoteIpAddress?.ToString();
@@ -67,8 +72,9 @@ public class SessionTrackingMiddleware
                 }
                 else
                 {
-                    // Validate session is still active
-                    var isValid = await sessionService.IsSessionValidAsync(sessionId);
+                    // Validate session is still active, reusing the row we just
+                    // loaded rather than reading it again.
+                    var isValid = await sessionService.IsSessionValidAsync(session);
 
                     if (!isValid)
                     {
@@ -103,27 +109,40 @@ public class SessionTrackingMiddleware
         await _next(context);
     }
 
+    /// <summary>
+    /// True when <paramref name="path"/> falls under <paramref name="prefix"/>.
+    /// </summary>
+    /// <remarks>
+    /// Segment-based, so `/healthz-internal` and `/connections` are no longer
+    /// swept up by the `/health` and `/connect` entries the way a raw
+    /// string.StartsWith did (andy-auth#156). The extra "prefix + dot" case
+    /// keeps `/favicon.ico` matching `/favicon`: it is a single segment, so
+    /// StartsWithSegments alone would miss it.
+    /// </remarks>
+    private static bool IsSkipped(PathString path, string prefix)
+    {
+        if (path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var value = path.Value;
+        return value is not null
+            && value.StartsWith(prefix + ".", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string? GetSessionId(HttpContext context)
     {
-        // Get session ID from claims or cookie
-        var sessionClaim = context.User.FindFirst("session_id");
-        if (sessionClaim != null)
-        {
-            return sessionClaim.Value;
-        }
-
-        // Fallback: use authentication ticket ID
-        if (context.Request.Cookies.TryGetValue(".AspNetCore.Identity.Application", out var cookie))
-        {
-            // Use a hash of the cookie as session ID
-            return Convert.ToBase64String(
-                System.Security.Cryptography.SHA256.HashData(
-                    System.Text.Encoding.UTF8.GetBytes(cookie)
-                )
-            )[..32];
-        }
-
-        return null;
+        // AndyAuthSignInManager stamps this at sign-in and carries it across
+        // principal re-issues, so it is stable for the life of the session.
+        //
+        // The previous fallback — SHA-256 of the raw Identity cookie — changed
+        // every time sliding expiration re-issued that cookie, so each renewal
+        // looked like a brand-new session: another UserSessions row, and the
+        // concurrency limit evicting the user's older rows (andy-auth#154).
+        // There is no fallback now; a request with no claim is simply not
+        // tracked, which is correct for bearer-token API calls.
+        return context.User.FindFirst(Services.AndyAuthSignInManager.SessionIdClaimType)?.Value;
     }
 
     private static bool IsApiRequest(HttpContext context)

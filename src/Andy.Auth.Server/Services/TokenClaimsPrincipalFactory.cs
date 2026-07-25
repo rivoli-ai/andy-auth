@@ -188,6 +188,14 @@ public class TokenClaimsPrincipalFactory
                 yield return Destinations.AccessToken;
                 yield break;
 
+            // Session identifier — access token only. SessionApiController
+            // resolves session truth for a bearer token from this claim
+            // (andy-auth#154); the identity token is for the client/UI and has
+            // no use for it.
+            case AndyAuthSignInManager.SessionIdClaimType:
+                yield return Destinations.AccessToken;
+                yield break;
+
             // Never include the security stamp in the access and identity
             // tokens, as it's a secret value.
             case "AspNet.Identity.SecurityStamp":

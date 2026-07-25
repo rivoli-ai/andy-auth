@@ -69,6 +69,7 @@ public class AuthorizationControllerTests
                 new RolePermissionResolver(
                     Microsoft.Extensions.Options.Options.Create(new RolePermissionOptions())),
                 _dbContext),
+            new DcrClientGate(_dbContext),
             _mockLogger.Object);
 
         _httpContext = new DefaultHttpContext();
