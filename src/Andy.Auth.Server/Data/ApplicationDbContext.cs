@@ -25,6 +25,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<UserConsent> UserConsents { get; set; }
 
     /// <summary>
+    /// Short-lived, single-use server-side consent approvals bridging the
+    /// consent screen and the authorization endpoint (issue #124).
+    /// </summary>
+    public DbSet<ConsentGrant> ConsentGrants { get; set; }
+
+    /// <summary>
     /// Active user sessions for session management.
     /// </summary>
     public DbSet<UserSession> UserSessions { get; set; }
@@ -84,6 +90,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasOne(c => c.User)
                 .WithMany()
                 .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure ConsentGrant entity (issue #124)
+        builder.Entity<ConsentGrant>(entity =>
+        {
+            entity.HasIndex(g => g.GrantId).IsUnique();
+            entity.HasIndex(g => new { g.ExpiresAt, g.ConsumedAt }); // cleanup queries
+            entity.Property(g => g.GrantId).HasMaxLength(128).IsRequired();
+            entity.Property(g => g.UserId).HasMaxLength(450).IsRequired();
+            entity.Property(g => g.ClientId).HasMaxLength(100).IsRequired();
+            entity.Property(g => g.RedirectUri).HasMaxLength(2000);
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(g => g.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

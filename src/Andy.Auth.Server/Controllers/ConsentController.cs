@@ -1,5 +1,6 @@
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Models;
+using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,7 @@ public class ConsentController : Controller
     private readonly IOpenIddictScopeManager _scopeManager;
     private readonly ApplicationDbContext _dbContext;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ConsentGrantService _consentGrantService;
     private readonly ILogger<ConsentController> _logger;
 
     // Friendly descriptions for standard scopes
@@ -35,12 +37,14 @@ public class ConsentController : Controller
         IOpenIddictScopeManager scopeManager,
         ApplicationDbContext dbContext,
         UserManager<ApplicationUser> userManager,
+        ConsentGrantService consentGrantService,
         ILogger<ConsentController> logger)
     {
         _applicationManager = applicationManager;
         _scopeManager = scopeManager;
         _dbContext = dbContext;
         _userManager = userManager;
+        _consentGrantService = consentGrantService;
         _logger = logger;
     }
 
@@ -109,50 +113,77 @@ public class ConsentController : Controller
             return Redirect(errorUrl);
         }
 
-        // User allowed - save consent
+        // User allowed - determine the approved scope subset.
         var scopesConsented = model.ScopesConsented ?? new List<string>();
 
-        // Always include openid scope if it was requested
-        if (query.TryGetValue("scope", out var scopeValues))
+        // Recover the full requested scope set and the redirect URI from the
+        // original authorization request so the grant can be bound to them.
+        var requestedScopes = query.TryGetValue("scope", out var scopeValues)
+            ? (scopeValues.First()?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>())
+            : Array.Empty<string>();
+        var redirectUri = query.TryGetValue("redirect_uri", out var redirectValues)
+            ? redirectValues.FirstOrDefault()
+            : null;
+
+        // Always include the openid scope if it was requested.
+        if (requestedScopes.Contains("openid") && !scopesConsented.Contains("openid"))
         {
-            var requestedScopes = scopeValues.First()?.Split(' ') ?? Array.Empty<string>();
-            if (requestedScopes.Contains("openid") && !scopesConsented.Contains("openid"))
+            scopesConsented.Add("openid");
+        }
+
+        // Never allow the user's "approved" set to contain a scope that was not
+        // actually requested (defence in depth against a tampered form post).
+        scopesConsented = scopesConsented
+            .Where(s => requestedScopes.Contains(s))
+            .Distinct()
+            .ToList();
+
+        // Persist the durable "remember" consent only when the user asked us
+        // to. A non-remembered decision must NOT create a long-lived record —
+        // the short-lived ConsentGrant below authorizes just this one request.
+        if (model.RememberConsent)
+        {
+            var existingConsent = await _dbContext.UserConsents
+                .FirstOrDefaultAsync(c => c.UserId == userId && c.ClientId == clientId);
+
+            if (existingConsent != null)
             {
-                scopesConsented.Add("openid");
+                existingConsent.SetScopes(scopesConsented);
+                existingConsent.GrantedAt = DateTime.UtcNow;
+                existingConsent.RememberConsent = true;
+                existingConsent.ExpiresAt = DateTime.UtcNow.AddDays(90);
+            }
+            else
+            {
+                var newConsent = new UserConsent
+                {
+                    UserId = userId,
+                    ClientId = clientId,
+                    RememberConsent = true,
+                    ExpiresAt = DateTime.UtcNow.AddDays(90)
+                };
+                newConsent.SetScopes(scopesConsented);
+                _dbContext.UserConsents.Add(newConsent);
             }
         }
 
-        // Save or update consent
-        var existingConsent = await _dbContext.UserConsents
-            .FirstOrDefaultAsync(c => c.UserId == userId && c.ClientId == clientId);
-
-        if (existingConsent != null)
-        {
-            existingConsent.SetScopes(scopesConsented);
-            existingConsent.GrantedAt = DateTime.UtcNow;
-            existingConsent.RememberConsent = model.RememberConsent;
-            existingConsent.ExpiresAt = model.RememberConsent ? DateTime.UtcNow.AddDays(90) : null;
-        }
-        else
-        {
-            var newConsent = new UserConsent
-            {
-                UserId = userId,
-                ClientId = clientId,
-                RememberConsent = model.RememberConsent,
-                ExpiresAt = model.RememberConsent ? DateTime.UtcNow.AddDays(90) : null
-            };
-            newConsent.SetScopes(scopesConsented);
-            _dbContext.UserConsents.Add(newConsent);
-        }
-
+        // Persist any durable "remember" consent recorded above.
         await _dbContext.SaveChangesAsync();
 
-        _logger.LogInformation("User {UserId} granted consent for client {ClientId} with scopes: {Scopes}",
-            userId, clientId, string.Join(", ", scopesConsented));
+        // Create the short-lived, single-use, server-side consent grant that
+        // authorizes this specific request. This replaces the old
+        // client-forgeable consent_granted=true marker (issue #124): the
+        // authorization endpoint validates and consumes this record rather
+        // than trusting any query parameter.
+        var grant = await _consentGrantService.CreateAsync(
+            userId, clientId, redirectUri, requestedScopes, scopesConsented);
 
-        // Add consent granted marker to return URL
-        var consentUrl = AppendQueryString(model.ReturnUrl, "consent_granted", "true");
+        _logger.LogInformation(
+            "User {UserId} granted consent for client {ClientId}. Approved scopes: {Scopes}, Remember: {Remember}",
+            userId, clientId, string.Join(", ", scopesConsented), model.RememberConsent);
+
+        // Hand the (unguessable) grant id back to the authorization endpoint.
+        var consentUrl = AppendQueryString(model.ReturnUrl, "consent_id", grant.GrantId);
         return Redirect(consentUrl);
     }
 

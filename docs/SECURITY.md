@@ -130,6 +130,66 @@ Passwords are automatically hashed using PBKDF2 with a random salt before storag
 
 **Code Location**: `Program.cs:41-102`
 
+### 9a. Consent Integrity (server-side consent state)
+
+**Implementation**: `Services/ConsentGrantService.cs`, `Data/ConsentGrant.cs`,
+`Controllers/ConsentController.cs`, `Controllers/AuthorizationController.cs`
+
+For clients configured with **explicit** (interactive) consent, the
+authorization endpoint must never treat the consent decision as something the
+client can assert. The authorization request is fully client-controlled, so any
+value carried in it — a query parameter, a form field — is attacker-controllable.
+
+**Invariant**: The authorization endpoint issues an authorization code for an
+explicit-consent client only when it can find, validate, and consume a
+**server-side consent grant** that the consent UI created for *this* approval.
+The code (and the resulting tokens) carry **only the scopes the user actually
+approved** — never the raw requested scope set.
+
+A `ConsentGrant` record binds an approval to:
+
+- the **authenticated user** (`sub`),
+- the **client id**,
+- the **redirect URI**,
+- the **exact set of requested scopes** the user was shown,
+- the **approved scope subset** (what actually gets issued), and
+- a **short expiry** (5 minutes — long enough to survive the redirect back from
+  the consent screen, no longer).
+
+Only an unguessable, cryptographically-random grant id (`consent_id`) travels
+back through the browser. The authorization endpoint looks the grant up by that
+id and enforces every binding above before issuing anything. A grant is
+**single-use**: it is marked consumed the moment it is honoured.
+
+This closes the previous vulnerability (issue #124) where the endpoint trusted a
+client-supplied `consent_granted=true` query marker as proof of consent and then
+issued every requested scope. That marker has been removed entirely.
+
+**Protections and their negative-path tests**
+(`Services/ConsentGrantServiceTests.cs`, `ConsentControllerTests.cs`):
+
+- **Forgery** — a fabricated/absent `consent_id` matches no server-side grant, so
+  consent cannot be self-asserted by the client.
+- **Replay** — a consumed grant is rejected on any subsequent use. Consumption
+  is **atomic**: the grant is claimed with a conditional
+  `UPDATE ... SET ConsumedAt = now WHERE ConsumedAt IS NULL`, so even two
+  requests replaying the same `consent_id` concurrently result in exactly one
+  success (covered by a concurrency test firing N simultaneous consumes).
+- **Expiry** — a grant past its short TTL is rejected.
+- **Tampering** — a request whose user, client, redirect URI, or requested-scope
+  set differs from the recorded grant is rejected and re-prompts for consent
+  (this defeats post-consent scope escalation via the redirect).
+- **Partial consent** — when the user approves a subset, only that subset is
+  recorded and issued; the de-selected scopes never reach a token.
+- **Non-remembered consent** — a "don't remember" decision creates no durable
+  record; only the short-lived grant authorizes that single request.
+
+> **Housekeeping (follow-up, not security-critical):** consumed/expired grants
+> are inert but are not yet pruned by any background job, so the `ConsentGrants`
+> table grows over time. The `(ExpiresAt, ConsumedAt)` index is in place so a
+> future scheduled reaper can delete `ConsumedAt IS NOT NULL OR ExpiresAt < now`
+> cheaply.
+
 ### 10. Database Security
 
 **Implementation**: PostgreSQL + Entity Framework Core

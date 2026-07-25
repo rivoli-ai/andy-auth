@@ -1,6 +1,7 @@
 using Andy.Auth.Server.Controllers;
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Models;
+using Andy.Auth.Server.Services;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -40,11 +41,15 @@ public class ConsentControllerTests : IDisposable
         _userManagerMock = new Mock<UserManager<ApplicationUser>>(
             store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
+        var consentGrantService = new ConsentGrantService(
+            _context, Mock.Of<ILogger<ConsentGrantService>>());
+
         _controller = new ConsentController(
             _applicationManagerMock.Object,
             _scopeManagerMock.Object,
             _context,
             _userManagerMock.Object,
+            consentGrantService,
             _loggerMock.Object);
 
         SetupHttpContext();
@@ -251,9 +256,11 @@ public class ConsentControllerTests : IDisposable
         // Act
         var result = await _controller.Index(model);
 
-        // Assert
+        // Assert: the redirect now carries an unguessable server-side grant id,
+        // NOT the old client-forgeable consent_granted=true marker (issue #124).
         var redirect = result.Should().BeOfType<RedirectResult>().Subject;
-        redirect.Url.Should().Contain("consent_granted=true");
+        redirect.Url.Should().Contain("consent_id=");
+        redirect.Url.Should().NotContain("consent_granted");
 
         var savedConsent = await _context.UserConsents
             .FirstOrDefaultAsync(c => c.UserId == _testUserId && c.ClientId == "test-client");
@@ -262,10 +269,20 @@ public class ConsentControllerTests : IDisposable
         savedConsent.ScopesList.Should().Contain("profile");
         savedConsent.RememberConsent.Should().BeTrue();
         savedConsent.ExpiresAt.Should().NotBeNull();
+
+        // A short-lived, single-use consent grant was created bound to this
+        // user, client and the approved scope subset.
+        var grant = await _context.ConsentGrants
+            .FirstOrDefaultAsync(g => g.UserId == _testUserId && g.ClientId == "test-client");
+        grant.Should().NotBeNull();
+        grant!.GrantedScopesList.Should().BeEquivalentTo(new[] { "openid", "profile" });
+        grant.ConsumedAt.Should().BeNull();
+        grant.ExpiresAt.Should().BeAfter(DateTime.UtcNow);
+        redirect.Url.Should().Contain(Uri.EscapeDataString(grant.GrantId));
     }
 
     [Fact]
-    public async Task Index_Post_NoRemember_ConsentDoesNotExpire()
+    public async Task Index_Post_NoRemember_DoesNotPersistDurableConsent()
     {
         // Arrange
         var model = new ConsentInputModel
@@ -277,14 +294,22 @@ public class ConsentControllerTests : IDisposable
         };
 
         // Act
-        await _controller.Index(model);
+        var result = await _controller.Index(model);
 
-        // Assert
+        // Assert: a non-remembered decision must NOT create a durable
+        // UserConsent (which — with a null expiry — would otherwise be valid
+        // forever). Only the short-lived grant authorizes this one request.
         var savedConsent = await _context.UserConsents
             .FirstOrDefaultAsync(c => c.UserId == _testUserId && c.ClientId == "test-client");
-        savedConsent.Should().NotBeNull();
-        savedConsent!.RememberConsent.Should().BeFalse();
-        savedConsent.ExpiresAt.Should().BeNull();
+        savedConsent.Should().BeNull();
+
+        var grant = await _context.ConsentGrants
+            .FirstOrDefaultAsync(g => g.UserId == _testUserId && g.ClientId == "test-client");
+        grant.Should().NotBeNull();
+        grant!.GrantedScopesList.Should().BeEquivalentTo(new[] { "openid" });
+
+        var redirect = result.Should().BeOfType<RedirectResult>().Subject;
+        redirect.Url.Should().Contain("consent_id=");
     }
 
     [Fact]
@@ -331,6 +356,59 @@ public class ConsentControllerTests : IDisposable
             ReturnUrl = "/authorize?client_id=test-client&scope=openid profile",
             Decision = "allow",
             ScopesConsented = new List<string> { "profile" }, // User didn't check openid but it was requested
+            RememberConsent = true
+        };
+
+        // Act
+        await _controller.Index(model);
+
+        // Assert: openid is force-included in both the durable consent and the grant.
+        var savedConsent = await _context.UserConsents
+            .FirstOrDefaultAsync(c => c.UserId == _testUserId && c.ClientId == "test-client");
+        savedConsent!.ScopesList.Should().Contain("openid");
+        savedConsent.ScopesList.Should().Contain("profile");
+
+        var grant = await _context.ConsentGrants
+            .FirstOrDefaultAsync(g => g.UserId == _testUserId && g.ClientId == "test-client");
+        grant!.GrantedScopesList.Should().Contain("openid");
+        grant.GrantedScopesList.Should().Contain("profile");
+    }
+
+    [Fact]
+    public async Task Index_Post_PartialConsent_GrantRecordsOnlyApprovedSubset()
+    {
+        // Arrange: client requests three scopes, user approves only two.
+        var model = new ConsentInputModel
+        {
+            ReturnUrl = "/authorize?client_id=test-client&scope=openid profile email",
+            Decision = "allow",
+            ScopesConsented = new List<string> { "openid", "profile" }, // email deselected
+            RememberConsent = false
+        };
+
+        // Act
+        await _controller.Index(model);
+
+        // Assert: the grant records the FULL requested set (for binding) but only
+        // the APPROVED subset (for issuance).
+        var grant = await _context.ConsentGrants
+            .FirstOrDefaultAsync(g => g.UserId == _testUserId && g.ClientId == "test-client");
+        grant.Should().NotBeNull();
+        grant!.RequestedScopesList.Should().BeEquivalentTo(new[] { "openid", "profile", "email" });
+        grant.GrantedScopesList.Should().BeEquivalentTo(new[] { "openid", "profile" });
+        grant.GrantedScopesList.Should().NotContain("email");
+    }
+
+    [Fact]
+    public async Task Index_Post_DropsApprovedScopeThatWasNotRequested()
+    {
+        // Arrange: a tampered form post claims approval for a scope that was
+        // never part of the request. It must be discarded.
+        var model = new ConsentInputModel
+        {
+            ReturnUrl = "/authorize?client_id=test-client&scope=openid profile",
+            Decision = "allow",
+            ScopesConsented = new List<string> { "openid", "profile", "admin" },
             RememberConsent = false
         };
 
@@ -338,10 +416,28 @@ public class ConsentControllerTests : IDisposable
         await _controller.Index(model);
 
         // Assert
-        var savedConsent = await _context.UserConsents
-            .FirstOrDefaultAsync(c => c.UserId == _testUserId && c.ClientId == "test-client");
-        savedConsent!.ScopesList.Should().Contain("openid");
-        savedConsent.ScopesList.Should().Contain("profile");
+        var grant = await _context.ConsentGrants
+            .FirstOrDefaultAsync(g => g.UserId == _testUserId && g.ClientId == "test-client");
+        grant!.GrantedScopesList.Should().BeEquivalentTo(new[] { "openid", "profile" });
+        grant.GrantedScopesList.Should().NotContain("admin");
+    }
+
+    [Fact]
+    public async Task Index_Post_UserDenies_DoesNotCreateGrant()
+    {
+        // Arrange
+        var model = new ConsentInputModel
+        {
+            ReturnUrl = "/authorize?client_id=test-client&scope=openid profile",
+            Decision = "deny"
+        };
+
+        // Act
+        await _controller.Index(model);
+
+        // Assert: denial creates neither a durable consent nor a grant.
+        (await _context.ConsentGrants.AnyAsync()).Should().BeFalse();
+        (await _context.UserConsents.AnyAsync()).Should().BeFalse();
     }
 
     [Fact]
