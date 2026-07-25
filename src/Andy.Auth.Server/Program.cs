@@ -443,6 +443,9 @@ builder.Services.AddScoped<IAuditService, AuditService>();
 // Register Dynamic Client Registration (RFC 7591)
 builder.Services.Configure<DcrSettings>(builder.Configuration.GetSection(DcrSettings.SectionName));
 builder.Services.AddScoped<DcrService>();
+// #120 — startup sweep that removes orphaned DCR applications/tokens left by
+// any pre-fix partial registration.
+builder.Services.AddScoped<DcrReconciliationService>();
 
 // Register RFC 8693 Token Exchange policy (Epic IDP — rivoli-ai/conductor#1246).
 // The TokenExchange:Policies allow-list gates which actor client_ids may
@@ -757,6 +760,11 @@ using (var scope = app.Services.CreateScope())
             services.GetRequiredService<ILogger<DbSeeder>>(),
             services.GetRequiredService<IHostEnvironment>());
         await seeder.SeedAsync();
+
+        // #120 — reconcile orphaned DCR registrations left by any interrupted
+        // registration from before the atomic-registration transaction shipped.
+        var reconciler = services.GetRequiredService<DcrReconciliationService>();
+        await reconciler.ReconcileAsync();
     }
     catch (Exception ex)
     {
