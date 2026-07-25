@@ -130,10 +130,52 @@ public class CspHeaderTests : IDisposable
 
     private static string ResolveRepoFile(string relativePath, [CallerFilePath] string testFilePath = "")
     {
-        // testFilePath -> .../tests/Andy.Auth.Server.Tests/CspHeaderTests.cs
-        var testProjectDir = Path.GetDirectoryName(testFilePath)!;
-        var repoRoot = Path.GetFullPath(Path.Combine(testProjectDir, "..", ".."));
+        // CallerFilePath alone is not enough. Directory.Build.props sets
+        // ContinuousIntegrationBuild under GITHUB_ACTIONS, which turns on
+        // deterministic source-path mapping — so in CI this arrives as
+        // "/_/tests/Andy.Auth.Server.Tests/CspHeaderTests.cs" and the file
+        // never resolves. That is why this assertion passed locally and failed
+        // on every CI run after central package management landed.
+        //
+        // Prefer the compile-time path when it actually exists (the local
+        // developer case), otherwise walk up from the test binary looking for
+        // the solution file.
+        var testProjectDir = Path.GetDirectoryName(testFilePath);
+        if (!string.IsNullOrEmpty(testProjectDir) && Directory.Exists(testProjectDir))
+        {
+            var mapped = Path.GetFullPath(Path.Combine(testProjectDir, "..", ".."));
+            var candidate = Path.Combine(mapped, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        var repoRoot = FindRepoRoot()
+            ?? throw new InvalidOperationException(
+                "Could not locate the repository root (no andy-auth.sln found walking up from " +
+                $"{AppContext.BaseDirectory}).");
+
         return Path.Combine(repoRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
+    }
+
+    /// <summary>
+    /// Walks up from the test assembly until it finds the directory holding
+    /// andy-auth.sln. Independent of source-path mapping, so it works under a
+    /// deterministic CI build.
+    /// </summary>
+    private static string? FindRepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "andy-auth.sln")))
+            {
+                return dir.FullName;
+            }
+            dir = dir.Parent;
+        }
+        return null;
     }
 
     private static void AssertRestrictiveDirectives(string csp)
