@@ -1372,4 +1372,114 @@ public class AccountControllerTests
             .Select(e => e.ErrorMessage)
             .Single());
     }
+
+    // ==================== andy-auth#53: TestLogin hardening ====================
+
+    /// <summary>
+    /// Builds the controller with a specific hosting environment and caller
+    /// address — the two gates TestLogin now gets past before it will
+    /// authenticate anyone.
+    /// </summary>
+    private AccountController BuildTestLoginController(string environment, System.Net.IPAddress? remoteIp)
+    {
+        var controller = BuildController(new ExternalLoginOptions());
+
+        var env = new Mock<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
+        env.SetupGet(x => x.EnvironmentName).Returns(environment);
+
+        var services = new ServiceCollection();
+        services.AddSingleton(_mockAuthService.Object);
+        services.AddSingleton(env.Object);
+
+        var httpContext = controller.ControllerContext.HttpContext;
+        httpContext.RequestServices = services.BuildServiceProvider();
+        httpContext.Connection.RemoteIpAddress = remoteIp;
+
+        return controller;
+    }
+
+    [Fact]
+    public async Task TestLogin_InProduction_Returns404()
+    {
+        var controller = BuildTestLoginController("Production", System.Net.IPAddress.Loopback);
+
+        var result = await controller.TestLogin("test@andy.local", "Test123!");
+
+        result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Theory]
+    [InlineData("203.0.113.5")]   // TEST-NET-3 — off-host
+    [InlineData("10.0.0.7")]      // private, still not this machine
+    public async Task TestLogin_FromNonLoopback_Returns404_EvenInDevelopment(string ip)
+    {
+        // The whole point of the second gate: a mis-set ASPNETCORE_ENVIRONMENT
+        // is no longer sufficient on its own to expose a keyless password-spray
+        // endpoint to the network.
+        var controller = BuildTestLoginController("Development", System.Net.IPAddress.Parse(ip));
+
+        var result = await controller.TestLogin("test@andy.local", "Test123!");
+
+        result.Should().BeOfType<NotFoundResult>();
+        _mockSignInManager.Verify(x => x.PasswordSignInAsync(
+            It.IsAny<ApplicationUser>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task TestLogin_WithUnknownRemoteAddress_Returns404()
+    {
+        var controller = BuildTestLoginController("Development", remoteIp: null);
+
+        var result = await controller.TestLogin("test@andy.local", "Test123!");
+
+        result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Theory]
+    [InlineData("127.0.0.1")]
+    [InlineData("::1")]
+    public async Task TestLogin_FromLoopbackInLocalEnvironment_StillWorks(string ip)
+    {
+        // Conductor's DevAutoSignIn reaches this over the embedded loopback
+        // proxy; hardening must not break the one legitimate caller.
+        var user = new ApplicationUser
+        {
+            Id = "u1", Email = "test@andy.local", UserName = "test@andy.local", IsActive = true
+        };
+        _mockUserManager.Setup(m => m.FindByEmailAsync("test@andy.local")).ReturnsAsync(user);
+        _mockUserManager.Setup(m => m.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
+        _mockSignInManager.Setup(m => m.PasswordSignInAsync(user, "Test123!", false, true))
+            .ReturnsAsync(SignInResult.Success);
+
+        var controller = BuildTestLoginController("Embedded", System.Net.IPAddress.Parse(ip));
+
+        var result = await controller.TestLogin("test@andy.local", "Test123!");
+
+        result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task TestLogin_CountsFailuresTowardLockout()
+    {
+        // Exempting this endpoint from lockout made it the one unthrottled
+        // password oracle in the system — a strictly easier target than the
+        // sign-in form it shadows.
+        var user = new ApplicationUser
+        {
+            Id = "u1", Email = "test@andy.local", UserName = "test@andy.local", IsActive = true
+        };
+        _mockUserManager.Setup(m => m.FindByEmailAsync("test@andy.local")).ReturnsAsync(user);
+        _mockSignInManager.Setup(m => m.PasswordSignInAsync(
+                It.IsAny<ApplicationUser>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .ReturnsAsync(SignInResult.Failed);
+
+        var controller = BuildTestLoginController("Development", System.Net.IPAddress.Loopback);
+
+        await controller.TestLogin("test@andy.local", "wrong");
+
+        _mockSignInManager.Verify(x => x.PasswordSignInAsync(
+            It.IsAny<ApplicationUser>(), It.IsAny<string>(), It.IsAny<bool>(), true),
+            Times.Once);
+    }
 }

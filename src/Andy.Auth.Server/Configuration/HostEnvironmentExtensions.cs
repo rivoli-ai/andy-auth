@@ -53,21 +53,34 @@ public static class HostEnvironmentExtensions
     }
 
     /// <summary>
-    /// True when the service is running in any non-production mode
-    /// (Development, Docker, or Embedded). Use for behaviors that
-    /// are safe across all local-development deployment shapes —
-    /// e.g. disabling HTTPS metadata requirement for the OIDC
-    /// discovery document when talking to andy-auth over plain HTTP
-    /// through a local proxy.
+    /// True only for the three modes that run on an operator's own machine:
+    /// Development, Docker, and Embedded. Use for behaviours that are safe
+    /// because nothing outside the host can reach the service — e.g. relaxing
+    /// the HTTPS metadata requirement when the OIDC discovery document is
+    /// fetched over plain HTTP through a local proxy.
     ///
-    /// Do NOT use for behaviors that leak sensitive information
-    /// (Swagger UI, developer exception pages, permission bypass) —
-    /// those must stay gated off <see cref="IHostEnvironment.IsDevelopment"/>
-    /// so the shipping Conductor app does not expose them.
+    /// Do NOT use for behaviours that leak sensitive information (Swagger UI,
+    /// developer exception pages, permission bypass) — those must stay gated on
+    /// <see cref="HostEnvironmentExtensions.IsDevelopment"/> so the shipping
+    /// Conductor app does not expose them.
     /// </summary>
+    /// <remarks>
+    /// This was implemented as <c>!environment.IsProduction()</c>, which made it
+    /// return true for UAT and Staging — neither of which is local, and UAT is
+    /// internet-facing. Two security gates read it and were therefore far wider
+    /// than they appeared: the seeding of `test@andy.local` with a published
+    /// password (andy-auth#54) and the keyless `TestLogin` endpoint
+    /// (andy-auth#53) were both live on UAT.
+    /// <para>
+    /// That the name never matched the behaviour is visible in Program.cs, which
+    /// writes <c>IsLocalOrEmbedded() || IsEnvironment("Staging") ||
+    /// IsEnvironment("UAT")</c> — clauses that would be dead code if this
+    /// already covered them.
+    /// </para>
+    /// </remarks>
     public static bool IsLocalOrEmbedded(this IHostEnvironment environment)
     {
         ArgumentNullException.ThrowIfNull(environment);
-        return !environment.IsProduction();
+        return environment.IsDevelopment() || environment.IsDocker() || environment.IsEmbedded();
     }
 }

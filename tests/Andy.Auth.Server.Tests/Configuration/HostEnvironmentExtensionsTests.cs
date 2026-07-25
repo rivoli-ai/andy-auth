@@ -38,12 +38,28 @@ public class HostEnvironmentExtensionsTests
     [InlineData("Development", true)]
     [InlineData("Docker", true)]
     [InlineData("Embedded", true)]
-    [InlineData("UAT", true)]
+    // UAT and Staging are NOT local. This helper was implemented as
+    // `!IsProduction()`, so it claimed they were — and two security gates read
+    // it: the seeding of test@andy.local with a published password
+    // (andy-auth#54) and the keyless TestLogin endpoint (andy-auth#53) were
+    // both live on internet-facing UAT as a result.
+    [InlineData("UAT", false)]
+    [InlineData("Staging", false)]
     [InlineData("Production", false)]
-    public void IsLocalOrEmbedded_ReturnsTrueForAllNonProductionEnvs(string envName, bool expected)
+    public void IsLocalOrEmbedded_IsTrueOnlyForOnHostEnvironments(string envName, bool expected)
     {
         var env = new FakeHostEnvironment { EnvironmentName = envName };
         env.IsLocalOrEmbedded().Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("development")]
+    [InlineData("EMBEDDED")]
+    [InlineData("docker")]
+    public void IsLocalOrEmbedded_IsCaseInsensitive(string envName)
+    {
+        var env = new FakeHostEnvironment { EnvironmentName = envName };
+        env.IsLocalOrEmbedded().Should().BeTrue();
     }
 
     [Fact]

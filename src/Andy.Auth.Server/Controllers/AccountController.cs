@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Claims;
 using Andy.Auth.Server.Configuration;
 using Andy.Auth.Server.Data;
@@ -1106,6 +1107,23 @@ public class AccountController : Controller
     /// here, `DevAutoSignIn` in Conductor gets a 404 and the user
     /// can't sign in to any Conductor feature.
     /// </summary>
+    /// <remarks>
+    /// andy-auth#53. This was a keyless password-spray endpoint: no antiforgery
+    /// token, <c>lockoutOnFailure: false</c>, and a single environment-string
+    /// check standing between it and the internet. Two things changed.
+    /// <para>
+    /// It now refuses any request that did not arrive over loopback, so a
+    /// mis-set <c>ASPNETCORE_ENVIRONMENT</c> is no longer sufficient on its own
+    /// to expose it — an attacker would also have to be executing on the host.
+    /// That still covers the only legitimate caller, Conductor's
+    /// <c>DevAutoSignIn</c> over the embedded loopback proxy.
+    /// </para>
+    /// <para>
+    /// Failures also count toward lockout now. Exempting them made this the one
+    /// unthrottled password oracle in the system, and made it a strictly easier
+    /// target than the real sign-in form it shadows.
+    /// </para>
+    /// </remarks>
     [HttpPost("~/Account/TestLogin")]
     [IgnoreAntiforgeryToken]
     public async Task<IActionResult> TestLogin([FromForm] string email, [FromForm] string password, [FromForm] string? returnUrl = null)
@@ -1120,6 +1138,19 @@ public class AccountController : Controller
             return NotFound();
         }
 
+        // Second, independent gate (andy-auth#53). RemoteIpAddress is the
+        // address resolved by the ForwardedHeaders middleware, which only
+        // honours forwarding headers from trusted peers (andy-auth#125) — and
+        // in local/embedded modes that trust set is loopback only, so this
+        // cannot be spoofed from off-host.
+        var remoteIp = HttpContext.Connection.RemoteIpAddress;
+        if (remoteIp is null || !IPAddress.IsLoopback(remoteIp))
+        {
+            _logger.LogWarning(
+                "TestLogin refused: request from non-loopback address {RemoteIp}", remoteIp);
+            return NotFound();
+        }
+
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null || !UserLifecycle.CanAuthenticate(user))
         {
@@ -1130,7 +1161,7 @@ public class AccountController : Controller
             user,
             password,
             isPersistent: false,
-            lockoutOnFailure: false);
+            lockoutOnFailure: true);
 
         if (result.Succeeded)
         {

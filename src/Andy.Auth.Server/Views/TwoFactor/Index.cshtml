@@ -276,7 +276,7 @@
             </div>
 
             <div class="action-buttons">
-                <a asp-action="ShowRecoveryCodes" class="btn btn-secondary">
+                <a asp-action="GenerateRecoveryCodes" class="btn btn-secondary">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/>
                         <rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/>
@@ -285,7 +285,7 @@
                     </svg>
                     Regenerate Codes
                 </a>
-                <form asp-action="ResetAuthenticator" method="post" style="margin: 0;">
+                <form asp-action="ResetAuthenticator" method="get" style="margin: 0;">
                     <button type="submit" class="btn btn-secondary" onclick="return confirm('This will invalidate your current authenticator. Are you sure?');">
                         Reset Authenticator
                     </button>
