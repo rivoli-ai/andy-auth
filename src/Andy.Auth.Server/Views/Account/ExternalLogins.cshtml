@@ -1,0 +1,198 @@
+@model Andy.Auth.Server.Models.ExternalLoginsViewModel
+@{
+    ViewData["Title"] = "External Logins";
+}
+
+<style>
+    .external-page {
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .page-description {
+        color: var(--text-muted);
+        margin-bottom: 2rem;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .alert-success {
+        background: rgba(40, 167, 69, 0.1);
+        border: 1px solid rgba(40, 167, 69, 0.3);
+        color: var(--success);
+    }
+
+    .alert-danger {
+        background: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.3);
+        color: var(--danger);
+    }
+
+    .status-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .card-hint {
+        color: var(--text-muted);
+        font-size: 0.875rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .login-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.875rem 0;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .login-row:last-child {
+        border-bottom: none;
+    }
+
+    .provider-name {
+        font-weight: 500;
+    }
+
+    .provider-key {
+        color: var(--text-muted);
+        font-size: 0.8125rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .empty-state {
+        color: var(--text-muted);
+        padding: 0.5rem 0;
+    }
+
+    .link-form {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 0.75rem;
+    }
+
+    .link-form .form-group {
+        flex: 1 1 220px;
+        margin-bottom: 0;
+    }
+
+    .link-form label {
+        display: block;
+        font-size: 0.875rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .link-form input,
+    .link-form select {
+        width: 100%;
+        padding: 0.6rem 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--text);
+    }
+</style>
+
+<div class="external-page">
+    <h1 class="page-title">External Logins</h1>
+    <p class="page-description">
+        Sign in to this account using an identity from another provider.
+    </p>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="status-card">
+        <div class="card-title">Linked accounts</div>
+        <div class="card-hint">
+            Each of these can sign in to this account. Removing one takes effect immediately.
+        </div>
+
+        @if (Model.LinkedLogins.Count == 0)
+        {
+            <p class="empty-state">No external accounts are linked.</p>
+        }
+        else
+        {
+            @foreach (var login in Model.LinkedLogins)
+            {
+                <div class="login-row">
+                    <div>
+                        <div class="provider-name">@login.ProviderDisplayName</div>
+                        <div class="provider-key">@login.ProviderKey</div>
+                    </div>
+                    <form asp-action="RemoveExternalLogin" method="post"
+                          onsubmit="return confirm('Remove @login.ProviderDisplayName from this account?');">
+                        <input type="hidden" name="loginProvider" value="@login.LoginProvider" />
+                        <input type="hidden" name="providerKey" value="@login.ProviderKey" />
+                        <button type="submit" class="btn btn-secondary">Remove</button>
+                    </form>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="status-card">
+        <div class="card-title">Link a new account</div>
+        <div class="card-hint">
+            @* The password prompt is the point: an open browser session is not proof
+               that the person at the keyboard owns this account (andy-auth#119). *@
+            Confirm your password to link a provider. This is required even though
+            you are already signed in.
+        </div>
+
+        @if (!Model.HasPassword)
+        {
+            <p class="empty-state">
+                This account has no password, so linking cannot be confirmed. Set one first.
+            </p>
+        }
+        else if (Model.AvailableProviders.Count == 0)
+        {
+            <p class="empty-state">
+                No additional identity providers are configured on this server.
+            </p>
+        }
+        else
+        {
+            <form asp-action="LinkExternalLogin" method="post" class="link-form" autocomplete="off">
+                <div class="form-group">
+                    <label for="provider">Provider</label>
+                    <select id="provider" name="provider">
+                        @foreach (var provider in Model.AvailableProviders)
+                        {
+                            <option value="@provider.Name">@provider.DisplayName</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="currentPassword">Current password</label>
+                    <input id="currentPassword" name="currentPassword" type="password"
+                           autocomplete="current-password" required />
+                </div>
+                <button type="submit" class="btn btn-primary">Link account</button>
+            </form>
+        }
+    </div>
+</div>

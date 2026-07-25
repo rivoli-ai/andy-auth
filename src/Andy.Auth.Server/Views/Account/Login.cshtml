@@ -1,5 +1,11 @@
 @model LoginViewModel
+@using Microsoft.AspNetCore.Authentication
+@inject IAuthenticationSchemeProvider SchemeProvider
 @{
+    var externalSchemes = (await SchemeProvider.GetAllSchemesAsync())
+        .Where(scheme => !string.IsNullOrEmpty(scheme.DisplayName))
+        .ToList();
+
     ViewData["Title"] = "Login";
     Layout = null;
 }
@@ -181,6 +187,43 @@
             font-family: inherit;
         }
 
+        .external-divider {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 1.5rem 0 1rem;
+            color: #6b7280;
+            font-size: 0.8125rem;
+        }
+
+        .external-divider::before,
+        .external-divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: rgba(0, 0, 0, 0.12);
+        }
+
+        .btn-external {
+            width: 100%;
+            padding: 0.875rem;
+            margin-bottom: 0.5rem;
+            background: transparent;
+            color: inherit;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-external:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
         .btn-login:hover {
             transform: translateY(-1px);
             box-shadow: 0 8px 25px -8px rgba(0, 102, 204, 0.5);
@@ -268,6 +311,21 @@
                     <p>Don't have an account? <a asp-controller="Account" asp-action="Register" asp-route-returnUrl="@Model.ReturnUrl">Create one</a></p>
                 </div>
             </form>
+
+            @if (externalSchemes.Count > 0)
+            {
+                <div class="external-divider"><span>or continue with</span></div>
+
+                <form asp-controller="Account" asp-action="ExternalLogin" method="post">
+                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                    @foreach (var scheme in externalSchemes)
+                    {
+                        <button type="submit" name="provider" value="@scheme.Name" class="btn-external">
+                            @scheme.DisplayName
+                        </button>
+                    }
+                </form>
+            }
         </div>
 
         <div class="brand-footer">

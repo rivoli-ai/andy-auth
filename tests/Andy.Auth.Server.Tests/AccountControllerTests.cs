@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using FluentAssertions;
+using Microsoft.AspNetCore.Authentication;
 using Andy.Auth.Server.Controllers;
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Models;
@@ -768,7 +769,80 @@ public class AccountControllerTests
 
         messages.Should().HaveCount(4);
         messages.Distinct().Should().ContainSingle(
-            "every failure mode must be indistinguishable to the caller");
+            "without the correct password, every failure mode must look identical");
+    }
+
+    [Fact]
+    public async Task Login_Post_LockedOut_WithCorrectPassword_ExplainsTheLockout()
+    {
+        // andy-auth#50: the disclosure is gated on knowing the password, not
+        // removed. Someone who can already authenticate learns nothing new from
+        // being told the account is locked — so they get a usable explanation
+        // instead of a dead end.
+        var locked = new ApplicationUser { Id = "u5", Email = "locked2@example.com", IsActive = true };
+        _mockUserManager.Setup(m => m.FindByEmailAsync("locked2@example.com")).ReturnsAsync(locked);
+        _mockUserManager.Setup(m => m.CheckPasswordAsync(locked, "CorrectPassword123!")).ReturnsAsync(true);
+        _mockSignInManager.Setup(m => m.PasswordSignInAsync(
+                locked, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.LockedOut);
+
+        await _controller.Login(new LoginViewModel
+        {
+            Email = "locked2@example.com",
+            Password = "CorrectPassword123!"
+        });
+
+        _controller.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Single().ErrorMessage
+            .Should().Contain("temporarily locked");
+    }
+
+    [Fact]
+    public async Task Login_Post_Disabled_WithCorrectPassword_ExplainsTheDisabledAccount()
+    {
+        var suspended = new ApplicationUser
+        {
+            Id = "u6", Email = "suspended2@example.com", IsActive = true, IsSuspended = true
+        };
+        _mockUserManager.Setup(m => m.FindByEmailAsync("suspended2@example.com")).ReturnsAsync(suspended);
+        _mockUserManager.Setup(m => m.CheckPasswordAsync(suspended, "CorrectPassword123!")).ReturnsAsync(true);
+
+        await _controller.Login(new LoginViewModel
+        {
+            Email = "suspended2@example.com",
+            Password = "CorrectPassword123!"
+        });
+
+        _controller.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Single().ErrorMessage
+            .Should().Contain("not currently able to sign in");
+    }
+
+    [Fact]
+    public async Task Login_Post_Disabled_WithWrongPassword_StaysGeneric()
+    {
+        // The other half of the invariant: an attacker probing a suspended
+        // account without its password must not be able to tell it apart from
+        // an address that was never registered.
+        var suspended = new ApplicationUser
+        {
+            Id = "u7", Email = "suspended3@example.com", IsActive = true, IsSuspended = true
+        };
+        _mockUserManager.Setup(m => m.FindByEmailAsync("suspended3@example.com")).ReturnsAsync(suspended);
+        _mockUserManager.Setup(m => m.CheckPasswordAsync(suspended, It.IsAny<string>())).ReturnsAsync(false);
+
+        await _controller.Login(new LoginViewModel
+        {
+            Email = "suspended3@example.com",
+            Password = "WrongPassword123!"
+        });
+
+        _controller.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Single().ErrorMessage
+            .Should().Be("Invalid login attempt. If the problem persists, contact your administrator.");
     }
 
     private async Task RunLoginAndCollect(string email, List<string> messages)
@@ -850,5 +924,98 @@ public class AccountControllerTests
         view.ViewName.Should().Be("Login");
         _mockUserManager.Verify(
             m => m.CreateAsync(It.IsAny<ApplicationUser>()), Times.Never);
+    }
+
+    // ==================== andy-auth#119: link management ====================
+
+    private ApplicationUser SignedInUser()
+    {
+        var user = new ApplicationUser { Id = "me", Email = "me@example.com", IsActive = true };
+        _mockUserManager.Setup(m => m.GetUserAsync(It.IsAny<ClaimsPrincipal>())).ReturnsAsync(user);
+        _mockUserManager.Setup(m => m.GetUserId(It.IsAny<ClaimsPrincipal>())).Returns(user.Id);
+        _mockUserManager.Setup(m => m.GetUserIdAsync(user)).ReturnsAsync(user.Id);
+        return user;
+    }
+
+    [Fact]
+    public async Task ExternalLogins_ListsLinkedAndAvailableProviders()
+    {
+        var user = SignedInUser();
+        _mockUserManager.Setup(m => m.GetLoginsAsync(user)).ReturnsAsync(new List<UserLoginInfo>
+        {
+            new("Microsoft", "key-1", "Microsoft"),
+        });
+        _mockUserManager.Setup(m => m.HasPasswordAsync(user)).ReturnsAsync(true);
+        _mockSignInManager.Setup(m => m.GetExternalAuthenticationSchemesAsync())
+            .ReturnsAsync(new[]
+            {
+                new AuthenticationScheme("Microsoft", "Microsoft", typeof(IAuthenticationHandler)),
+                new AuthenticationScheme("Google", "Google", typeof(IAuthenticationHandler)),
+            });
+
+        var result = await _controller.ExternalLogins();
+
+        var model = Assert.IsType<ExternalLoginsViewModel>(Assert.IsType<ViewResult>(result).Model);
+        model.LinkedLogins.Should().ContainSingle().Which.LoginProvider.Should().Be("Microsoft");
+        // Already-linked providers must not be offered again.
+        model.AvailableProviders.Should().ContainSingle().Which.Name.Should().Be("Google");
+        model.HasPassword.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task RemoveExternalLogin_RefusesToRemoveTheOnlyWayIn()
+    {
+        // No password and no other provider: unlinking would lock the user out
+        // of their own account, and there is no mail sender to recover with.
+        var user = SignedInUser();
+        _mockUserManager.Setup(m => m.GetLoginsAsync(user)).ReturnsAsync(new List<UserLoginInfo>
+        {
+            new("Microsoft", "key-1", "Microsoft"),
+        });
+        _mockUserManager.Setup(m => m.HasPasswordAsync(user)).ReturnsAsync(false);
+
+        await _controller.RemoveExternalLogin("Microsoft", "key-1");
+
+        _mockUserManager.Verify(
+            m => m.RemoveLoginAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never);
+        _controller.TempData["ErrorMessage"].Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task RemoveExternalLogin_RotatesTheSecurityStamp()
+    {
+        // Sessions riding on the removed identity must stop being honoured.
+        var user = SignedInUser();
+        _mockUserManager.Setup(m => m.GetLoginsAsync(user)).ReturnsAsync(new List<UserLoginInfo>
+        {
+            new("Microsoft", "key-1", "Microsoft"),
+        });
+        _mockUserManager.Setup(m => m.HasPasswordAsync(user)).ReturnsAsync(true);
+        _mockUserManager.Setup(m => m.RemoveLoginAsync(user, "Microsoft", "key-1"))
+            .ReturnsAsync(IdentityResult.Success);
+        _mockUserManager.Setup(m => m.UpdateSecurityStampAsync(user)).ReturnsAsync(IdentityResult.Success);
+
+        await _controller.RemoveExternalLogin("Microsoft", "key-1");
+
+        _mockUserManager.Verify(m => m.UpdateSecurityStampAsync(user), Times.Once);
+    }
+
+    [Fact]
+    public async Task LinkExternalLogin_WrongPassword_DoesNotChallengeTheProvider()
+    {
+        // An open session is not proof the person at the keyboard owns the
+        // account, so linking is gated on a fresh re-authentication.
+        var user = SignedInUser();
+        _mockUserManager.Setup(m => m.CheckPasswordAsync(user, It.IsAny<string>())).ReturnsAsync(false);
+
+        var result = await _controller.LinkExternalLogin("Microsoft", "WrongPassword123!");
+
+        result.Should().BeOfType<RedirectToActionResult>();
+        _mockSignInManager.Verify(
+            m => m.ConfigureExternalAuthenticationProperties(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never);
+        _controller.TempData["ErrorMessage"].Should().NotBeNull();
     }
 }

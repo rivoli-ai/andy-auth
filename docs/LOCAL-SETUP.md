@@ -94,6 +94,15 @@ Production startup fails unless one of the two is set.
 
 ## Database Management
 
+> **Upgrading an existing checkout:** the compose PostgreSQL role changed from
+> `postgres` to `andy_auth` so it matches `appsettings.Development.json`
+> (andy-auth#157). `POSTGRES_USER` only takes effect when the data volume is
+> first initialized, so a volume created before that change won't have the new
+> role and `dotnet run` will fail to authenticate. Reset it with
+> `docker compose down -v && docker compose up -d postgres` — this discards
+> local dev data, which is re-seeded on next start.
+
+
 ### View Database
 
 Access Adminer at http://localhost:8080:

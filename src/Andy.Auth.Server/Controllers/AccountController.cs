@@ -31,12 +31,23 @@ public class AccountController : Controller
     /// to the log and the audit trail instead.
     /// </summary>
     /// <remarks>
-    /// This deliberately costs the locked-out user their explanation. Without a
-    /// configured mail sender there is no side channel to deliver it, so the
-    /// disclosure has to go rather than move. Revisit when email ships.
+    /// A specific reason is still shown, but only to a caller who supplied the
+    /// <em>correct</em> password — see <see cref="DescribeFailureAsync"/>.
+    /// Someone who already knows the password learns nothing new from being
+    /// told the account is locked or disabled, so that disclosure carries no
+    /// enumeration value.
     /// </remarks>
     private const string GenericLoginFailureMessage =
         "Invalid login attempt. If the problem persists, contact your administrator.";
+
+    /// <summary>Shown only once the correct password has been supplied.</summary>
+    private const string LockedOutMessage =
+        "This account is temporarily locked after too many failed sign-in attempts. " +
+        "Try again in 30 minutes, or contact your administrator.";
+
+    /// <summary>Shown only once the correct password has been supplied.</summary>
+    private const string AccountDisabledMessage =
+        "This account is not currently able to sign in. Contact your administrator.";
 
     /// <summary>
     /// A real PBKDF2 hash, verified against when the account doesn't exist so
@@ -123,9 +134,7 @@ public class AccountController : Controller
 
         // Lifecycle gate (andy-auth#146). AndyAuthSignInManager enforces the
         // same predicate inside PasswordSignInAsync; checking first keeps the
-        // disabled case out of the lockout counter. The specific reason is
-        // logged and audited, never shown — "this account has been disabled"
-        // confirms the account exists (andy-auth#50).
+        // disabled case out of the lockout counter.
         var denialReason = UserLifecycle.GetDenialReason(user);
         if (denialReason is not null)
         {
@@ -135,7 +144,8 @@ public class AccountController : Controller
                 "UserLoginFailed", user.Id, user.Email ?? model.Email, user.Id, user.Email,
                 $"Login refused: {denialReason}", ipAddress);
 
-            ModelState.AddModelError(string.Empty, GenericLoginFailureMessage);
+            ModelState.AddModelError(string.Empty,
+                await DescribeFailureAsync(user, model.Password, AccountDisabledMessage));
             return View(model);
         }
 
@@ -195,7 +205,8 @@ public class AccountController : Controller
                 "Account locked out due to failed login attempts",
                 ipAddress);
 
-            ModelState.AddModelError(string.Empty, GenericLoginFailureMessage);
+            ModelState.AddModelError(string.Empty,
+                await DescribeFailureAsync(user, model.Password, LockedOutMessage));
             return View(model);
         }
 
@@ -211,6 +222,33 @@ public class AccountController : Controller
 
         ModelState.AddModelError(string.Empty, GenericLoginFailureMessage);
         return View(model);
+    }
+
+    /// <summary>
+    /// Returns <paramref name="specificMessage"/> when <paramref name="password"/>
+    /// is the account's real password, and the generic message otherwise.
+    /// </summary>
+    /// <remarks>
+    /// andy-auth#50. The enumeration oracle was that "disabled" and "locked
+    /// out" were reachable <em>without</em> knowing the password — so an
+    /// attacker could tell real addresses from fake ones, and could confirm an
+    /// account existed just by tripping its lockout. Gating the disclosure on a
+    /// correct password removes that: a caller who can already authenticate
+    /// learns nothing new, and a caller who can't only ever sees the generic
+    /// message.
+    /// <para>
+    /// <see cref="UserManager{TUser}.CheckPasswordAsync"/> verifies the hash
+    /// without touching the lockout counter, so probing here cannot itself lock
+    /// an account or extend an existing lockout. It also keeps the work per
+    /// request at roughly one PBKDF2 verification on every path, which is what
+    /// closes the timing side of the oracle.
+    /// </para>
+    /// </remarks>
+    private async Task<string> DescribeFailureAsync(
+        ApplicationUser user, string password, string specificMessage)
+    {
+        var passwordIsCorrect = await _userManager.CheckPasswordAsync(user, password ?? string.Empty);
+        return passwordIsCorrect ? specificMessage : GenericLoginFailureMessage;
     }
 
     [HttpGet]
@@ -770,6 +808,103 @@ public class AccountController : Controller
     }
 
     /// <summary>
+    /// Lists the external identities attached to the signed-in account and the
+    /// providers still available to link.
+    /// </summary>
+    /// <remarks>
+    /// andy-auth#119. Since <c>ExternalLoginCallback</c> stopped attaching a
+    /// provider identity to an existing account on a matching email, this is
+    /// the only way to link one — so it needs a surface, not just endpoints.
+    /// </remarks>
+    [HttpGet]
+    [Authorize(AuthenticationSchemes = "Identity.Application")]
+    public async Task<IActionResult> ExternalLogins()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null)
+        {
+            return RedirectToAction(nameof(Login));
+        }
+
+        return View(await BuildExternalLoginsViewModelAsync(user));
+    }
+
+    /// <summary>
+    /// Detaches an external identity from the signed-in account.
+    /// </summary>
+    [HttpPost]
+    [Authorize(AuthenticationSchemes = "Identity.Application")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveExternalLogin(string loginProvider, string providerKey)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null)
+        {
+            return RedirectToAction(nameof(Login));
+        }
+
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        // Refuse to remove the account's last way in. Without a password and
+        // with no other provider attached, unlinking would lock the user out of
+        // their own account with no self-service recovery (there is no mail
+        // sender configured to send a reset).
+        var logins = await _userManager.GetLoginsAsync(user);
+        var hasPassword = await _userManager.HasPasswordAsync(user);
+        if (!hasPassword && logins.Count <= 1)
+        {
+            TempData["ErrorMessage"] =
+                "This is the only way to sign in to this account. Set a password before removing it.";
+            return RedirectToAction(nameof(ExternalLogins));
+        }
+
+        var result = await _userManager.RemoveLoginAsync(user, loginProvider, providerKey);
+        if (!result.Succeeded)
+        {
+            TempData["ErrorMessage"] = "That external account could not be removed.";
+            return RedirectToAction(nameof(ExternalLogins));
+        }
+
+        // Rotate the security stamp so any session riding on the removed
+        // identity stops being honoured.
+        await _userManager.UpdateSecurityStampAsync(user);
+
+        await _auditService.LogAsync(
+            "ExternalLinkRemoved", user.Id, user.Email ?? "Unknown", user.Id, user.Email,
+            $"Unlinked from {loginProvider}", ipAddress);
+
+        TempData["SuccessMessage"] = $"{loginProvider} account removed.";
+        return RedirectToAction(nameof(ExternalLogins));
+    }
+
+    private async Task<ExternalLoginsViewModel> BuildExternalLoginsViewModelAsync(ApplicationUser user)
+    {
+        var linked = await _userManager.GetLoginsAsync(user);
+        var schemes = await _signInManager.GetExternalAuthenticationSchemesAsync();
+
+        return new ExternalLoginsViewModel
+        {
+            LinkedLogins = linked
+                .Select(l => new LinkedExternalLogin
+                {
+                    LoginProvider = l.LoginProvider,
+                    ProviderDisplayName = l.ProviderDisplayName ?? l.LoginProvider,
+                    ProviderKey = l.ProviderKey,
+                })
+                .ToList(),
+            AvailableProviders = schemes
+                .Where(scheme => linked.All(l => l.LoginProvider != scheme.Name))
+                .Select(scheme => new AvailableExternalProvider
+                {
+                    Name = scheme.Name,
+                    DisplayName = scheme.DisplayName ?? scheme.Name,
+                })
+                .ToList(),
+            HasPassword = await _userManager.HasPasswordAsync(user),
+        };
+    }
+
+    /// <summary>
     /// Starts linking an external identity to the <em>already signed-in</em>
     /// account.
     /// </summary>
@@ -805,7 +940,7 @@ public class AccountController : Controller
                 $"Re-authentication failed while linking {provider}", ipAddress);
 
             TempData["ErrorMessage"] = "Password incorrect. External account not linked.";
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction(nameof(ExternalLogins));
         }
 
         await _auditService.LogAsync(
@@ -842,7 +977,7 @@ public class AccountController : Controller
                 "External login information was unavailable on callback", ipAddress);
 
             TempData["ErrorMessage"] = "Could not read the external login information.";
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction(nameof(ExternalLogins));
         }
 
         var result = await _userManager.AddLoginAsync(user, info);
@@ -860,7 +995,7 @@ public class AccountController : Controller
                 ipAddress);
 
             TempData["ErrorMessage"] = "That external account could not be linked.";
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction(nameof(ExternalLogins));
         }
 
         await _auditService.LogAsync(
@@ -871,7 +1006,7 @@ public class AccountController : Controller
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
         TempData["SuccessMessage"] = $"{info.LoginProvider} account linked.";
-        return RedirectToAction("Index", "Home");
+        return RedirectToAction(nameof(ExternalLogins));
     }
 
     /// <summary>
