@@ -2,6 +2,7 @@ using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenIddict.Abstractions;
 using OpenIddict.Validation.AspNetCore;
 using System.Text.Json.Serialization;
 
@@ -40,14 +41,34 @@ namespace Andy.Auth.Server.Controllers.Api;
 [Produces("application/json")]
 public class OAuthAuthorizationsController : ControllerBase
 {
+    /// <summary>
+    /// Request header carrying the signed one-time callback capability minted at
+    /// /authorize time. Presented by the callback handler in lieu of a bearer
+    /// token (the provider redirect carries no bearer). Issue #123.
+    /// </summary>
+    public const string CapabilityHeader = "X-OAuth-Callback-Token";
+
+    /// <summary>
+    /// Dedicated OAuth scope identifying the machine <b>broker</b> service
+    /// identity (issue #123). Granted only to the client-credentials broker
+    /// client — NOT to human users, and deliberately independent of the human
+    /// <c>Admin</c> role. A principal carrying this scope may drive callback
+    /// mutations without a capability and read any authorization's status. See
+    /// <c>Program.cs</c> where the scope is registered.
+    /// </summary>
+    public const string BrokerScope = "andy_auth:oauth_broker";
+
     private readonly OAuthAuthorizationService _service;
+    private readonly OAuthCallbackCapabilityService _capabilities;
     private readonly ILogger<OAuthAuthorizationsController> _logger;
 
     public OAuthAuthorizationsController(
         OAuthAuthorizationService service,
+        OAuthCallbackCapabilityService capabilities,
         ILogger<OAuthAuthorizationsController> logger)
     {
         _service = service;
+        _capabilities = capabilities;
         _logger = logger;
     }
 
@@ -78,10 +99,18 @@ public class OAuthAuthorizationsController : ControllerBase
         var subjectId = User.FindFirst("sub")?.Value;
         var auth = await _service.CreateAsync(request.Provider, request.StateToken, subjectId);
 
+        // Mint the signed, narrowly-scoped callback capability bound to this
+        // authorization id + provider (issue #123). The caller embeds it in the
+        // deep-link and presents it via the X-OAuth-Callback-Token header on the
+        // anonymous provider callback, so knowledge of the UUID alone can no
+        // longer drive a terminal transition.
+        var callbackToken = _capabilities.Issue(auth.AuthorizationId, auth.Provider, auth.ExpiresAt);
+
         var dto = new AuthorizationCreatedDto
         {
             AuthorizationId = auth.AuthorizationId,
-            ExpiresAt = auth.ExpiresAt
+            ExpiresAt = auth.ExpiresAt,
+            CallbackToken = callbackToken
         };
 
         return CreatedAtAction(nameof(GetStatus), new { id = auth.AuthorizationId }, dto);
@@ -115,11 +144,22 @@ public class OAuthAuthorizationsController : ControllerBase
     [AllowAnonymous] // Callback arrives from a browser redirect, no bearer token in flight.
     [ProducesResponseType(typeof(CallbackOutcomeDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(CallbackOutcomeDto), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RecordCallback(
         Guid id,
         [FromBody] RecordCallbackRequest request)
     {
+        // Load the record first so the capability can be bound to its provider
+        // and the caller authorized before any state transition (issue #123).
+        var descriptor = await _service.GetDescriptorAsync(id);
+        if (descriptor == null)
+            return NotFound(new { error = "Authorization not found" });
+
+        if (!TryAuthorizeCallbackMutation(id, descriptor.Provider, out var failure))
+            return failure!;
+
         var classification = await _service.ClassifyCallbackAsync(
             authorizationId: id,
             providerError: request.ProviderError,
@@ -129,22 +169,20 @@ public class OAuthAuthorizationsController : ControllerBase
             tokenExchangeDetail: request.TokenExchangeDetail,
             connectionId: request.ConnectionId);
 
-        if (classification.AuthorizationId == null && classification.Result == CallbackResult.InvalidCallback
-            && classification.Detail == "Authorization not found")
-        {
-            return NotFound(new { error = "Authorization not found" });
-        }
-
         var dto = MapClassificationToDto(classification);
 
-        // 409 when already terminal (idempotency).
-        var statusCode = classification.Result == CallbackResult.ExchangePending
+        // 200 when THIS call committed the processing; 409 when the outcome came
+        // from an already-terminal record — an idempotent replay, or the loser of
+        // a concurrent terminal race reconciled to the winner's outcome. Derived
+        // from the transition result, not a pre-read, so it holds under
+        // concurrency (issue #123).
+        var statusCode = classification.Committed
             ? StatusCodes.Status200OK
-            : StatusCodes.Status200OK;
+            : StatusCodes.Status409Conflict;
 
         _logger.LogInformation(
-            "[SM.2.2] Callback recorded for auth {AuthId}: result={Result}",
-            id, dto.Result);
+            "[SM.2.2] Callback recorded for auth {AuthId}: result={Result} status={Status}",
+            id, dto.Result, statusCode);
 
         return StatusCode(statusCode, dto);
     }
@@ -159,16 +197,19 @@ public class OAuthAuthorizationsController : ControllerBase
     [AllowAnonymous]
     [ProducesResponseType(typeof(CallbackOutcomeDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(CallbackOutcomeDto), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> MarkExchangeResult(
         Guid id,
         [FromBody] MarkExchangeResultRequest request)
     {
-        var existingStatus = await _service.GetStatusAsync(id);
+        var descriptor = await _service.GetDescriptorAsync(id);
+        if (descriptor == null)
+            return NotFound(new { error = "Authorization not found" });
 
-        bool wasAlreadyTerminal = existingStatus is { } s
-            && s.State is OAuthAuthorizationState.Completed
-                or OAuthAuthorizationState.Failed
-                or OAuthAuthorizationState.Expired;
+        if (!TryAuthorizeCallbackMutation(id, descriptor.Provider, out var failure))
+            return failure!;
 
         var classification = await _service.MarkTokenExchangeResultAsync(
             id,
@@ -178,13 +219,11 @@ public class OAuthAuthorizationsController : ControllerBase
 
         var dto = MapClassificationToDto(classification);
 
-        if (dto.Result == "invalid_callback" && classification.Detail == "Authorization not found")
-            return NotFound(new { error = "Authorization not found" });
-
-        // Return 409 when the caller replays against an already-terminal record.
-        var httpStatus = wasAlreadyTerminal
-            ? StatusCodes.Status409Conflict
-            : StatusCodes.Status200OK;
+        // 409 when the outcome came from an already-terminal record (idempotent
+        // replay or reconciled concurrent loser); 200 when this call committed.
+        var httpStatus = classification.Committed
+            ? StatusCodes.Status200OK
+            : StatusCodes.Status409Conflict;
 
         return StatusCode(httpStatus, dto);
     }
@@ -210,6 +249,7 @@ public class OAuthAuthorizationsController : ControllerBase
     /// <response code="404">No authorization with the given ID exists.</response>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(AuthorizationStatusDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetStatus(Guid id)
     {
@@ -217,6 +257,18 @@ public class OAuthAuthorizationsController : ControllerBase
 
         if (status == null)
             return NotFound(new { error = "Authorization not found" });
+
+        // Ownership (issue #123): only the initiating subject or an authorized
+        // service identity may read the authoritative status. Knowledge of the
+        // UUID is not sufficient. Return 403 (not 404) — the caller is
+        // authenticated (class-level [Authorize]) but not entitled to this record.
+        if (!IsAuthorizedForRecord(status.SubjectId))
+        {
+            _logger.LogWarning(
+                "[#123] Subject {Subject} denied status read for auth {AuthId} owned by {Owner}",
+                User.FindFirst("sub")?.Value ?? "<none>", id, status.SubjectId ?? "<none>");
+            return Forbid();
+        }
 
         var dto = new AuthorizationStatusDto
         {
@@ -231,6 +283,95 @@ public class OAuthAuthorizationsController : ControllerBase
         };
 
         return Ok(dto);
+    }
+
+    // ── authorization helpers (issue #123) ─────────────────────────────────────
+
+    /// <summary>
+    /// Authorizes a callback mutation. Succeeds when the caller presents a valid
+    /// capability token bound to this authorization id + provider, OR (absent a
+    /// capability) authenticates as an authorized broker/service identity.
+    /// Knowledge of the authorization UUID alone never suffices.
+    /// </summary>
+    /// <returns>
+    /// <c>true</c> when authorized; otherwise <c>false</c> with <paramref name="failure"/>
+    /// set to a 403 (a capability was presented but is invalid/expired/mis-bound —
+    /// tampering) or 401 (no capability and no service identity).
+    /// </returns>
+    private bool TryAuthorizeCallbackMutation(Guid id, string provider, out IActionResult? failure)
+    {
+        failure = null;
+
+        var presentedToken = Request.Headers[CapabilityHeader].FirstOrDefault();
+        if (!string.IsNullOrEmpty(presentedToken))
+        {
+            if (_capabilities.Validate(presentedToken, id, provider))
+                return true;
+
+            _logger.LogWarning(
+                "[#123] Rejected callback mutation for auth {AuthId}: capability token invalid, " +
+                "expired, or bound to a different authorization/provider.", id);
+            failure = StatusCode(StatusCodes.Status403Forbidden, new { error = "invalid_capability" });
+            return false;
+        }
+
+        if (IsAuthorizedServiceIdentity())
+            return true;
+
+        _logger.LogWarning(
+            "[#123] Rejected callback mutation for auth {AuthId}: no capability token and caller " +
+            "is not an authorized service identity.", id);
+        failure = StatusCode(StatusCodes.Status401Unauthorized,
+            new { error = "callback_authorization_required" });
+        return false;
+    }
+
+    /// <summary>
+    /// True when the caller is the initiating subject of the record or an
+    /// authorized service identity. Used to gate status reads (issue #123).
+    /// </summary>
+    private bool IsAuthorizedForRecord(string? ownerSubjectId)
+    {
+        var callerSubject = User.FindFirst("sub")?.Value;
+        if (!string.IsNullOrEmpty(ownerSubjectId)
+            && string.Equals(ownerSubjectId, callerSubject, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return IsAuthorizedServiceIdentity();
+    }
+
+    /// <summary>
+    /// True when the authenticated principal is the machine <b>broker</b> service
+    /// identity — i.e. it carries the dedicated <see cref="BrokerScope"/> OAuth
+    /// scope (issue #123). This is deliberately distinct from the human
+    /// <c>Admin</c> role: a person with admin rights is not a broker and must not
+    /// be able to read arbitrary authorization status or forge terminal
+    /// transitions without a signed capability. The scope is granted only to the
+    /// client-credentials (M2M) broker client.
+    /// </summary>
+    private bool IsAuthorizedServiceIdentity()
+        => User.Identity?.IsAuthenticated == true && HasBrokerScope();
+
+    /// <summary>
+    /// True when the principal's granted scopes include <see cref="BrokerScope"/>.
+    /// Handles both a space-delimited <c>scope</c> claim (JWT / RFC 8693 access
+    /// token) and OpenIddict's normalized private scope claims.
+    /// </summary>
+    private bool HasBrokerScope()
+    {
+        foreach (var claim in User.FindAll("scope"))
+        {
+            if (claim.Value
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Contains(BrokerScope, StringComparer.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return User.HasScope(BrokerScope);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
@@ -305,6 +446,16 @@ public class AuthorizationCreatedDto
     /// <summary>When the authorization expires if not completed (UTC).</summary>
     [JsonPropertyName("expiresAt")]
     public DateTime ExpiresAt { get; set; }
+
+    /// <summary>
+    /// Signed, narrowly-scoped one-time capability bound to this authorization id
+    /// and provider (issue #123). The caller embeds it in the callback deep-link
+    /// and presents it via the <c>X-OAuth-Callback-Token</c> header when driving
+    /// the anonymous provider callback / exchange-result mutation, so knowledge of
+    /// the authorization UUID alone can no longer authorize a terminal transition.
+    /// </summary>
+    [JsonPropertyName("callbackToken")]
+    public string CallbackToken { get; set; } = null!;
 }
 
 /// <summary>Request body for POST /auth/oauth/authorizations/{id}/callback.</summary>

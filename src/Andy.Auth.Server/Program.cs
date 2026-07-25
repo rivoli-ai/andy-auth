@@ -1,4 +1,5 @@
 using Andy.Auth.Server.Configuration;
+using Andy.Auth.Server.Controllers.Api;
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Mcp;
 using Andy.Auth.Server.Middleware;
@@ -324,8 +325,15 @@ builder.Services.AddOpenIddict()
             }
         }
 
-        // Register scopes
-        options.RegisterScopes("openid", "profile", "email", "roles", "offline_access", "urn:andy-docs-api");
+        // Register scopes. `andy_auth:oauth_broker` (issue #123) is the dedicated
+        // machine broker-service scope that authorizes the OAuth broker callback /
+        // exchange-result mutations and status reads without a signed capability.
+        // It is granted only to the client-credentials broker client and is
+        // distinct from the human `Admin` role, so an admin user cannot forge
+        // terminal transitions or read arbitrary authorization status.
+        options.RegisterScopes("openid", "profile", "email", "roles", "offline_access",
+            "urn:andy-docs-api",
+            OAuthAuthorizationsController.BrokerScope);
 
         // Register MCP resource servers — the audience values that clients
         // can request tokens for via the `resource` parameter. Read from
@@ -469,6 +477,15 @@ builder.Services.AddHostedService<TokenCleanupService>();
 // Owns lifecycle of OAuthAuthorization records: creation, callback classification,
 // state transitions, and crash-reconciliation status queries.
 builder.Services.AddScoped<OAuthAuthorizationService>();
+
+// Issue #123 — signed one-time capability that authorizes the anonymous OAuth
+// broker callback / exchange-result mutations. Minted at /authorize time and
+// bound to the authorization id + provider via ASP.NET Data Protection, so
+// knowledge of the authorization UUID alone is no longer sufficient authority.
+// AddDataProtection is idempotent (Identity already pulls it in) but is declared
+// explicitly here to make this endpoint's dependency self-evident.
+builder.Services.AddDataProtection();
+builder.Services.AddSingleton<OAuthCallbackCapabilityService>();
 
 // Add MCP Server for AI assistant integration with group management
 builder.Services

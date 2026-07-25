@@ -1,6 +1,7 @@
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Services;
 using FluentAssertions;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -456,5 +457,130 @@ public class OAuthAuthorizationServiceTests : IDisposable
         denied.Result.Should().Be(CallbackResult.UserDenied);
         mismatch.Result.Should().Be(CallbackResult.StateMismatch);
         denied.Result.Should().NotBe(mismatch.Result);
+    }
+
+    // ── ownership descriptor (issue #123) ─────────────────────────────────────
+
+    [Fact]
+    public async Task GetDescriptor_ReturnsProviderAndSubject_WithoutMutating()
+    {
+        var auth = await _service.CreateAsync("gitlab", "state", "user-owner-1");
+
+        var descriptor = await _service.GetDescriptorAsync(auth.AuthorizationId);
+
+        descriptor.Should().NotBeNull();
+        descriptor!.AuthorizationId.Should().Be(auth.AuthorizationId);
+        descriptor.Provider.Should().Be("gitlab");
+        descriptor.SubjectId.Should().Be("user-owner-1");
+    }
+
+    [Fact]
+    public async Task GetDescriptor_UnknownId_ReturnsNull()
+    {
+        var descriptor = await _service.GetDescriptorAsync(Guid.NewGuid());
+        descriptor.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetDescriptor_StalePendingRecord_DoesNotLazilyExpire()
+    {
+        // Unlike GetStatusAsync, the descriptor lookup must be side-effect free so
+        // the authorization pre-check never mutates state.
+        var auth = await _service.CreateAsync("github", "state", ttl: TimeSpan.FromMilliseconds(1));
+        await Task.Delay(10);
+
+        var descriptor = await _service.GetDescriptorAsync(auth.AuthorizationId);
+        descriptor.Should().NotBeNull();
+
+        var persisted = await _context.OAuthAuthorizations
+            .AsNoTracking()
+            .FirstAsync(a => a.AuthorizationId == auth.AuthorizationId);
+        persisted.State.Should().Be(OAuthAuthorizationState.Pending); // not promoted
+    }
+
+    // ── concurrency: atomic terminal transition (issue #123) ──────────────────
+
+    [Fact]
+    public async Task ConcurrentTerminalTransition_LoserReconcilesToWinner_DoesNotOverwrite()
+    {
+        // Two racing terminal writers on the same Pending record must not both
+        // succeed. The concurrency token guarantees exactly one winner; the loser
+        // observes DbUpdateConcurrencyException, reloads, and returns the winner's
+        // authoritative outcome instead of clobbering it.
+        //
+        // Enforced with SQLite (relational) — the InMemory provider ignores
+        // concurrency tokens, so this invariant is Postgres/SQLite-only.
+        using var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        using var seedContext = new ApplicationDbContext(options);
+        await seedContext.Database.EnsureCreatedAsync();
+
+        using var winnerContext = new ApplicationDbContext(options);
+        using var loserContext = new ApplicationDbContext(options);
+        var winnerService = new OAuthAuthorizationService(
+            winnerContext, new Mock<ILogger<OAuthAuthorizationService>>().Object);
+        var loserService = new OAuthAuthorizationService(
+            loserContext, new Mock<ILogger<OAuthAuthorizationService>>().Object);
+
+        var created = await winnerService.CreateAsync("github", "state", "user-1");
+        var id = created.AuthorizationId;
+
+        // The loser context loads (tracks) the record while it is still Pending —
+        // a stale snapshot with the original concurrency token.
+        var staleTracked = await loserContext.OAuthAuthorizations
+            .FirstAsync(a => a.AuthorizationId == id);
+        staleTracked.State.Should().Be(OAuthAuthorizationState.Pending);
+
+        // Winner commits the terminal transition first (rotates the token).
+        var winner = await winnerService.MarkTokenExchangeResultAsync(id, true, connectionId: "conn-win");
+        winner.Result.Should().Be(CallbackResult.Success);
+
+        // Loser attempts a conflicting terminal write against its stale snapshot.
+        var loser = await loserService.MarkTokenExchangeResultAsync(id, false, detail: "should not win");
+
+        // Reconciled to the winner's outcome, not the loser's attempted failure.
+        loser.Result.Should().Be(CallbackResult.Success);
+
+        // The database is authoritative and untorn: Completed with winner's data.
+        using var verifyContext = new ApplicationDbContext(options);
+        var persisted = await verifyContext.OAuthAuthorizations
+            .FirstAsync(a => a.AuthorizationId == id);
+        persisted.State.Should().Be(OAuthAuthorizationState.Completed);
+        persisted.ConnectionId.Should().Be("conn-win");
+        persisted.FailureReason.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ConcurrentTerminalTransition_TokenRotatesOnEveryWrite()
+    {
+        // The concurrency token must change on each terminal transition so a stale
+        // writer's UPDATE fails to match.
+        using var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        using var seedContext = new ApplicationDbContext(options);
+        await seedContext.Database.EnsureCreatedAsync();
+
+        using var context = new ApplicationDbContext(options);
+        var service = new OAuthAuthorizationService(
+            context, new Mock<ILogger<OAuthAuthorizationService>>().Object);
+
+        var created = await service.CreateAsync("github", "state", "user-1");
+        var tokenBefore = created.ConcurrencyToken;
+
+        await service.MarkTokenExchangeResultAsync(created.AuthorizationId, true);
+
+        using var verifyContext = new ApplicationDbContext(options);
+        var persisted = await verifyContext.OAuthAuthorizations
+            .FirstAsync(a => a.AuthorizationId == created.AuthorizationId);
+        persisted.ConcurrencyToken.Should().NotBe(tokenBefore);
+        persisted.ConcurrencyToken.Should().NotBe(Guid.Empty);
     }
 }
