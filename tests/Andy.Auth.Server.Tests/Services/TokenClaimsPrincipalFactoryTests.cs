@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Moq;
 using OpenIddict.Abstractions;
@@ -79,8 +80,24 @@ public class TokenClaimsPrincipalFactoryTests
             new Mock<IOpenIddictAuthorizationManager>().Object,
             _scopeManager.Object,
             new RolePermissionResolver(rolePermissions),
-            _dbContext);
+            _dbContext,
+            DeploymentTenant.Resolve(TenantConfiguration));
     }
+
+    /// <summary>
+    /// Pins the tenant so the assertions below can name it. A deployment
+    /// resolves this once from its own configuration; nothing in a request
+    /// reaches it.
+    /// </summary>
+    private const string Tenant = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
+
+    private static IConfiguration TenantConfiguration =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [DeploymentTenant.ConfigurationKey] = Tenant,
+            })
+            .Build();
 
     private static async IAsyncEnumerable<T> AsyncEmpty<T>()
     {
@@ -149,5 +166,43 @@ public class TokenClaimsPrincipalFactoryTests
         principal.FindFirst(Claims.Subject)!.Value.Should().Be(User.Id);
         principal.FindFirst(Claims.Email)!.Value.Should().Be(User.Email);
         principal.FindFirst(Claims.PreferredUsername)!.Value.Should().Be(User.UserName);
+    }
+
+    [Fact]
+    public async Task CreateAsync_EmitsTheDeploymentTenantClaim()
+    {
+        var principal = await _factory.CreateAsync(User, new[] { "openid", "profile" }, "andy-cli");
+
+        principal.FindAll(DeploymentTenant.ClaimType).Select(c => c.Value)
+            .Should().BeEquivalentTo(Tenant);
+    }
+
+    [Fact]
+    public async Task CreateAsync_RoutesTheTenantClaimToBothTokens()
+    {
+        // Resource servers partition storage on it, and a client that shows
+        // which tenant it signed into reads the identity token.
+        var principal = await _factory.CreateAsync(User, new[] { "openid", "profile" }, "andy-cli");
+
+        principal.FindFirst(DeploymentTenant.ClaimType)!.GetDestinations()
+            .Should().BeEquivalentTo(Destinations.AccessToken, Destinations.IdentityToken);
+    }
+
+    [Fact]
+    public async Task CreateAsync_DiscardsATenantClaimAlreadyOnThePrincipal()
+    {
+        // A `tid` reaching the principal from a persisted user claim or from an
+        // upstream provider surviving an external sign-in would otherwise let
+        // whoever controls that directory pick the partition their tokens read
+        // and write.
+        _signInManager.Setup(x => x.CreateUserPrincipalAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(() => new ClaimsPrincipal(new ClaimsIdentity(
+                new[] { new Claim(DeploymentTenant.ClaimType, "11111111-1111-1111-1111-111111111111") },
+                "Identity.Application", Claims.Name, Claims.Role)));
+
+        var principal = await _factory.CreateAsync(User, new[] { "openid" }, "andy-cli");
+
+        principal.FindAll(DeploymentTenant.ClaimType).Select(c => c.Value)
+            .Should().BeEquivalentTo(Tenant);
     }
 }

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -95,6 +96,18 @@ public class E2ETestServer : IAsyncDisposable
         builder.Services.Configure<RolePermissionOptions>(
             builder.Configuration.GetSection(RolePermissionOptions.SectionName));
         builder.Services.AddScoped<RolePermissionResolver>();
+
+        // This host mirrors Program.cs rather than reusing it, so the tenant
+        // every issued token names has to be registered here too. Pinned rather
+        // than derived because this server has no configured issuer.
+        builder.Services.AddSingleton(DeploymentTenant.Resolve(
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    [DeploymentTenant.ConfigurationKey] = "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
+                })
+                .Build()));
+
         builder.Services.AddScoped<TokenClaimsPrincipalFactory>();
         builder.Services.AddScoped<DcrClientGate>();
 
