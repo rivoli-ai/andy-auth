@@ -32,6 +32,7 @@ public class AuthorizationController : ControllerBase
     private readonly TokenClaimsPrincipalFactory _principalFactory;
     private readonly DcrClientGate _dcrGate;
     private readonly ConsentGrantService _consentGrantService;
+    private readonly DeploymentTenant _tenant;
     private readonly ILogger<AuthorizationController> _logger;
 
     public AuthorizationController(
@@ -46,6 +47,7 @@ public class AuthorizationController : ControllerBase
         TokenClaimsPrincipalFactory principalFactory,
         DcrClientGate dcrGate,
         ConsentGrantService consentGrantService,
+        DeploymentTenant tenant,
         ILogger<AuthorizationController> logger)
     {
         _applicationManager = applicationManager;
@@ -59,6 +61,7 @@ public class AuthorizationController : ControllerBase
         _principalFactory = principalFactory;
         _dcrGate = dcrGate;
         _consentGrantService = consentGrantService;
+        _tenant = tenant;
         _logger = logger;
     }
 
@@ -451,6 +454,19 @@ public class AuthorizationController : ControllerBase
             identity.AddClaim(new Claim(Claims.Name, await _applicationManager.GetDisplayNameAsync(application)!)
                 .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
 
+            // A workload token is not tenantless. It has no user behind it, but
+            // it was issued by this deployment and everything this deployment
+            // issues belongs to this deployment's tenant, so it names the same
+            // partition a user token from here names. The value comes from
+            // server configuration, never from `request`: a client cannot ask
+            // for a different tenant by varying anything it controls.
+            //
+            // This identity never passes through
+            // `TokenClaimsPrincipalFactory.GetDestinations`, so the destination
+            // set here is the one that ships.
+            identity.AddClaim(new Claim(DeploymentTenant.ClaimType, _tenant.ClaimValue)
+                .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+
             var principal = new ClaimsPrincipal(identity);
             principal.SetScopes(request.GetScopes());
 
@@ -616,6 +632,14 @@ public class AuthorizationController : ControllerBase
         // value type.
         var actClaimValue = JsonSerializer.Serialize(new { sub = actorClientId });
         identity.AddClaim(new Claim("act", actClaimValue, JsonClaimValueTypes.Json)
+            .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+
+        // The exchange narrows scope and audience; it does not cross tenants.
+        // The tenant is restated from configuration rather than copied off the
+        // subject token so that an actor cannot widen its reach by presenting
+        // a subject token carrying some other `tid` — the validated subject
+        // token's claims are read for the subject alone.
+        identity.AddClaim(new Claim(DeploymentTenant.ClaimType, _tenant.ClaimValue)
             .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
 
         var principal = new ClaimsPrincipal(identity);

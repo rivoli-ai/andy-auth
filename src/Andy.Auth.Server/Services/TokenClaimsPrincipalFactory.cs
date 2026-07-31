@@ -37,6 +37,7 @@ public class TokenClaimsPrincipalFactory
     private readonly IOpenIddictScopeManager _scopeManager;
     private readonly RolePermissionResolver _rolePermissionResolver;
     private readonly ApplicationDbContext _dbContext;
+    private readonly DeploymentTenant _tenant;
 
     public TokenClaimsPrincipalFactory(
         SignInManager<ApplicationUser> signInManager,
@@ -45,7 +46,8 @@ public class TokenClaimsPrincipalFactory
         IOpenIddictAuthorizationManager authorizationManager,
         IOpenIddictScopeManager scopeManager,
         RolePermissionResolver rolePermissionResolver,
-        ApplicationDbContext dbContext)
+        ApplicationDbContext dbContext,
+        DeploymentTenant tenant)
     {
         _signInManager = signInManager;
         _userManager = userManager;
@@ -54,6 +56,7 @@ public class TokenClaimsPrincipalFactory
         _scopeManager = scopeManager;
         _rolePermissionResolver = rolePermissionResolver;
         _dbContext = dbContext;
+        _tenant = tenant;
     }
 
     /// <summary>
@@ -68,6 +71,22 @@ public class TokenClaimsPrincipalFactory
     {
         var principal = await _signInManager.CreateUserPrincipalAsync(user);
         var identity = (ClaimsIdentity)principal.Identity!;
+
+        // The tenant is the deployment's, and only the deployment's. Any `tid`
+        // already on the principal came from somewhere else — a claim persisted
+        // against the user row, or an upstream provider's own tenant surviving
+        // an external sign-in — and honouring it would let a caller who
+        // controls that upstream directory choose the partition their tokens
+        // read and write. Drop whatever is there before stating ours.
+        foreach (var carrier in principal.Identities)
+        {
+            foreach (var stale in carrier.FindAll(DeploymentTenant.ClaimType).ToList())
+            {
+                carrier.TryRemoveClaim(stale);
+            }
+        }
+
+        identity.AddClaim(new Claim(DeploymentTenant.ClaimType, _tenant.ClaimValue));
 
         // Claims persisted into the tokens.
         identity.AddClaim(new Claim(Claims.Subject, user.Id)
@@ -173,6 +192,18 @@ public class TokenClaimsPrincipalFactory
                 if (principal.HasScope(Scopes.Roles))
                     yield return Destinations.IdentityToken;
 
+                yield break;
+
+            // Tenant claim. Resource servers partition storage on it —
+            // andy-ahp keys row-level security, cache namespaces, object keys
+            // and quotas off `tid` — so it has to reach the access token, and
+            // a client that displays which tenant it signed into reads the
+            // identity token, so it reaches both. Stated explicitly rather
+            // than left to the default arm so that removing it is a deliberate
+            // edit.
+            case DeploymentTenant.ClaimType:
+                yield return Destinations.AccessToken;
+                yield return Destinations.IdentityToken;
                 yield break;
 
             // Groups claim for RBAC integration - always include in access token
