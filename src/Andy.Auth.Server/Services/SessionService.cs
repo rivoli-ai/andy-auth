@@ -227,6 +227,27 @@ public class SessionService
     }
 
     /// <summary>
+    /// Validates both the session state and its subject binding. OAuth grant
+    /// artifacts use this to prevent a session identifier from being replayed
+    /// for a different user or after per-session revocation.
+    /// </summary>
+    public async Task<bool> IsSessionValidForUserAsync(
+        string? sessionId, string userId)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            return false;
+        }
+
+        var session = await _dbContext.UserSessions
+            .FirstOrDefaultAsync(s => s.SessionId == sessionId);
+
+        return session is not null &&
+               string.Equals(session.UserId, userId, StringComparison.Ordinal) &&
+               await IsSessionValidAsync(session);
+    }
+
+    /// <summary>
     /// Overload for callers that have already loaded the row — the tracking
     /// middleware runs on every authenticated request, so re-reading it here
     /// doubled the per-request query count (andy-auth#154).

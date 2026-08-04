@@ -32,6 +32,7 @@ public class AuthorizationController : ControllerBase
     private readonly TokenClaimsPrincipalFactory _principalFactory;
     private readonly DcrClientGate _dcrGate;
     private readonly ConsentGrantService _consentGrantService;
+    private readonly SessionService _sessionService;
     private readonly ILogger<AuthorizationController> _logger;
 
     public AuthorizationController(
@@ -46,6 +47,7 @@ public class AuthorizationController : ControllerBase
         TokenClaimsPrincipalFactory principalFactory,
         DcrClientGate dcrGate,
         ConsentGrantService consentGrantService,
+        SessionService sessionService,
         ILogger<AuthorizationController> logger)
     {
         _applicationManager = applicationManager;
@@ -59,6 +61,7 @@ public class AuthorizationController : ControllerBase
         _principalFactory = principalFactory;
         _dcrGate = dcrGate;
         _consentGrantService = consentGrantService;
+        _sessionService = sessionService;
         _logger = logger;
     }
 
@@ -372,9 +375,11 @@ public class AuthorizationController : ControllerBase
         {
             // Retrieve the claims principal stored in the authorization code/refresh token
             var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            var redeemedPrincipal = result.Principal ??
+                throw new InvalidOperationException("The grant principal cannot be retrieved.");
 
             // Retrieve the user profile corresponding to the authorization code/refresh token
-            var user = await _userManager.FindByIdAsync(result.Principal!.GetClaim(Claims.Subject)!);
+            var user = await _userManager.FindByIdAsync(redeemedPrincipal.GetClaim(Claims.Subject)!);
             if (user == null)
             {
                 return Forbid(
@@ -398,7 +403,38 @@ public class AuthorizationController : ControllerBase
                     }));
             }
 
-            var principal = await CreateClaimsPrincipalAsync(user, result.Principal.GetScopes());
+            // Authorization codes, refresh tokens, and approved device codes
+            // are delegated from an interactive browser session. Do not let a
+            // redeemed artifact outlive revocation of that backing session.
+            // This also rejects legacy/unbound artifacts instead of silently
+            // converting them into a new session (#169).
+            var sessionId = redeemedPrincipal.GetClaim(
+                AndyAuthSignInManager.SessionIdClaimType);
+            if (!await _sessionService.IsSessionValidForUserAsync(sessionId, user.Id))
+            {
+                _logger.LogWarning(
+                    "Token redemption refused for inactive session {SessionId} and user {UserId}",
+                    sessionId, user.Id);
+                return Forbid(
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                    properties: new AuthenticationProperties(new Dictionary<string, string?>
+                    {
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "The authorization session is no longer valid."
+                    }));
+            }
+
+            var principal = await CreateClaimsPrincipalAsync(user, redeemedPrincipal.GetScopes());
+
+            // Rebuilding the Identity principal at the token endpoint would
+            // otherwise mint a fresh session_id: there is no application
+            // cookie on this request for AndyAuthSignInManager to carry
+            // forward. Preserve the validated grant binding across access and
+            // refresh token rotation.
+            principal.SetClaim(AndyAuthSignInManager.SessionIdClaimType, sessionId);
+            principal.FindFirst(AndyAuthSignInManager.SessionIdClaimType)!
+                .SetDestinations(Destinations.AccessToken);
 
             // Handle resource parameter (RFC 8707 - MCP requirement)
             var requestedResources = request.GetResources();

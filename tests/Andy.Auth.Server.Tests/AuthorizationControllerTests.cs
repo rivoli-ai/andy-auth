@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using OpenIddict.Abstractions;
@@ -73,6 +74,10 @@ public class AuthorizationControllerTests
             new DcrClientGate(_dbContext),
             new ConsentGrantService(
                 _dbContext, Mock.Of<ILogger<ConsentGrantService>>()),
+            new SessionService(
+                _dbContext,
+                Mock.Of<ILogger<SessionService>>(),
+                new ConfigurationBuilder().Build()),
             _mockLogger.Object);
 
         _httpContext = new DefaultHttpContext();

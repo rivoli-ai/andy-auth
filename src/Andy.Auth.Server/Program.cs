@@ -172,6 +172,9 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/AccessDenied";
     options.LogoutPath = "/Account/Logout";
+    // Persist/validate the server-side session before the application cookie
+    // is emitted, covering every successful interactive sign-in path (#169).
+    options.EventsType = typeof(InteractiveSessionCookieEvents);
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Lax;
@@ -519,6 +522,7 @@ builder.Services.AddAuthorization(options =>
 
 // Register session management service
 builder.Services.AddScoped<SessionService>();
+builder.Services.AddScoped<InteractiveSessionCookieEvents>();
 
 // Tears down tokens/authorizations/sessions when an admin disables an account
 // (andy-auth#146) — blocking future sign-ins alone leaves existing refresh
