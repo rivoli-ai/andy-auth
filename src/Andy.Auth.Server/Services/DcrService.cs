@@ -235,9 +235,16 @@ public class DcrService
 
         if (isCustomScheme)
         {
-            // Custom URI schemes are allowed for native applications (VS Code extensions, desktop apps, etc.)
-            // These are used by MCP clients like Cline, Roo, Continue.dev, etc.
-            // Examples: vscode://saoudrizwan.claude-dev/callback, cursor://callback
+            if (!_settings.AllowedCustomRedirectUriSchemes.Contains(
+                    parsedUri.Scheme, StringComparer.OrdinalIgnoreCase))
+            {
+                return (false, new ClientRegistrationError
+                {
+                    Error = DcrErrorCodes.InvalidRedirectUri,
+                    ErrorDescription = "The custom redirect URI scheme is not allowed.",
+                    InvalidRedirectUri = uri
+                });
+            }
         }
         else if (isLocalhost)
         {
@@ -488,6 +495,32 @@ public class DcrService
         await _context.SaveChangesAsync();
 
         return (entity, plainTextToken);
+    }
+
+    /// <summary>
+    /// Rotates a validated registration management credential in place. The
+    /// old plaintext token stops matching as soon as this method commits and
+    /// the replacement receives a fresh bounded lifetime.
+    /// </summary>
+    public async Task<(RegistrationAccessToken Entity, string PlainTextToken)>
+        RotateRegistrationAccessTokenAsync(RegistrationAccessToken token)
+    {
+        var now = DateTime.UtcNow;
+        var plainTextToken = GenerateRegistrationAccessToken();
+
+        token.TokenHash = HashToken(plainTextToken);
+        token.CreatedAt = now;
+        token.ExpiresAt = _settings.RegistrationAccessTokenLifetime.HasValue
+            ? now.Add(_settings.RegistrationAccessTokenLifetime.Value)
+            : null;
+        token.IsRevoked = false;
+        token.RevokedAt = null;
+        token.RevokedBy = null;
+        token.RevocationReason = null;
+        token.LastUsedAt = now;
+
+        await _context.SaveChangesAsync();
+        return (token, plainTextToken);
     }
 
     /// <summary>

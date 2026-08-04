@@ -445,6 +445,47 @@
                                 Dynamically registered on <span data-utc="@client.RegisteredAt.Value.ToString("o")" data-format="datetime"></span>
                             </div>
                         }
+                        @if (client.PendingMetadataChange is not null)
+                        {
+                            <div class="detail-section pending-metadata-review">
+                                <strong>Pending security-sensitive change:</strong>
+                                <p class="text-muted">
+                                    Submitted <span data-utc="@client.PendingMetadataChange.ChangedAt.ToString("o")" data-format="datetime"></span>
+                                </p>
+                                <strong>Redirect URIs before:</strong>
+                                <ul class="uri-list">
+                                    @foreach (var uri in client.PendingMetadataChange.PreviousRedirectUris)
+                                    {
+                                        <li><code>@uri</code></li>
+                                    }
+                                </ul>
+                                <strong>Redirect URIs proposed:</strong>
+                                <ul class="uri-list">
+                                    @foreach (var uri in client.PendingMetadataChange.ProposedRedirectUris)
+                                    {
+                                        <li><code>@uri</code></li>
+                                    }
+                                </ul>
+                                @if (client.PendingMetadataChange.PreviousPostLogoutRedirectUris.Any() ||
+                                     client.PendingMetadataChange.ProposedPostLogoutRedirectUris.Any())
+                                {
+                                    <strong>Post-logout URIs before:</strong>
+                                    <ul class="uri-list">
+                                        @foreach (var uri in client.PendingMetadataChange.PreviousPostLogoutRedirectUris)
+                                        {
+                                            <li><code>@uri</code></li>
+                                        }
+                                    </ul>
+                                    <strong>Post-logout URIs proposed:</strong>
+                                    <ul class="uri-list">
+                                        @foreach (var uri in client.PendingMetadataChange.ProposedPostLogoutRedirectUris)
+                                        {
+                                            <li><code>@uri</code></li>
+                                        }
+                                    </ul>
+                                }
+                            </div>
+                        }
                         <div class="detail-section">
                             <strong>Redirect URIs:</strong>
                             @if (client.RedirectUris.Any())

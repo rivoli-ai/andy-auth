@@ -144,6 +144,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.HasIndex(d => d.ClientId).IsUnique();
             entity.Property(d => d.ClientId).HasMaxLength(100).IsRequired();
+            // The pending-review snapshot doubles as an optimistic concurrency
+            // boundary: an admin who loaded the old approval state cannot save
+            // over a concurrent security-sensitive DCR update.
+            entity.Property(d => d.MetadataJson).IsConcurrencyToken();
             entity.HasOne(d => d.InitialAccessToken)
                 .WithMany()
                 .HasForeignKey(d => d.InitialAccessTokenId)

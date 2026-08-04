@@ -215,6 +215,17 @@ public class DcrServiceTests : IDisposable
     }
 
     [Fact]
+    public void ValidateRedirectUri_UnlistedCustomScheme_Rejected()
+    {
+        var (isValid, error) =
+            _service.ValidateRedirectUri("untrusted-app://oauth/callback");
+
+        isValid.Should().BeFalse();
+        error!.Error.Should().Be(DcrErrorCodes.InvalidRedirectUri);
+        error.ErrorDescription.Should().Contain("scheme");
+    }
+
+    [Fact]
     public void ValidateRegistrationRequest_TooManyRedirectUris_Rejected()
     {
         // Arrange
@@ -714,6 +725,13 @@ public class DcrServiceTests : IDisposable
     // ==================== Token Creation Tests ====================
 
     [Fact]
+    public void DcrSettings_RegistrationAccessTokenLifetime_DefaultsToNinetyDays()
+    {
+        new DcrSettings().RegistrationAccessTokenLifetime
+            .Should().Be(TimeSpan.FromDays(90));
+    }
+
+    [Fact]
     public async Task CreateRegistrationAccessTokenAsync_PersistsToken()
     {
         // Arrange
@@ -727,9 +745,31 @@ public class DcrServiceTests : IDisposable
         entity.ClientId.Should().Be(clientId);
         entity.TokenHash.Should().Be(_service.HashToken(plainText));
         entity.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        entity.ExpiresAt.Should().BeCloseTo(
+            DateTime.UtcNow.AddDays(90), TimeSpan.FromSeconds(5));
 
         var saved = await _context.RegistrationAccessTokens.FindAsync(entity.Id);
         saved.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task RotateRegistrationAccessTokenAsync_InvalidatesOldTokenAndBoundsReplacement()
+    {
+        var clientId = "dcr_rotate";
+        var (entity, oldToken) = await _service.CreateRegistrationAccessTokenAsync(clientId);
+
+        var (rotated, newToken) =
+            await _service.RotateRegistrationAccessTokenAsync(entity);
+
+        newToken.Should().NotBe(oldToken);
+        rotated.TokenHash.Should().Be(_service.HashToken(newToken));
+        rotated.ExpiresAt.Should().BeCloseTo(
+            DateTime.UtcNow.AddDays(90), TimeSpan.FromSeconds(5));
+        (await _service.ValidateRegistrationAccessTokenAsync(oldToken, clientId))
+            .IsValid.Should().BeFalse();
+        (await _service.ValidateRegistrationAccessTokenAsync(newToken, clientId))
+            .IsValid.Should().BeTrue();
+        (await _context.RegistrationAccessTokens.CountAsync()).Should().Be(1);
     }
 
     [Fact]

@@ -1,10 +1,12 @@
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Services;
+using Andy.Auth.Server.Models.Dcr;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
+using System.Text.Json;
 
 namespace Andy.Auth.Server.Controllers;
 
@@ -105,6 +107,21 @@ public class AdminController : Controller
                 clientViewModel.RegisteredAt = dcr.RegisteredAt;
                 clientViewModel.IsApproved = dcr.IsApproved;
                 clientViewModel.IsDisabled = dcr.IsDisabled;
+                if (!dcr.IsApproved && !string.IsNullOrWhiteSpace(dcr.MetadataJson))
+                {
+                    try
+                    {
+                        clientViewModel.PendingMetadataChange =
+                            JsonSerializer.Deserialize<DcrMetadataChangeReview>(dcr.MetadataJson);
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogWarning(
+                            ex,
+                            "Could not parse pending metadata review for DCR client {ClientId}",
+                            clientId);
+                    }
+                }
             }
 
             clients.Add(clientViewModel);
@@ -1038,8 +1055,22 @@ public class AdminController : Controller
         dcr.IsApproved = true;
         dcr.ApprovedById = currentUser?.Id;
         dcr.ApprovedAt = DateTime.UtcNow;
+        dcr.MetadataJson = null;
 
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Stale approval refused for DCR client {ClientId}; registration metadata changed concurrently",
+                clientId);
+            TempData["ErrorMessage"] =
+                "The client metadata changed while it was being approved. Review the latest changes and try again.";
+            return RedirectToAction(nameof(Clients));
+        }
 
         await LogAuditAsync("DcrClientApproved", null, null, $"Client ID: {clientId}");
 
@@ -1127,6 +1158,7 @@ public class AdminController : Controller
         public DateTime? RegisteredAt { get; set; }
         public bool IsApproved { get; set; } = true;
         public bool IsDisabled { get; set; } = false;
+        public DcrMetadataChangeReview? PendingMetadataChange { get; set; }
     }
 
     public class CreateClientViewModel
