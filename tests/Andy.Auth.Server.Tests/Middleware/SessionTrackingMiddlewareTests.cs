@@ -102,6 +102,11 @@ public class SessionTrackingMiddlewareTests : IDisposable
     [InlineData("/.well-known/openid-configuration")]
     [InlineData("/health")]
     [InlineData("/connect/token")]
+    [InlineData("/connect/introspect")]
+    [InlineData("/connect/revoke")]
+    [InlineData("/connect/userinfo")]
+    [InlineData("/connect/device")]
+    [InlineData("/connect/register/dcr-client")]
     public async Task InvokeAsync_SkipPaths_PassesThroughWithoutTracking(string path)
     {
         // Arrange
@@ -116,6 +121,54 @@ public class SessionTrackingMiddlewareTests : IDisposable
         // No session should be created for skip paths
         var sessions = await _context.UserSessions.ToListAsync();
         sessions.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("/connect/authorize")]
+    [InlineData("/connect/verify")]
+    [InlineData("/connect/logout")]
+    public async Task InvokeAsync_InteractiveConnectPath_TracksCookieSession(string path)
+    {
+        var middleware = CreateMiddleware();
+        var httpContext = CreateHttpContext(
+            authenticated: true,
+            sessionId: "interactive-session",
+            userId: "user-1",
+            path: path);
+
+        await middleware.InvokeAsync(httpContext, _sessionService, _context);
+
+        _nextCalled.Should().BeTrue();
+        (await _context.UserSessions.SingleAsync())
+            .SessionId.Should().Be("interactive-session");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_AuthorizeWithRevokedSession_BlocksBeforeController()
+    {
+        const string sessionId = "revoked-authorize-session";
+        await _sessionService.CreateSessionAsync("user-1", sessionId, "127.0.0.1", "Browser");
+        await _sessionService.RevokeSessionByIdAsync(sessionId, "Security review regression test");
+
+        var middleware = CreateMiddleware();
+        var httpContext = CreateHttpContext(
+            authenticated: true,
+            sessionId: sessionId,
+            userId: "user-1",
+            path: "/connect/authorize");
+
+        var authentication = new Mock<IAuthenticationService>();
+        var services = new ServiceCollection();
+        services.AddSingleton(_memoryCache);
+        services.AddSingleton(authentication.Object);
+        httpContext.RequestServices = services.BuildServiceProvider();
+
+        await middleware.InvokeAsync(httpContext, _sessionService, _context);
+
+        _nextCalled.Should().BeFalse("a revoked cookie must not reach the authorization controller");
+        httpContext.Response.StatusCode.Should().Be(StatusCodes.Status302Found);
+        httpContext.Response.Headers.Location.ToString()
+            .Should().StartWith("/Account/Login?sessionExpired=true");
     }
 
     [Fact]
@@ -394,12 +447,9 @@ public class SessionTrackingMiddlewareTests : IDisposable
 
     // ==================== API Path Detection Tests ====================
 
-    // Note: /connect/* is intentionally absent — SessionTrackingMiddleware
-    // skips it via SkipPaths because OAuth endpoints authenticate via
-    // tokens, not session cookies. A previous version of this Theory
-    // listed "/connect/token" with isApiPath=true, but that case never
-    // reached the revocation branch (the SkipPaths short-circuit fires
-    // first), and the test was failing in CI as a result.
+    // Machine-only /connect endpoints remain absent because their explicit
+    // SkipPaths entries short-circuit before this branch. Interactive connect
+    // endpoints are covered above because they authenticate the Identity cookie.
     [Theory]
     [InlineData("/api/users", true)]
     [InlineData("/dashboard", false)]
