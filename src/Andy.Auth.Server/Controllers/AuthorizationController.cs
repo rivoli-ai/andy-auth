@@ -550,8 +550,10 @@ public class AuthorizationController : ControllerBase
             return TokenExchangeError(Errors.InvalidRequest,
                 "subject_token parameter is required.");
         }
-        if (!string.IsNullOrWhiteSpace(subjectTokenType)
-            && !string.Equals(subjectTokenType, TokenExchangeConstants.AccessTokenType, StringComparison.Ordinal))
+        if (!string.Equals(
+                subjectTokenType,
+                TokenExchangeConstants.AccessTokenType,
+                StringComparison.Ordinal))
         {
             return TokenExchangeError(Errors.InvalidRequest,
                 "subject_token_type must be urn:ietf:params:oauth:token-type:access_token.");
@@ -595,6 +597,24 @@ public class AuthorizationController : ControllerBase
                 "subject_token is not a valid access token issued by this server.");
         }
 
+        // The subject token must have been intended for a resource trusted as
+        // the source of this OBO hop. A valid Andy Auth token for an unrelated
+        // API is not authority for this actor/target pair (#170).
+        var trustedSubjectAudiences =
+            _tokenExchangePolicy.SubjectAudiences(actorClientId, audience);
+        var subjectAudiences = validation.Audiences ?? Array.Empty<string>();
+        if (!TokenExchangeAttenuation.HasTrustedAudience(
+                subjectAudiences,
+                trustedSubjectAudiences))
+        {
+            _logger.LogWarning(
+                "Token-exchange rejected: subject audience is not trusted for actor {ActorClientId} and target {Audience}",
+                actorClientId,
+                audience);
+            return TokenExchangeError(Errors.InvalidGrant,
+                "subject_token is not valid for this token exchange relationship.");
+        }
+
         // 4b. The subject token proves only that this server minted it, not
         //     that the account behind it is still permitted to authenticate.
         //     Access tokens are unencrypted JWTs validated offline, so without
@@ -612,27 +632,35 @@ public class AuthorizationController : ControllerBase
                 "subject_token is not a valid access token issued by this server.");
         }
 
-        // 5. Scope handling. If the policy has an explicit AllowedScopes
-        //    list, the requested scopes (or, if none requested, the
-        //    subject token's scopes) must be a subset of that list.
-        //    Otherwise, the subject token's scopes pass through.
-        var requestedScopes = request.GetScopes().ToList();
-        var effectiveScopes = requestedScopes.Count > 0
-            ? requestedScopes
-            : validation.Scopes.ToList();
-
-        var allowedScopes = _tokenExchangePolicy.AllowedScopes(actorClientId, audience);
-        if (allowedScopes.Count > 0)
+        // A delegated token may not detach from the interactive session that
+        // authorized the subject token. Missing, expired, revoked, or
+        // cross-user session bindings fail closed.
+        if (!await _sessionService.IsSessionValidForUserAsync(
+                validation.SessionId, subjectUser.Id))
         {
-            var disallowed = effectiveScopes
-                .Where(s => !allowedScopes.Contains(s, StringComparer.Ordinal))
-                .ToList();
-            if (disallowed.Count > 0)
-            {
-                return TokenExchangeError(Errors.InvalidScope,
-                    $"requested scope(s) not allowed for this actor/audience: {string.Join(" ", disallowed)}");
-            }
+            _logger.LogWarning(
+                "Token-exchange rejected: inactive subject session for user {Subject} and actor {ActorClientId}",
+                validation.Subject,
+                actorClientId);
+            return TokenExchangeError(Errors.InvalidGrant,
+                "subject_token session is no longer valid.");
         }
+
+        // 5. Scope handling is strict attenuation: subject authority,
+        //    actor/target policy, and the optional request are intersected.
+        //    No requested scope may be introduced by this exchange.
+        var requestedScopes = request.GetScopes().ToList();
+        var allowedScopes = _tokenExchangePolicy.AllowedScopes(actorClientId, audience);
+        var scopeAttenuation = TokenExchangeAttenuation.AttenuateScopes(
+            validation.Scopes,
+            allowedScopes,
+            requestedScopes);
+        if (!scopeAttenuation.IsAllowed)
+        {
+            return TokenExchangeError(Errors.InvalidScope,
+                $"requested scope(s) exceed the subject or actor/target policy: {string.Join(" ", scopeAttenuation.DisallowedScopes)}");
+        }
+        var effectiveScopes = scopeAttenuation.EffectiveScopes;
 
         // 6. Build the exchanged principal. The user is the subject;
         //    the actor is recorded in the `act` claim as a JSON object
@@ -645,6 +673,11 @@ public class AuthorizationController : ControllerBase
 
         identity.AddClaim(new Claim(Claims.Subject, validation.Subject)
             .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+
+        identity.AddClaim(new Claim(
+                AndyAuthSignInManager.SessionIdClaimType,
+                validation.SessionId!)
+            .SetDestinations(Destinations.AccessToken));
 
         // RFC 8693 §4.1: the act claim is a JSON object {"sub": "<actor>"}.
         // OpenIddict serializes claims of type JSON into structured
@@ -660,6 +693,20 @@ public class AuthorizationController : ControllerBase
             principal.SetScopes(effectiveScopes);
         }
         principal.SetResources(audience);
+
+        // Never let delegation extend authority in time. An exchanged token
+        // receives the smaller of the configured exchange lifetime and the
+        // subject token's remaining lifetime.
+        var exchangedLifetime = TokenExchangeAttenuation.CapLifetime(
+            validation.ExpiresAt,
+            DateTimeOffset.UtcNow,
+            _tokenExchangePolicy.ExchangedTokenLifetime);
+        if (exchangedLifetime is null)
+        {
+            return TokenExchangeError(Errors.InvalidGrant,
+                "subject_token has no usable remaining lifetime.");
+        }
+        principal.SetAccessTokenLifetime(exchangedLifetime.Value);
 
         _logger.LogInformation(
             "Token-exchange issued. Subject: {Subject}, Actor: {ActorClientId}, Audience: {Audience}, Scopes: {Scopes}",

@@ -14,10 +14,9 @@ namespace Andy.Auth.Server.Services;
 /// Validation uses the same signing + encryption keys configured on
 /// <see cref="OpenIddictServerOptions"/>, so any token the server has
 /// just issued through the normal authorization-code / refresh-token
-/// flows is accepted. <c>ValidateAudience</c> is intentionally false —
-/// the subject token's <c>aud</c> claim names whatever resource the
-/// user signed in for (e.g. Conductor); we just need to confirm
-/// authenticity and extract <c>sub</c>.
+/// flows is accepted. Audience authorization is performed by the exchange
+/// policy because the trusted source audience depends on the authenticated
+/// actor/target pair, but the validator returns the verified audience values.
 ///
 /// Drives Epic IDP (rivoli-ai/conductor#1246).
 /// </summary>
@@ -36,7 +35,10 @@ public record SubjectTokenValidationResult(
     bool IsValid,
     string? Subject,
     IReadOnlyList<string> Scopes,
-    string? FailureReason);
+    string? FailureReason,
+    IReadOnlyList<string>? Audiences = null,
+    DateTimeOffset? ExpiresAt = null,
+    string? SessionId = null);
 
 public class InProcessSubjectTokenValidator : ISubjectTokenValidator
 {
@@ -90,6 +92,10 @@ public class InProcessSubjectTokenValidator : ISubjectTokenValidator
             ValidateAudience = false,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
+            // OpenIddict access tokens use the RFC 9068 media type. This
+            // rejects ID tokens (JWT) and unrelated locally signed JWTs even
+            // when they share this server's signing key (#170).
+            ValidTypes = new[] { "at+jwt" },
             IssuerSigningKeys = signingKeys,
             TokenDecryptionKeys = decryptionKeys.Count > 0 ? decryptionKeys : null,
             NameClaimType = "sub",
@@ -136,7 +142,18 @@ public class InProcessSubjectTokenValidator : ISubjectTokenValidator
         // access tokens. Fall back to standard `scope`/`scp` for tokens
         // minted with the public claim form.
         var scopes = ExtractScopes(result);
-        return new SubjectTokenValidationResult(true, sub, scopes, null);
+        var audiences = result.SecurityToken is JsonWebToken jwt
+            ? jwt.Audiences.ToArray()
+            : Array.Empty<string>();
+        var expiresAt = result.SecurityToken is JsonWebToken expiringJwt &&
+                        expiringJwt.ValidTo != DateTime.MinValue
+            ? new DateTimeOffset(DateTime.SpecifyKind(expiringJwt.ValidTo, DateTimeKind.Utc))
+            : (DateTimeOffset?)null;
+        var sessionId = result.ClaimsIdentity?.FindFirst(
+            AndyAuthSignInManager.SessionIdClaimType)?.Value;
+
+        return new SubjectTokenValidationResult(
+            true, sub, scopes, null, audiences, expiresAt, sessionId);
     }
 
     private static IReadOnlyList<string> ExtractScopes(TokenValidationResult result)

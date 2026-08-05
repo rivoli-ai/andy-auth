@@ -38,14 +38,29 @@ public class SubjectTokenValidatorIssuerTests
         return (new InProcessSubjectTokenValidator(monitor, NullLogger<InProcessSubjectTokenValidator>.Instance), creds);
     }
 
-    private static string MintToken(SigningCredentials creds, string issuer, string sub)
+    private static string MintToken(
+        SigningCredentials creds,
+        string issuer,
+        string sub,
+        string tokenType = "at+jwt",
+        string? audience = null,
+        DateTime? expires = null,
+        IEnumerable<Claim>? additionalClaims = null)
     {
         var handler = new JsonWebTokenHandler();
+        var claims = new List<Claim> { new("sub", sub) };
+        if (additionalClaims is not null)
+        {
+            claims.AddRange(additionalClaims);
+        }
+
         return handler.CreateToken(new SecurityTokenDescriptor
         {
             Issuer = issuer,
-            Subject = new ClaimsIdentity(new[] { new Claim("sub", sub) }),
-            Expires = DateTime.UtcNow.AddMinutes(5),
+            Audience = audience,
+            TokenType = tokenType,
+            Subject = new ClaimsIdentity(claims),
+            Expires = expires ?? DateTime.UtcNow.AddMinutes(5),
             SigningCredentials = creds,
         });
     }
@@ -73,6 +88,48 @@ public class SubjectTokenValidatorIssuerTests
         var result = await validator.ValidateAsync(token);
 
         result.IsValid.Should().BeFalse("a token from an unrelated issuer must still be rejected");
+    }
+
+    [Theory]
+    [InlineData("JWT")]
+    [InlineData("id+jwt")]
+    public async Task ValidateAsync_RejectsLocallySignedNonAccessToken(string tokenType)
+    {
+        var (validator, creds) = BuildValidator();
+        var token = MintToken(
+            creds, IssuerWithSlash, "user-123", tokenType: tokenType);
+
+        var result = await validator.ValidateAsync(token);
+
+        result.IsValid.Should().BeFalse(
+            "a valid signature must not turn an ID or generic JWT into an access token");
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ReturnsVerifiedAudienceExpiryScopesAndSession()
+    {
+        var (validator, creds) = BuildValidator();
+        var expiry = DateTime.UtcNow.AddMinutes(3);
+        var token = MintToken(
+            creds,
+            IssuerWithSlash,
+            "user-123",
+            audience: "urn:trusted-source-api",
+            expires: expiry,
+            additionalClaims: new[]
+            {
+                new Claim("scope", "read write"),
+                new Claim(AndyAuthSignInManager.SessionIdClaimType, "session-123")
+            });
+
+        var result = await validator.ValidateAsync(token);
+
+        result.IsValid.Should().BeTrue();
+        result.Audiences.Should().ContainSingle("urn:trusted-source-api");
+        result.Scopes.Should().BeEquivalentTo("read", "write");
+        result.SessionId.Should().Be("session-123");
+        result.ExpiresAt.Should().BeCloseTo(
+            new DateTimeOffset(expiry, TimeSpan.Zero), TimeSpan.FromSeconds(1));
     }
 
     private sealed class StaticOptionsMonitor<T> : IOptionsMonitor<T>

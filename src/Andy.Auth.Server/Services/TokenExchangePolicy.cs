@@ -26,6 +26,12 @@ public interface ITokenExchangePolicy
     /// definition.
     /// </summary>
     IReadOnlyList<string> AllowedScopes(string actorClientId, string audience);
+
+    /// <summary>Trusted source audiences for the subject token.</summary>
+    IReadOnlyList<string> SubjectAudiences(string actorClientId, string audience);
+
+    /// <summary>Maximum lifetime of a newly exchanged access token.</summary>
+    TimeSpan ExchangedTokenLifetime { get; }
 }
 
 /// <summary>
@@ -69,4 +75,14 @@ public class TokenExchangePolicy : ITokenExchangePolicy
             && string.Equals(p.Audience, audience, StringComparison.Ordinal));
         return entry?.AllowedScopes ?? new List<string>();
     }
+
+    public IReadOnlyList<string> SubjectAudiences(string actorClientId, string audience)
+    {
+        var entry = _settings.Policies.FirstOrDefault(p =>
+            string.Equals(p.ActorClientId, actorClientId, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(p.Audience, audience, StringComparison.Ordinal));
+        return entry?.SubjectAudiences ?? new List<string>();
+    }
+
+    public TimeSpan ExchangedTokenLifetime => _settings.ExchangedTokenLifetime;
 }
