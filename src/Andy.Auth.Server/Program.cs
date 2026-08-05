@@ -260,6 +260,22 @@ builder.Services.AddOpenIddict()
         }
         options.SetIssuer(new Uri(configuredIssuer));
 
+        // Self-contained JWT access tokens cannot be recalled from downstream
+        // resource servers. Keep their residual revocation window explicit and
+        // short; refresh tokens remain server-side reference tokens and are
+        // checked against the backing interactive session on redemption (#172).
+        var accessTokenLifetime = builder.Configuration.GetValue(
+            "OpenIddict:AccessTokenLifetime", TimeSpan.FromMinutes(5));
+        var refreshTokenLifetime = builder.Configuration.GetValue(
+            "OpenIddict:RefreshTokenLifetime", TimeSpan.FromDays(14));
+        if (accessTokenLifetime <= TimeSpan.Zero || refreshTokenLifetime <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException(
+                "OpenIddict access-token and refresh-token lifetimes must be positive.");
+        }
+        options.SetAccessTokenLifetime(accessTokenLifetime)
+            .SetRefreshTokenLifetime(refreshTokenLifetime);
+
         // Enable the authorization, token, introspection, and revocation endpoints
         // Note: userinfo and logout are handled by custom controller endpoints
         options.SetAuthorizationEndpointUris("connect/authorize")

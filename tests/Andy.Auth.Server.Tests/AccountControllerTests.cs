@@ -11,8 +11,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -30,7 +28,7 @@ public class AccountControllerTests
     private readonly Mock<UserManager<ApplicationUser>> _mockUserManager;
     private readonly Mock<SignInManager<ApplicationUser>> _mockSignInManager;
     private readonly Mock<IAuditService> _mockAuditService;
-    private readonly SessionService _sessionService;
+    private readonly Mock<IUserAccessRevoker> _mockAccessRevoker;
     private readonly Mock<ILogger<AccountController>> _mockLogger;
     private readonly AccountController _controller;
     private Mock<IAuthenticationService> _mockAuthService = new();
@@ -40,7 +38,7 @@ public class AccountControllerTests
         _mockUserManager = MockUserManager();
         _mockSignInManager = MockSignInManager(_mockUserManager.Object);
         _mockAuditService = new Mock<IAuditService>();
-        _sessionService = CreateSessionService();
+        _mockAccessRevoker = new Mock<IUserAccessRevoker>();
         _mockLogger = new Mock<ILogger<AccountController>>();
 
         _controller = BuildController(new ExternalLoginOptions());
@@ -56,7 +54,7 @@ public class AccountControllerTests
             _mockSignInManager.Object,
             _mockUserManager.Object,
             _mockAuditService.Object,
-            _sessionService,
+            _mockAccessRevoker.Object,
             Options.Create(externalLoginOptions),
             _mockLogger.Object);
 
@@ -508,6 +506,15 @@ public class AccountControllerTests
     public async Task Logout_SignsOutAndRedirects()
     {
         // Arrange
+        var user = new ApplicationUser
+        {
+            Id = "logout-user",
+            Email = "logout@example.com",
+            UserName = "logout@example.com"
+        };
+        _mockUserManager
+            .Setup(m => m.GetUserAsync(It.IsAny<ClaimsPrincipal>()))
+            .ReturnsAsync(user);
         _mockSignInManager.Setup(m => m.SignOutAsync())
             .Returns(Task.CompletedTask);
 
@@ -520,6 +527,9 @@ public class AccountControllerTests
         Assert.Equal("Home", redirectResult.ControllerName);
 
         _mockSignInManager.Verify(m => m.SignOutAsync(), Times.Once);
+        _mockAccessRevoker.Verify(
+            r => r.RevokeAllAccessAsync(user, "User logged out"),
+            Times.Once);
     }
 
     #endregion
@@ -1220,21 +1230,6 @@ public class AccountControllerTests
             contextAccessor.Object,
             claimsFactory.Object,
             null, null, null, null);
-    }
-
-    private static SessionService CreateSessionService()
-    {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-        var dbContext = new ApplicationDbContext(options);
-        var logger = new Mock<ILogger<SessionService>>();
-        var configuration = new Mock<IConfiguration>();
-
-        return new SessionService(
-            dbContext,
-            logger.Object,
-            configuration.Object);
     }
 
     #endregion

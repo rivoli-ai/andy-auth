@@ -56,7 +56,7 @@ public class AccountController : Controller
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IAuditService _auditService;
-    private readonly SessionService _sessionService;
+    private readonly IUserAccessRevoker _accessRevoker;
     private readonly ExternalLoginOptions _externalLoginOptions;
     private readonly ILogger<AccountController> _logger;
 
@@ -64,14 +64,14 @@ public class AccountController : Controller
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager,
         IAuditService auditService,
-        SessionService sessionService,
+        IUserAccessRevoker accessRevoker,
         IOptions<ExternalLoginOptions> externalLoginOptions,
         ILogger<AccountController> logger)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _auditService = auditService;
-        _sessionService = sessionService;
+        _accessRevoker = accessRevoker;
         _externalLoginOptions = externalLoginOptions.Value;
         _logger = logger;
     }
@@ -313,18 +313,13 @@ public class AccountController : Controller
         // Get current user before signing out
         var user = await _userManager.GetUserAsync(User);
 
-        // Revoke all sessions for this user
+        // Logout is an account-wide operation on this surface. Coordinate the
+        // browser cookie with OpenIddict tokens/authorizations and every
+        // tracked session so a reference refresh token cannot silently keep
+        // the account signed in after the UI says logout succeeded (#172).
         if (user != null)
         {
-            try
-            {
-                var revokedCount = await _sessionService.RevokeAllSessionsAsync(user.Id, "User logged out");
-                _logger.LogInformation("Revoked {Count} sessions for user {UserId} on logout", revokedCount, user.Id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to revoke sessions on logout for user {UserId}", user.Id);
-            }
+            await _accessRevoker.RevokeAllAccessAsync(user, "User logged out");
         }
 
         await _signInManager.SignOutAsync();

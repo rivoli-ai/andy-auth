@@ -782,6 +782,32 @@ public class AuthorizationController : ControllerBase
     [HttpPost("~/connect/logout")]
     public async Task<IActionResult> Logout()
     {
+        // RP-initiated logout ends only the browser session represented by
+        // this cookie. Revoking its server-side session immediately prevents
+        // refresh-token redemption via the session binding enforced at the
+        // token endpoint, without signing the user out of unrelated devices.
+        var user = await _userManager.GetUserAsync(User);
+        var sessionId = User.GetClaim(AndyAuthSignInManager.SessionIdClaimType);
+        if (user is not null && !string.IsNullOrWhiteSpace(sessionId))
+        {
+            try
+            {
+                await _sessionService.RevokeSessionForUserAsync(
+                    sessionId, user.Id, "OpenID Connect logout");
+            }
+            catch (Exception ex)
+            {
+                // A backend failure must not trap the user in a local browser
+                // session. The access token remains bounded by its lifetime;
+                // surface the failure for operators and still clear the cookie.
+                _logger.LogError(
+                    ex,
+                    "Failed to revoke session {SessionId} for user {UserId} during logout",
+                    sessionId,
+                    user.Id);
+            }
+        }
+
         // Ask OpenIddict to sign the user out
         await _signInManager.SignOutAsync();
 

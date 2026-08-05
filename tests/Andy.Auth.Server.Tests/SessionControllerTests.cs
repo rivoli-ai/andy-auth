@@ -190,6 +190,19 @@ public class SessionControllerTests : IDisposable
         _controller.TempData["Error"].Should().NotBeNull();
     }
 
+    [Fact]
+    public async Task RevokeSessionForUserAsync_RejectsCrossUserSessionId()
+    {
+        await _sessionService.CreateSessionAsync(
+            "user-2", "user-2-session", null, null);
+
+        var revoked = await _sessionService.RevokeSessionForUserAsync(
+            "user-2-session", "user-1", "OIDC logout");
+
+        revoked.Should().BeFalse();
+        (await _context.UserSessions.SingleAsync()).IsRevoked.Should().BeFalse();
+    }
+
     // ==================== RevokeAllOther Tests ====================
 
     [Fact]

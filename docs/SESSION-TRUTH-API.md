@@ -44,9 +44,14 @@ validation scheme). Resolves the session truth for the token's `sub` (and the
 | No active session | `200` | `{ "authenticated": false, "revoked": false }` | Token valid but no live/revoked session (expired or none). A clean "not signed in" — **never a 500.** | sign out / re-auth |
 | Transient backend failure | `503` | `{ "reason": "temporarily_unavailable", "description": "..." }` (+ `Retry-After: 5`) | A dependency the auth service relies on is momentarily unavailable. **Transient.** | **retry** (honor `Retry-After`) |
 
-`SessionTruthDto` also carries `revokedAt` (the revocation watermark) so a client
-can reconcile a stale status read against a newer revocation: the higher
-`revokedAt` wins.
+The 410 error body carries `subject`, `sessionId`, and `revokedAt` (the
+revocation watermark) so a client can reconcile a stale status read against a
+newer revocation: the higher `revokedAt` wins. Every response is marked
+`Cache-Control: no-store, no-cache, max-age=0`; session truth must never be
+reused from an intermediary cache.
+
+See [REVOCATION-PROFILE.md](REVOCATION-PROFILE.md) for client classes, maximum
+revocation latency, and the mandatory fail-open/fail-closed decision table.
 
 ## Error taxonomy → client action
 

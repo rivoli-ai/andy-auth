@@ -129,6 +129,12 @@ public class SessionApiControllerTests : IDisposable
         obj.StatusCode.Should().Be(StatusCodes.Status410Gone);
         var err = obj.Value.Should().BeOfType<SessionErrorDto>().Subject;
         err.Reason.Should().Be(SessionErrorCodes.SessionRevoked);
+        err.Subject.Should().Be("user-2");
+        err.SessionId.Should().Be("sess-2");
+        err.RevokedAt.Should().NotBeNull();
+        controller.Response.Headers.CacheControl.ToString()
+            .Should().Be("no-store, no-cache, max-age=0");
+        controller.Response.Headers.Pragma.ToString().Should().Be("no-cache");
     }
 
     [Fact]
