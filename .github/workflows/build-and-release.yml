@@ -54,7 +54,7 @@ jobs:
     # in Andy.Auth.E2E.Tests fails immediately with
     # `Executable doesn't exist at /home/runner/.cache/ms-playwright/...`.
     - name: Install Playwright browsers
-      run: pwsh tests/Andy.Auth.E2E.Tests/bin/Release/net8.0/playwright.ps1 install --with-deps chromium
+      run: pwsh "$(ls tests/Andy.Auth.E2E.Tests/bin/Release/*/playwright.ps1 | head -1)" install --with-deps chromium
 
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
