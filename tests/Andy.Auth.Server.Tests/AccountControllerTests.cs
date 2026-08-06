@@ -48,7 +48,9 @@ public class AccountControllerTests
     /// Builds the controller under test with the supplied external-login policy,
     /// wiring up the URL helper and an empty (unauthenticated) HTTP context.
     /// </summary>
-    private AccountController BuildController(ExternalLoginOptions externalLoginOptions)
+    private AccountController BuildController(
+        ExternalLoginOptions externalLoginOptions,
+        SelfRegistrationOptions? selfRegistrationOptions = null)
     {
         var controller = new AccountController(
             _mockSignInManager.Object,
@@ -56,6 +58,11 @@ public class AccountControllerTests
             _mockAuditService.Object,
             _mockAccessRevoker.Object,
             Options.Create(externalLoginOptions),
+            Options.Create(selfRegistrationOptions ?? new SelfRegistrationOptions
+            {
+                Enabled = true,
+                RequireConfirmedEmail = true
+            }),
             _mockLogger.Object);
 
         // Setup controller context for URL helper
@@ -385,6 +392,16 @@ public class AccountControllerTests
         Assert.Equal(returnUrl, model.ReturnUrl);
     }
 
+    [Fact]
+    public void Register_Get_WhenDisabled_ReturnsNotFound()
+    {
+        var controller = BuildController(
+            new ExternalLoginOptions(),
+            new SelfRegistrationOptions { Enabled = false });
+
+        controller.Register().Should().BeOfType<NotFoundResult>();
+    }
+
     #endregion
 
     #region Register POST Tests
@@ -405,7 +422,7 @@ public class AccountControllerTests
     }
 
     [Fact]
-    public async Task Register_Post_SuccessfulRegistration_SignsInAndRedirects()
+    public async Task Register_Post_SuccessfulRegistration_DoesNotSignInUnverifiedAccount()
     {
         // Arrange
         var model = new RegisterViewModel
@@ -419,31 +436,30 @@ public class AccountControllerTests
         _mockUserManager.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>(), model.Password))
             .ReturnsAsync(IdentityResult.Success);
 
-        _mockSignInManager.Setup(m => m.SignInAsync(It.IsAny<ApplicationUser>(), false, null))
-            .Returns(Task.CompletedTask);
-
         // Act
         var result = await _controller.Register(model);
 
         // Assert
         var redirectResult = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal("Index", redirectResult.ActionName);
-        Assert.Equal("Home", redirectResult.ControllerName);
+        Assert.Equal("Login", redirectResult.ActionName);
 
         _mockUserManager.Verify(m => m.CreateAsync(
             It.Is<ApplicationUser>(u =>
                 u.Email == model.Email &&
                 u.UserName == model.Email &&
                 u.FullName == model.FullName &&
-                u.IsActive),
+                u.IsActive &&
+                !u.EmailConfirmed),
             model.Password),
             Times.Once);
 
-        _mockSignInManager.Verify(m => m.SignInAsync(It.IsAny<ApplicationUser>(), false, null), Times.Once);
+        _mockSignInManager.Verify(
+            m => m.SignInAsync(It.IsAny<ApplicationUser>(), false, null),
+            Times.Never);
     }
 
     [Fact]
-    public async Task Register_Post_SuccessfulRegistrationWithReturnUrl_RedirectsToReturnUrl()
+    public async Task Register_Post_SuccessfulRegistrationWithReturnUrl_ReturnsToLoginFlow()
     {
         // Arrange
         var returnUrl = "/connect/authorize";
@@ -458,15 +474,13 @@ public class AccountControllerTests
         _mockUserManager.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>(), model.Password))
             .ReturnsAsync(IdentityResult.Success);
 
-        _mockSignInManager.Setup(m => m.SignInAsync(It.IsAny<ApplicationUser>(), false, null))
-            .Returns(Task.CompletedTask);
-
         // Act
         var result = await _controller.Register(model);
 
         // Assert
-        var redirectResult = Assert.IsType<RedirectResult>(result);
-        Assert.Equal(returnUrl, redirectResult.Url);
+        var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Login", redirectResult.ActionName);
+        redirectResult.RouteValues!["returnUrl"].Should().Be(returnUrl);
     }
 
     [Fact]
@@ -481,8 +495,8 @@ public class AccountControllerTests
 
         var errors = new[]
         {
-            new IdentityError { Description = "Password too weak" },
-            new IdentityError { Description = "Email already exists" }
+            new IdentityError { Code = "PasswordTooShort", Description = "Password too weak" },
+            new IdentityError { Code = "DuplicateEmail", Description = "Email already exists" }
         };
 
         _mockUserManager.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>(), model.Password))
@@ -495,7 +509,52 @@ public class AccountControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         Assert.Same(model, viewResult.Model);
         Assert.False(_controller.ModelState.IsValid);
-        Assert.Equal(2, _controller.ModelState.ErrorCount);
+        Assert.Equal(1, _controller.ModelState.ErrorCount);
+        _controller.ModelState.Values.SelectMany(v => v.Errors)
+            .Should().NotContain(e => e.ErrorMessage.Contains("already", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Register_Post_DuplicateEmail_ReturnsSameGenericResponseAsSuccess()
+    {
+        var model = new RegisterViewModel
+        {
+            Email = "existing@example.com",
+            Password = "Password123!",
+            ConfirmPassword = "Password123!"
+        };
+        _mockUserManager.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>(), model.Password))
+            .ReturnsAsync(IdentityResult.Failed(
+                new IdentityError { Code = "DuplicateEmail", Description = "Email already exists" },
+                new IdentityError { Code = "DuplicateUserName", Description = "Username already exists" }));
+
+        var result = await _controller.Register(model);
+
+        var redirect = result.Should().BeOfType<RedirectToActionResult>().Subject;
+        redirect.ActionName.Should().Be("Login");
+        _controller.ModelState.ErrorCount.Should().Be(0);
+        _mockSignInManager.Verify(
+            m => m.SignInAsync(It.IsAny<ApplicationUser>(), false, null),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Register_Post_WhenDisabled_ReturnsNotFoundWithoutCreatingUser()
+    {
+        var controller = BuildController(
+            new ExternalLoginOptions(),
+            new SelfRegistrationOptions { Enabled = false });
+        var model = new RegisterViewModel
+        {
+            Email = "new@example.com",
+            Password = "Password123!",
+            ConfirmPassword = "Password123!"
+        };
+
+        (await controller.Register(model)).Should().BeOfType<NotFoundResult>();
+        _mockUserManager.Verify(
+            m => m.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()),
+            Times.Never);
     }
 
     #endregion

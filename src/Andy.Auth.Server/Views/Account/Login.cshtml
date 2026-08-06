@@ -1,4 +1,7 @@
 @model LoginViewModel
+@using Andy.Auth.Server.Configuration
+@using Microsoft.Extensions.Options
+@inject IOptions<SelfRegistrationOptions> SelfRegistration
 @{
     ViewData["Title"] = "Login";
     Layout = null;
@@ -241,6 +244,10 @@
             </div>
 
             <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+            @if (TempData["RegistrationMessage"] is string registrationMessage)
+            {
+                <div class="validation-summary-errors">@registrationMessage</div>
+            }
 
             <form asp-controller="Account" asp-action="Login" method="post" autocomplete="off">
                 <input type="hidden" asp-for="ReturnUrl" />
@@ -264,9 +271,12 @@
 
                 <button type="submit" class="btn-login">Sign in</button>
 
-                <div class="login-footer">
-                    <p>Don't have an account? <a asp-controller="Account" asp-action="Register" asp-route-returnUrl="@Model.ReturnUrl">Create one</a></p>
-                </div>
+                @if (SelfRegistration.Value.Enabled)
+                {
+                    <div class="login-footer">
+                        <p>Don't have an account? <a asp-controller="Account" asp-action="Register" asp-route-returnUrl="@Model.ReturnUrl">Create one</a></p>
+                    </div>
+                }
             </form>
         </div>
 

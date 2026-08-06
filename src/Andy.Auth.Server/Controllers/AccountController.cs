@@ -58,6 +58,7 @@ public class AccountController : Controller
     private readonly IAuditService _auditService;
     private readonly IUserAccessRevoker _accessRevoker;
     private readonly ExternalLoginOptions _externalLoginOptions;
+    private readonly SelfRegistrationOptions _selfRegistrationOptions;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
@@ -66,6 +67,7 @@ public class AccountController : Controller
         IAuditService auditService,
         IUserAccessRevoker accessRevoker,
         IOptions<ExternalLoginOptions> externalLoginOptions,
+        IOptions<SelfRegistrationOptions> selfRegistrationOptions,
         ILogger<AccountController> logger)
     {
         _signInManager = signInManager;
@@ -73,6 +75,7 @@ public class AccountController : Controller
         _auditService = auditService;
         _accessRevoker = accessRevoker;
         _externalLoginOptions = externalLoginOptions.Value;
+        _selfRegistrationOptions = selfRegistrationOptions.Value;
         _logger = logger;
     }
 
@@ -245,6 +248,11 @@ public class AccountController : Controller
     [HttpGet]
     public IActionResult Register(string? returnUrl = null)
     {
+        if (!_selfRegistrationOptions.Enabled)
+        {
+            return NotFound();
+        }
+
         ViewData["ReturnUrl"] = returnUrl;
         return View(new RegisterViewModel { ReturnUrl = returnUrl });
     }
@@ -253,6 +261,11 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Register(RegisterViewModel model)
     {
+        if (!_selfRegistrationOptions.Enabled)
+        {
+            return NotFound();
+        }
+
         ViewData["ReturnUrl"] = model.ReturnUrl;
 
         if (!ModelState.IsValid)
@@ -286,23 +299,43 @@ public class AccountController : Controller
                 "New user registration",
                 ipAddress);
 
-            // Sign in the user
-            await _signInManager.SignInAsync(user, isPersistent: false);
-
-            if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
-            {
-                return Redirect(model.ReturnUrl);
-            }
-
-            return RedirectToAction("Index", "Home");
+            // A public registration is not an authenticated identity until the
+            // address has been verified. Returning the same response as a
+            // duplicate submission also avoids confirming account existence.
+            return RegistrationSubmitted(model.ReturnUrl);
         }
 
-        foreach (var error in result.Errors)
+        var hasDuplicateIdentity = result.Errors.Any(
+            error => error.Code is "DuplicateEmail" or "DuplicateUserName");
+        if (hasDuplicateIdentity)
+        {
+            // Identity rejects a duplicate during user validation, before its
+            // password hasher runs. Burn comparable PBKDF2 work so the generic
+            // response is not undermined by a cheap timing oracle (#173).
+            TimingEqualizer.HashPassword(new ApplicationUser(), model.Password);
+        }
+
+        var publicErrors = result.Errors
+            .Where(error => error.Code is not "DuplicateEmail" and not "DuplicateUserName")
+            .ToList();
+        if (publicErrors.Count == 0)
+        {
+            return RegistrationSubmitted(model.ReturnUrl);
+        }
+
+        foreach (var error in publicErrors)
         {
             ModelState.AddModelError(string.Empty, error.Description);
         }
 
         return View(model);
+    }
+
+    private IActionResult RegistrationSubmitted(string? returnUrl)
+    {
+        TempData["RegistrationMessage"] =
+            "If registration can be completed, follow the email verification instructions or contact your administrator.";
+        return RedirectToAction(nameof(Login), new { returnUrl });
     }
 
     [HttpPost]

@@ -502,14 +502,13 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task RegisterPage_ReturnsSuccessfully()
+    public async Task RegisterPage_IsNotExposedByDefault()
     {
         // Act
         var response = await _client.GetAsync("/Account/Register");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("text/html", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

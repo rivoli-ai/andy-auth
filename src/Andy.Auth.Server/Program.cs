@@ -141,7 +141,19 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseOpenIddict();
 });
 
-// Configure ASP.NET Core Identity
+// Configure ASP.NET Core Identity. Public registration may never be combined
+// with unconfirmed-email sign-in: that recreates the unverified identity path
+// this policy exists to close (#173).
+var selfRegistrationEnabled = builder.Configuration.GetValue(
+    "SelfRegistration:Enabled", false);
+var requireConfirmedRegistrationEmail = builder.Configuration.GetValue(
+    "SelfRegistration:RequireConfirmedEmail", true);
+if (selfRegistrationEnabled && !requireConfirmedRegistrationEmail)
+{
+    throw new InvalidOperationException(
+        "SelfRegistration:RequireConfirmedEmail must be true when self-registration is enabled.");
+}
+
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     // Password settings
@@ -158,7 +170,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 
     // User settings
     options.User.RequireUniqueEmail = true;
-    options.SignIn.RequireConfirmedEmail = false; // Set to true when email is configured
+    options.SignIn.RequireConfirmedEmail = requireConfirmedRegistrationEmail;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 // Enforces the account lifecycle flags (suspended / expired / soft-deleted)
@@ -554,6 +566,8 @@ builder.Services.AddScoped<IAuditService, AuditService>();
 // Account Linking").
 builder.Services.Configure<ExternalLoginOptions>(
     builder.Configuration.GetSection(ExternalLoginOptions.SectionName));
+builder.Services.Configure<SelfRegistrationOptions>(
+    builder.Configuration.GetSection(SelfRegistrationOptions.SectionName));
 
 // Register Dynamic Client Registration (RFC 7591)
 builder.Services.Configure<DcrSettings>(builder.Configuration.GetSection(DcrSettings.SectionName));

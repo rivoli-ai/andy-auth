@@ -35,6 +35,7 @@ public class TokenClaimsPrincipalFactoryTests
         Email = "user@test.local",
         UserName = "user@test.local",
         FullName = "Test User",
+        EmailConfirmed = true,
         IsActive = true,
     };
 
@@ -96,7 +97,7 @@ public class TokenClaimsPrincipalFactoryTests
     [InlineData("andy-cli")]        // device flow
     public async Task CreateAsync_EmitsPermissionClaims_ForEveryFlow(string? clientId)
     {
-        var principal = await _factory.CreateAsync(User, new[] { "openid", "profile" }, clientId);
+        var principal = await _factory.CreateAsync(User, new[] { "openid", "roles" }, clientId);
 
         principal.FindAll("permission").Select(c => c.Value)
             .Should().BeEquivalentTo("tasks:approvePlan", "tasks:editPlan");
@@ -107,7 +108,7 @@ public class TokenClaimsPrincipalFactoryTests
     {
         // The identity token is for the client/UI; permissions are for
         // downstream service policies.
-        var principal = await _factory.CreateAsync(User, new[] { "openid", "profile" }, "andy-cli");
+        var principal = await _factory.CreateAsync(User, new[] { "openid", "roles" }, "andy-cli");
 
         var permission = principal.FindFirst("permission");
         permission.Should().NotBeNull();
@@ -122,7 +123,7 @@ public class TokenClaimsPrincipalFactoryTests
         _dbContext.UserGroups.Add(new UserGroup { UserId = User.Id, Group = group });
         await _dbContext.SaveChangesAsync();
 
-        var principal = await _factory.CreateAsync(User, new[] { "openid" }, "andy-cli");
+        var principal = await _factory.CreateAsync(User, new[] { "openid", "roles" }, "andy-cli");
 
         principal.FindAll("groups").Select(c => c.Value).Should().BeEquivalentTo("engineering");
     }
@@ -144,10 +145,72 @@ public class TokenClaimsPrincipalFactoryTests
     [Fact]
     public async Task CreateAsync_EmitsCoreSubjectClaims()
     {
-        var principal = await _factory.CreateAsync(User, new[] { "openid", "profile" }, "andy-cli");
+        var principal = await _factory.CreateAsync(
+            User, new[] { "openid", "profile", "email" }, "andy-cli");
 
         principal.FindFirst(Claims.Subject)!.Value.Should().Be(User.Id);
+        principal.FindFirst(Claims.Subject)!.GetDestinations()
+            .Should().BeEquivalentTo(Destinations.AccessToken, Destinations.IdentityToken);
         principal.FindFirst(Claims.Email)!.Value.Should().Be(User.Email);
         principal.FindFirst(Claims.PreferredUsername)!.Value.Should().Be(User.UserName);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ProfileScope_DoesNotReleaseEmailAddress()
+    {
+        var principal = await _factory.CreateAsync(
+            User, new[] { "openid", "profile" }, "andy-cli");
+
+        principal.FindFirst(Claims.Email).Should().BeNull();
+        principal.FindFirst(Claims.EmailVerified).Should().BeNull();
+        principal.FindFirst(Claims.PreferredUsername).Should().BeNull(
+            "the local username is the email address and must not bypass the email scope");
+        principal.FindFirst(Claims.Name).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task CreateAsync_EmailScope_DoesNotReleaseProfileClaims()
+    {
+        var principal = await _factory.CreateAsync(
+            User, new[] { "openid", "email" }, "andy-cli");
+
+        principal.FindFirst(Claims.Email)!.Value.Should().Be(User.Email);
+        principal.FindFirst(Claims.EmailVerified)!.Value.Should().Be("true");
+        principal.FindFirst(Claims.Name).Should().BeNull();
+        principal.FindFirst(Claims.PreferredUsername).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithoutRolesScope_DoesNotReleaseAuthorityClaims()
+    {
+        var group = new Group { Code = "engineering", Name = "Engineering", IsActive = true };
+        _dbContext.Groups.Add(group);
+        _dbContext.UserGroups.Add(new UserGroup { UserId = User.Id, Group = group });
+        await _dbContext.SaveChangesAsync();
+
+        var principal = await _factory.CreateAsync(
+            User, new[] { "openid", "profile" }, "andy-cli");
+
+        principal.FindAll(Claims.Role).Should().BeEmpty();
+        principal.FindAll("groups").Should().BeEmpty();
+        principal.FindAll("permission").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateAsync_UnverifiedEmail_IsExplicitlyMarkedUnverified()
+    {
+        var unverified = new ApplicationUser
+        {
+            Id = "unverified",
+            Email = "unverified@test.local",
+            UserName = "unverified@test.local",
+            EmailConfirmed = false,
+            IsActive = true
+        };
+
+        var principal = await _factory.CreateAsync(
+            unverified, new[] { "openid", "email" }, "andy-cli");
+
+        principal.FindFirst(Claims.EmailVerified)!.Value.Should().Be("false");
     }
 }
