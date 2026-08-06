@@ -4,7 +4,11 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Andy.Auth.Server.Data;
+using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Andy.Auth.Server.Tests;
@@ -498,14 +502,13 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task RegisterPage_ReturnsSuccessfully()
+    public async Task RegisterPage_IsNotExposedByDefault()
     {
         // Act
         var response = await _client.GetAsync("/Account/Register");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("text/html", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
@@ -542,6 +545,73 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     #endregion
 
     #region Authorization Code Flow Tests
+
+    [Fact]
+    public async Task Authorization_WithRevokedInteractiveSession_ReturnsToLoginBeforeIssuance()
+    {
+        var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = true,
+            BaseAddress = new Uri("https://localhost")
+        });
+
+        var loginStartedAt = DateTime.UtcNow.AddSeconds(-1);
+        var loginPage = await client.GetAsync("/Account/Login");
+        loginPage.EnsureSuccessStatusCode();
+        var html = await loginPage.Content.ReadAsStringAsync();
+        var tokenMatch = Regex.Match(
+            html,
+            @"<input[^>]*name=""__RequestVerificationToken""[^>]*value=""([^""]+)""");
+        Assert.True(tokenMatch.Success, "The login form must contain an antiforgery token.");
+
+        var loginResponse = await client.PostAsync(
+            "/Account/Login",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["Email"] = CustomWebApplicationFactory.AdminEmail,
+                ["Password"] = CustomWebApplicationFactory.AdminPassword,
+                ["RememberMe"] = "false",
+                ["__RequestVerificationToken"] = tokenMatch.Groups[1].Value
+            }));
+        Assert.Equal(HttpStatusCode.Redirect, loginResponse.StatusCode);
+
+        string sessionId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var user = await dbContext.Users.SingleAsync(
+                u => u.Email == CustomWebApplicationFactory.AdminEmail);
+            var session = await dbContext.UserSessions
+                .Where(s => s.UserId == user.Id && s.CreatedAt >= loginStartedAt)
+                .OrderByDescending(s => s.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            Assert.NotNull(session);
+            sessionId = session!.SessionId;
+
+            var sessionService = scope.ServiceProvider.GetRequiredService<SessionService>();
+            Assert.True(await sessionService.RevokeSessionByIdAsync(
+                sessionId, "OAuth integration revocation test"));
+        }
+
+        var verifier = GenerateCodeVerifier();
+        var challenge = GenerateCodeChallenge(verifier);
+        var authorizeResponse = await client.GetAsync(
+            "/connect/authorize" +
+            "?client_id=claude-desktop" +
+            "&redirect_uri=http%3A%2F%2F127.0.0.1%2Fcallback" +
+            "&response_type=code" +
+            "&scope=openid%20profile" +
+            $"&code_challenge={challenge}" +
+            "&code_challenge_method=S256");
+
+        Assert.Equal(HttpStatusCode.Redirect, authorizeResponse.StatusCode);
+        Assert.StartsWith(
+            "/Account/Login?sessionExpired=true",
+            authorizeResponse.Headers.Location?.OriginalString,
+            StringComparison.Ordinal);
+    }
 
     [Fact]
     public async Task ClaudeDesktopClient_AuthorizationCodeFlowWithPKCE_ShouldSucceed()

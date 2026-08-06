@@ -166,6 +166,35 @@ public class SessionService
     }
 
     /// <summary>
+    /// Revokes a session only when it belongs to the expected user. Logout
+    /// surfaces use this subject-bound form so a forged/mismatched
+    /// <c>session_id</c> claim cannot terminate another account's session.
+    /// </summary>
+    public async Task<bool> RevokeSessionForUserAsync(
+        string sessionId, string userId, string reason)
+    {
+        var session = await _dbContext.UserSessions
+            .FirstOrDefaultAsync(s => s.SessionId == sessionId && s.UserId == userId);
+
+        if (session == null || session.IsRevoked)
+        {
+            return false;
+        }
+
+        session.IsRevoked = true;
+        session.RevokedAt = DateTime.UtcNow;
+        session.RevocationReason = reason;
+
+        await _dbContext.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Revoked session {SessionId} for user {UserId}. Reason: {Reason}",
+            sessionId, userId, reason);
+
+        return true;
+    }
+
+    /// <summary>
     /// Revokes all sessions for a user except the current one.
     /// </summary>
     public async Task<int> RevokeAllOtherSessionsAsync(string userId, string currentSessionId)
@@ -224,6 +253,27 @@ public class SessionService
             .FirstOrDefaultAsync(s => s.SessionId == sessionId);
 
         return await IsSessionValidAsync(session);
+    }
+
+    /// <summary>
+    /// Validates both the session state and its subject binding. OAuth grant
+    /// artifacts use this to prevent a session identifier from being replayed
+    /// for a different user or after per-session revocation.
+    /// </summary>
+    public async Task<bool> IsSessionValidForUserAsync(
+        string? sessionId, string userId)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            return false;
+        }
+
+        var session = await _dbContext.UserSessions
+            .FirstOrDefaultAsync(s => s.SessionId == sessionId);
+
+        return session is not null &&
+               string.Equals(session.UserId, userId, StringComparison.Ordinal) &&
+               await IsSessionValidAsync(session);
     }
 
     /// <summary>

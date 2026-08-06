@@ -72,6 +72,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         // Exercised by TokenExchangeIntegrationTests.
         SetEnv("TokenExchange__Policies__0__ActorClientId", AndyContainersApiClientId);
         SetEnv("TokenExchange__Policies__0__Audience", AndyModelsApiAudience);
+        SetEnv("TokenExchange__Policies__0__SubjectAudiences__0", "urn:andy-containers-api");
 
         // Give the seeded admin user a deterministic password so admin-gated
         // flows can be exercised for real (otherwise DbSeeder generates a

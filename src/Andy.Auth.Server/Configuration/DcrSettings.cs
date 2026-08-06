@@ -50,9 +50,11 @@ public class DcrSettings
     };
 
     /// <summary>
-    /// Registration access token lifetime. Set to null for non-expiring tokens.
+    /// Registration access token lifetime. Defaults to 90 days so a missing
+    /// configuration value cannot create a permanent management credential.
+    /// Set to null only as an explicit compatibility exception.
     /// </summary>
-    public TimeSpan? RegistrationAccessTokenLifetime { get; set; } = null;
+    public TimeSpan? RegistrationAccessTokenLifetime { get; set; } = TimeSpan.FromDays(90);
 
     /// <summary>
     /// If true, localhost redirect URIs are allowed (useful for development clients).
@@ -64,6 +66,17 @@ public class DcrSettings
     /// If true, HTTP redirect URIs are allowed for localhost (development only).
     /// </summary>
     public bool AllowHttpLocalhostRedirectUris { get; set; } = false;
+
+    /// <summary>
+    /// Custom redirect URI schemes permitted for installed applications.
+    /// Scheme matching is exact and case-insensitive; an arbitrary scheme is
+    /// not accepted merely because the URI is syntactically valid.
+    /// </summary>
+    public List<string> AllowedCustomRedirectUriSchemes { get; set; } = new()
+    {
+        "vscode",
+        "cursor"
+    };
 
     /// <summary>
     /// Allowed redirect URI patterns (regex). Empty means all valid URIs are allowed.

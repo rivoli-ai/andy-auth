@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
+using System.Text.Json;
 
 namespace Andy.Auth.Server.Controllers;
 
@@ -479,6 +480,11 @@ public class DynamicClientRegistrationController : ControllerBase
         var descriptor = new OpenIddictApplicationDescriptor();
         await _applicationManager.PopulateAsync(descriptor, application);
 
+        var previousRedirectUris = ToSortedUriStrings(descriptor.RedirectUris);
+        var previousPostLogoutRedirectUris = ToSortedUriStrings(
+            descriptor.PostLogoutRedirectUris);
+        var securitySensitiveMetadataChanged = false;
+
         // Update display name
         if (request.ClientName != null)
         {
@@ -488,39 +494,145 @@ public class DynamicClientRegistrationController : ControllerBase
         // Update redirect URIs
         if (request.RedirectUris != null)
         {
+            var updatedRedirectUris = ParseAbsoluteUris(request.RedirectUris);
+            securitySensitiveMetadataChanged |= !UriSetsEqual(
+                descriptor.RedirectUris, updatedRedirectUris);
+
             descriptor.RedirectUris.Clear();
-            foreach (var uri in request.RedirectUris)
+            foreach (var uri in updatedRedirectUris)
             {
-                if (Uri.TryCreate(uri, UriKind.Absolute, out var parsedUri))
-                {
-                    descriptor.RedirectUris.Add(parsedUri);
-                }
+                descriptor.RedirectUris.Add(uri);
             }
         }
 
         // Update post-logout redirect URIs
         if (request.PostLogoutRedirectUris != null)
         {
+            var updatedPostLogoutRedirectUris = ParseAbsoluteUris(
+                request.PostLogoutRedirectUris);
+            securitySensitiveMetadataChanged |= !UriSetsEqual(
+                descriptor.PostLogoutRedirectUris, updatedPostLogoutRedirectUris);
+
             descriptor.PostLogoutRedirectUris.Clear();
-            foreach (var uri in request.PostLogoutRedirectUris)
+            foreach (var uri in updatedPostLogoutRedirectUris)
             {
-                if (Uri.TryCreate(uri, UriKind.Absolute, out var parsedUri))
-                {
-                    descriptor.PostLogoutRedirectUris.Add(parsedUri);
-                }
+                descriptor.PostLogoutRedirectUris.Add(uri);
             }
         }
 
-        await _applicationManager.UpdateAsync(application, descriptor);
+        // An RFC 7592 registration access token proves control of the client,
+        // but it is not an administrator approval credential. If an approved
+        // client changes a URI to which authorization responses or logout
+        // responses may be sent, fail closed before applying the new metadata.
+        // DcrClientGate will then block authorization and token issuance until
+        // an administrator reviews the replacement URI set (#171).
+        var approvalReset = securitySensitiveMetadataChanged &&
+            (dcrMetadata.RequiresApproval || _settings.RequireAdminApproval);
+        var useTransaction = _context.Database.IsRelational();
+        await using var transaction = useTransaction
+            ? await _context.Database.BeginTransactionAsync()
+            : null;
+        var revokedTokenCount = 0;
 
-        // Update last used timestamp
-        if (ratToken != null)
+        try
         {
-            await _dcrService.UpdateRegistrationAccessTokenLastUsedAsync(ratToken);
-        }
+            if (approvalReset)
+            {
+                var review = new DcrMetadataChangeReview
+                {
+                    ChangedAt = DateTime.UtcNow,
+                    PreviousRedirectUris = previousRedirectUris,
+                    ProposedRedirectUris = ToSortedUriStrings(descriptor.RedirectUris),
+                    PreviousPostLogoutRedirectUris = previousPostLogoutRedirectUris,
+                    ProposedPostLogoutRedirectUris = ToSortedUriStrings(
+                        descriptor.PostLogoutRedirectUris)
+                };
 
-        // Log audit
-        await LogAuditAsync("DcrClientUpdated", clientId, $"Client updated via DCR: {request.ClientName ?? clientId}");
+                // Persist the deployment's current policy too. This covers a
+                // client originally registered in a permissive environment
+                // before RequireAdminApproval was tightened.
+                dcrMetadata.RequiresApproval = true;
+                dcrMetadata.IsApproved = false;
+                dcrMetadata.ApprovedById = null;
+                dcrMetadata.ApprovedAt = null;
+                dcrMetadata.MetadataJson = JsonSerializer.Serialize(review);
+                await _context.SaveChangesAsync();
+
+                _logger.LogWarning(
+                    "Admin approval reset for DCR client {ClientId} after redirect metadata changed",
+                    clientId);
+            }
+
+            await _applicationManager.UpdateAsync(application, descriptor);
+
+            // Codes, refresh tokens, device codes, and access-token entries
+            // issued under the superseded approval must not survive the move
+            // back to pending review.
+            if (approvalReset)
+            {
+                var applicationId = await _applicationManager.GetIdAsync(application);
+                if (applicationId != null)
+                {
+                    await foreach (var token in _tokenManager.FindByApplicationIdAsync(applicationId))
+                    {
+                        if (await _tokenManager.TryRevokeAsync(token))
+                        {
+                            revokedTokenCount++;
+                        }
+                    }
+                }
+            }
+
+            // Update last used timestamp
+            if (ratToken != null)
+            {
+                await _dcrService.UpdateRegistrationAccessTokenLastUsedAsync(ratToken);
+            }
+
+            // Log a credential-free before/after snapshot in the same
+            // transaction as both the approval reset and application update.
+            var auditDetails = approvalReset
+                ? $"Security-sensitive metadata changed, approval was reset, and {revokedTokenCount} token(s) were revoked. Review: {dcrMetadata.MetadataJson}"
+                : $"Client updated via DCR: {request.ClientName ?? clientId}";
+            await LogAuditAsync("DcrClientUpdated", clientId, auditDetails);
+
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync();
+            }
+
+            _logger.LogWarning(
+                ex,
+                "Concurrent DCR update refused for client {ClientId}",
+                clientId);
+            return Conflict(new ClientRegistrationError
+            {
+                Error = DcrErrorCodes.InvalidClientMetadata,
+                ErrorDescription =
+                    "The client registration changed concurrently. Retrieve the latest configuration and retry."
+            });
+        }
+        catch (Exception ex)
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync();
+            }
+
+            _logger.LogError(ex, "DCR update failed for client {ClientId}; rolled back", clientId);
+            return StatusCode(500, new ClientRegistrationError
+            {
+                Error = DcrErrorCodes.InvalidClientMetadata,
+                ErrorDescription = "The client registration could not be updated."
+            });
+        }
 
         _logger.LogInformation("Client updated via DCR: {ClientId}", clientId);
 
@@ -529,6 +641,66 @@ public class DynamicClientRegistrationController : ControllerBase
 
         return Ok(response);
     }
+
+    /// <summary>
+    /// Rotates the bearer credential used to manage this registration. The
+    /// current token authenticates the request and is invalidated atomically
+    /// with issuance of the replacement.
+    /// </summary>
+    [HttpPost("{clientId}/registration-access-token")]
+    [Produces("application/json")]
+    public async Task<IActionResult> RotateRegistrationAccessToken(string clientId)
+    {
+        var (isValid, ratToken, error) =
+            await ValidateRegistrationAccessTokenFromHeaderAsync(clientId);
+        if (!isValid || ratToken is null)
+        {
+            return Unauthorized(error);
+        }
+
+        var (rotatedToken, plainTextToken) =
+            await _dcrService.RotateRegistrationAccessTokenAsync(ratToken);
+
+        await LogAuditAsync(
+            "DcrRegistrationAccessTokenRotated",
+            clientId,
+            "Registration access token rotated; credential value was not logged.");
+
+        return Ok(new RegistrationAccessTokenRotationResponse
+        {
+            RegistrationAccessToken = plainTextToken,
+            ExpiresAt = rotatedToken.ExpiresAt.HasValue
+                ? new DateTimeOffset(rotatedToken.ExpiresAt.Value).ToUnixTimeSeconds()
+                : null
+        });
+    }
+
+    private static HashSet<Uri> ParseAbsoluteUris(IEnumerable<string> values)
+    {
+        var result = new HashSet<Uri>();
+        foreach (var value in values)
+        {
+            if (Uri.TryCreate(value, UriKind.Absolute, out var uri))
+            {
+                result.Add(uri);
+            }
+        }
+
+        return result;
+    }
+
+    private static bool UriSetsEqual(IEnumerable<Uri> left, IEnumerable<Uri> right)
+    {
+        var leftValues = left
+            .Select(uri => uri.AbsoluteUri)
+            .ToHashSet(StringComparer.Ordinal);
+        return leftValues.SetEquals(right.Select(uri => uri.AbsoluteUri));
+    }
+
+    private static List<string> ToSortedUriStrings(IEnumerable<Uri> values) =>
+        values.Select(uri => uri.AbsoluteUri)
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .ToList();
 
     /// <summary>
     /// Delete client registration (RFC 7592).

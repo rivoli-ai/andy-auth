@@ -183,4 +183,37 @@ public class TokenExchangePolicyTests
 
         Assert.Empty(policy.AllowedScopes("any", "any"));
     }
+
+    [Fact]
+    public void SubjectAudiences_ReturnsOnlyConfiguredSourceTrust()
+    {
+        var policy = MakePolicy(new TokenExchangeSettings
+        {
+            Policies = new()
+            {
+                new TokenExchangePolicyEntry
+                {
+                    ActorClientId = "actor-api",
+                    Audience = "urn:target-api",
+                    SubjectAudiences = new() { "urn:actor-api" }
+                }
+            }
+        });
+
+        Assert.Equal(
+            new[] { "urn:actor-api" },
+            policy.SubjectAudiences("actor-api", "urn:target-api"));
+        Assert.Empty(policy.SubjectAudiences("actor-api", "urn:other-api"));
+    }
+
+    [Fact]
+    public void ExchangedTokenLifetime_ReturnsConfiguredCap()
+    {
+        var policy = MakePolicy(new TokenExchangeSettings
+        {
+            ExchangedTokenLifetime = TimeSpan.FromMinutes(7)
+        });
+
+        Assert.Equal(TimeSpan.FromMinutes(7), policy.ExchangedTokenLifetime);
+    }
 }

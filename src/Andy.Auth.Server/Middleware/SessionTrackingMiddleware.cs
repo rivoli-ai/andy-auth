@@ -15,10 +15,15 @@ public class SessionTrackingMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<SessionTrackingMiddleware> _logger;
 
-    // Paths to skip session tracking
+    // Paths that never use the ASP.NET Identity application cookie. Do not
+    // skip the entire /connect subtree: /connect/authorize, /connect/verify,
+    // and /connect/logout are interactive browser endpoints and must enforce
+    // per-session revocation before they issue or approve any artifact (#169).
     private static readonly string[] SkipPaths = new[]
     {
-        "/css", "/js", "/images", "/favicon", "/.well-known", "/health", "/ready", "/connect"
+        "/css", "/js", "/images", "/favicon", "/.well-known", "/health", "/ready",
+        "/connect/token", "/connect/introspect", "/connect/revoke",
+        "/connect/userinfo", "/connect/device", "/connect/register"
     };
 
     public SessionTrackingMiddleware(RequestDelegate next, ILogger<SessionTrackingMiddleware> logger)
@@ -147,10 +152,16 @@ public class SessionTrackingMiddleware
 
     private static bool IsApiRequest(HttpContext context)
     {
+        var isInteractiveConnectEndpoint =
+            context.Request.Path.StartsWithSegments("/connect/authorize") ||
+            context.Request.Path.StartsWithSegments("/connect/verify") ||
+            context.Request.Path.StartsWithSegments("/connect/logout");
+
         return context.Request.Headers.Accept.Any(h =>
             h?.Contains("application/json") == true) ||
             context.Request.Path.StartsWithSegments("/api") ||
-            context.Request.Path.StartsWithSegments("/connect");
+            (context.Request.Path.StartsWithSegments("/connect") &&
+             !isInteractiveConnectEndpoint);
     }
 
     private static bool ShouldUpdateActivity(HttpContext context, string sessionId)

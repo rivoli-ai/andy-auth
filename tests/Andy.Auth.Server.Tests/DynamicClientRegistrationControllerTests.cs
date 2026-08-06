@@ -545,6 +545,186 @@ public class DynamicClientRegistrationControllerTests : IDisposable
         response.ClientName.Should().Be("Updated Name");
     }
 
+    [Fact]
+    public async Task UpdateConfiguration_ApprovedClientRedirectChange_ResetsApproval()
+    {
+        var (dcr, rat, clientId) = await CreateRegisteredClientAsync();
+        dcr.RequiresApproval = true;
+        dcr.IsApproved = true;
+        dcr.ApprovedById = "admin-1";
+        dcr.ApprovedAt = DateTime.UtcNow.AddDays(-1);
+        await _context.SaveChangesAsync();
+        _controller.ControllerContext.HttpContext.Request.Headers.Authorization = $"Bearer {rat}";
+
+        var application = SetupApplicationForUpdate(
+            clientId,
+            new[] { "https://example.com/approved-callback" });
+        var issuedTokens = new[] { new object(), new object() };
+        _applicationManagerMock
+            .Setup(x => x.GetIdAsync(application, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("app-approved");
+        _tokenManagerMock
+            .Setup(x => x.FindByApplicationIdAsync(
+                "app-approved", It.IsAny<CancellationToken>()))
+            .Returns(ToAsyncEnumerable(issuedTokens));
+        _tokenManagerMock
+            .Setup(x => x.TryRevokeAsync(
+                It.IsAny<object>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var result = await _controller.UpdateConfiguration(
+            clientId,
+            new ClientRegistrationRequest
+            {
+                RedirectUris = new List<string> { "https://attacker.example/callback" }
+            });
+
+        result.Should().BeOfType<OkObjectResult>();
+        dcr.IsApproved.Should().BeFalse();
+        dcr.ApprovedById.Should().BeNull();
+        dcr.ApprovedAt.Should().BeNull();
+        dcr.MetadataJson.Should().Contain("approved-callback");
+        dcr.MetadataJson.Should().Contain("attacker.example");
+
+        var gate = new DcrClientGate(_context);
+        (await gate.GetDenialReasonAsync(clientId)).Should().Contain("pending approval");
+        _tokenManagerMock.Verify(
+            x => x.TryRevokeAsync(It.IsAny<object>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task UpdateConfiguration_SameRedirectSetInDifferentOrder_KeepsApproval()
+    {
+        var (dcr, rat, clientId) = await CreateRegisteredClientAsync();
+        dcr.RequiresApproval = true;
+        dcr.IsApproved = true;
+        dcr.ApprovedById = "admin-1";
+        dcr.ApprovedAt = DateTime.UtcNow.AddDays(-1);
+        await _context.SaveChangesAsync();
+        _controller.ControllerContext.HttpContext.Request.Headers.Authorization = $"Bearer {rat}";
+
+        SetupApplicationForUpdate(
+            clientId,
+            new[]
+            {
+                "https://example.com/one",
+                "https://example.com/two"
+            });
+
+        var result = await _controller.UpdateConfiguration(
+            clientId,
+            new ClientRegistrationRequest
+            {
+                RedirectUris = new List<string>
+                {
+                    "https://example.com/two",
+                    "https://example.com/one"
+                }
+            });
+
+        result.Should().BeOfType<OkObjectResult>();
+        dcr.IsApproved.Should().BeTrue();
+        dcr.ApprovedById.Should().Be("admin-1");
+        dcr.MetadataJson.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateConfiguration_PostLogoutRedirectChange_ResetsApproval()
+    {
+        var (dcr, rat, clientId) = await CreateRegisteredClientAsync();
+        dcr.RequiresApproval = true;
+        dcr.IsApproved = true;
+        dcr.ApprovedById = "admin-1";
+        dcr.ApprovedAt = DateTime.UtcNow.AddDays(-1);
+        await _context.SaveChangesAsync();
+        _controller.ControllerContext.HttpContext.Request.Headers.Authorization = $"Bearer {rat}";
+
+        SetupApplicationForUpdate(
+            clientId,
+            new[] { "https://example.com/callback" },
+            new[] { "https://example.com/logout-complete" });
+
+        var result = await _controller.UpdateConfiguration(
+            clientId,
+            new ClientRegistrationRequest
+            {
+                PostLogoutRedirectUris = new List<string>
+                {
+                    "https://other.example/logout-complete"
+                }
+            });
+
+        result.Should().BeOfType<OkObjectResult>();
+        dcr.IsApproved.Should().BeFalse();
+        dcr.MetadataJson.Should().Contain("example.com/logout-complete");
+        dcr.MetadataJson.Should().Contain("other.example/logout-complete");
+    }
+
+    [Fact]
+    public async Task UpdateConfiguration_DisplayNameOnly_KeepsApproval()
+    {
+        var (dcr, rat, clientId) = await CreateRegisteredClientAsync();
+        dcr.RequiresApproval = true;
+        dcr.IsApproved = true;
+        dcr.ApprovedById = "admin-1";
+        dcr.ApprovedAt = DateTime.UtcNow.AddDays(-1);
+        await _context.SaveChangesAsync();
+        _controller.ControllerContext.HttpContext.Request.Headers.Authorization = $"Bearer {rat}";
+
+        SetupApplicationForUpdate(
+            clientId,
+            new[] { "https://example.com/approved-callback" });
+
+        var result = await _controller.UpdateConfiguration(
+            clientId,
+            new ClientRegistrationRequest { ClientName = "Harmless Rename" });
+
+        result.Should().BeOfType<OkObjectResult>();
+        dcr.IsApproved.Should().BeTrue();
+        dcr.ApprovedById.Should().Be("admin-1");
+        dcr.MetadataJson.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task RotateRegistrationAccessToken_ReturnsReplacementAndInvalidatesOldToken()
+    {
+        var (_, oldToken, clientId) = await CreateRegisteredClientAsync();
+        _controller.ControllerContext.HttpContext.Request.Headers.Authorization =
+            $"Bearer {oldToken}";
+
+        var result = await _controller.RotateRegistrationAccessToken(clientId);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = ok.Value
+            .Should().BeOfType<RegistrationAccessTokenRotationResponse>().Subject;
+        response.RegistrationAccessToken.Should().StartWith("rat_");
+        response.RegistrationAccessToken.Should().NotBe(oldToken);
+        response.ExpiresAt.Should().BeGreaterThan(
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+        (await _dcrService.ValidateRegistrationAccessTokenAsync(oldToken, clientId))
+            .IsValid.Should().BeFalse();
+        (await _dcrService.ValidateRegistrationAccessTokenAsync(
+            response.RegistrationAccessToken, clientId)).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task RotateRegistrationAccessToken_ExpiredToken_Returns401()
+    {
+        var (_, token, clientId) = await CreateRegisteredClientAsync();
+        var tokenEntity = await _context.RegistrationAccessTokens
+            .SingleAsync(candidate => candidate.ClientId == clientId);
+        tokenEntity.ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+        await _context.SaveChangesAsync();
+        _controller.ControllerContext.HttpContext.Request.Headers.Authorization =
+            $"Bearer {token}";
+
+        var result = await _controller.RotateRegistrationAccessToken(clientId);
+
+        result.Should().BeOfType<UnauthorizedObjectResult>();
+    }
+
     // ==================== DeleteRegistration Tests ====================
 
     [Fact]
@@ -776,6 +956,66 @@ public class DynamicClientRegistrationControllerTests : IDisposable
             "Test Browser");
 
         return (dcr, ratValue, clientId);
+    }
+
+    private object SetupApplicationForUpdate(
+        string clientId,
+        IEnumerable<string> redirectUris,
+        IEnumerable<string>? postLogoutRedirectUris = null)
+    {
+        var application = new object();
+        var redirects = redirectUris.ToArray();
+        var postLogoutRedirects = (postLogoutRedirectUris ?? Array.Empty<string>()).ToArray();
+
+        _applicationManagerMock
+            .Setup(x => x.FindByClientIdAsync(clientId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+        _applicationManagerMock
+            .Setup(x => x.PopulateAsync(
+                It.IsAny<OpenIddictApplicationDescriptor>(),
+                application,
+                It.IsAny<CancellationToken>()))
+            .Callback<OpenIddictApplicationDescriptor, object, CancellationToken>(
+                (descriptor, _, _) =>
+                {
+                    foreach (var uri in redirects)
+                    {
+                        descriptor.RedirectUris.Add(new Uri(uri));
+                    }
+
+                    foreach (var uri in postLogoutRedirects)
+                    {
+                        descriptor.PostLogoutRedirectUris.Add(new Uri(uri));
+                    }
+                })
+            .Returns(ValueTask.CompletedTask);
+        _applicationManagerMock
+            .Setup(x => x.UpdateAsync(
+                application,
+                It.IsAny<OpenIddictApplicationDescriptor>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+        _applicationManagerMock
+            .Setup(x => x.GetClientIdAsync(application, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(clientId);
+        _applicationManagerMock
+            .Setup(x => x.GetDisplayNameAsync(application, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("DCR test client");
+        _applicationManagerMock
+            .Setup(x => x.GetClientTypeAsync(application, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(OpenIddictConstants.ClientTypes.Public);
+        _applicationManagerMock
+            .Setup(x => x.GetRedirectUrisAsync(application, It.IsAny<CancellationToken>()))
+            .Returns(new ValueTask<ImmutableArray<string>>(redirects.ToImmutableArray()));
+        _applicationManagerMock
+            .Setup(x => x.GetPostLogoutRedirectUrisAsync(application, It.IsAny<CancellationToken>()))
+            .Returns(new ValueTask<ImmutableArray<string>>(
+                postLogoutRedirects.ToImmutableArray()));
+        _applicationManagerMock
+            .Setup(x => x.GetPermissionsAsync(application, It.IsAny<CancellationToken>()))
+            .Returns(new ValueTask<ImmutableArray<string>>(ImmutableArray<string>.Empty));
+
+        return application;
     }
 
     // Async enumerable helpers - local to avoid conflicts with AdminControllerTests

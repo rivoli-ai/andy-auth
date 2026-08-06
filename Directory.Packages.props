@@ -41,9 +41,19 @@
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.2.0" />
     <PackageVersion Include="OpenIddict.EntityFrameworkCore" Version="7.2.0" />
+    <!-- Explicit security overrides for transitive dependencies brought in by
+         Andy.Telemetry and EF Core. Keep these direct references until their
+         upstream packages carry versions at least this new. -->
+    <PackageVersion Include="OpenTelemetry.Api" Version="1.17.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.0.0-beta.12" />
     <PackageVersion Include="QRCoder" Version="1.4.3" />
+    <!-- main pinned 7.7.3 as a security patch; net10 needs >= 8.19.2 because
+         Microsoft.AspNetCore.Authentication.JwtBearer 10.0.10 requires it
+         transitively (otherwise NU1605 package downgrade). 8.19.2 is newer than
+         the 7.x patch line, so it carries those fixes forward. -->
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.19.2" />
+    <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
 
     <!-- Test-only dependencies (unified across all test projects) -->
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />

@@ -141,7 +141,19 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseOpenIddict();
 });
 
-// Configure ASP.NET Core Identity
+// Configure ASP.NET Core Identity. Public registration may never be combined
+// with unconfirmed-email sign-in: that recreates the unverified identity path
+// this policy exists to close (#173).
+var selfRegistrationEnabled = builder.Configuration.GetValue(
+    "SelfRegistration:Enabled", false);
+var requireConfirmedRegistrationEmail = builder.Configuration.GetValue(
+    "SelfRegistration:RequireConfirmedEmail", true);
+if (selfRegistrationEnabled && !requireConfirmedRegistrationEmail)
+{
+    throw new InvalidOperationException(
+        "SelfRegistration:RequireConfirmedEmail must be true when self-registration is enabled.");
+}
+
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     // Password settings
@@ -158,7 +170,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 
     // User settings
     options.User.RequireUniqueEmail = true;
-    options.SignIn.RequireConfirmedEmail = false; // Set to true when email is configured
+    options.SignIn.RequireConfirmedEmail = requireConfirmedRegistrationEmail;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 // Enforces the account lifecycle flags (suspended / expired / soft-deleted)
@@ -172,43 +184,12 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/AccessDenied";
     options.LogoutPath = "/Account/Logout";
+    // Persist/validate the server-side session before the application cookie
+    // is emitted, covering every successful interactive sign-in path (#169).
+    options.EventsType = typeof(InteractiveSessionCookieEvents);
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Lax;
-
-    // .NET 10 stops the cookie handler redirecting to LoginPath for endpoints it
-    // considers APIs (anything carrying IApiEndpointMetadata — which every
-    // [ApiController] action does) and returns 401 instead. See
-    // https://learn.microsoft.com/aspnet/core/breaking-changes/10/cookie-authentication-api-endpoints
-    //
-    // That default is right for our REST surface and WRONG for the OpenIddict
-    // interactive endpoints: /connect/authorize and /connect/logout live on an
-    // [ApiController] but are driven by a *browser*. Without this, an
-    // unauthenticated authorization request 401s instead of redirecting to
-    // sign-in, which breaks the entire interactive OAuth flow for every client.
-    //
-    // So: redirect for the browser-driven endpoints, keep the .NET 10 default
-    // (Location header + 401) everywhere else.
-    static bool IsBrowserInteractiveEndpoint(HttpContext context) =>
-        context.Request.Path.StartsWithSegments("/connect/authorize", StringComparison.OrdinalIgnoreCase) ||
-        context.Request.Path.StartsWithSegments("/connect/logout", StringComparison.OrdinalIgnoreCase) ||
-        context.Request.Path.StartsWithSegments("/connect/verify", StringComparison.OrdinalIgnoreCase);
-
-    // Delegate to the framework default for every other path so the rest of the
-    // surface keeps whatever .NET decides — only the OpenIddict interactive
-    // endpoints are forced back to redirecting.
-    var defaultRedirectToLogin = options.Events.OnRedirectToLogin;
-    var defaultRedirectToAccessDenied = options.Events.OnRedirectToAccessDenied;
-
-    options.Events.OnRedirectToLogin = context =>
-        IsBrowserInteractiveEndpoint(context.HttpContext)
-            ? Results.Redirect(context.RedirectUri).ExecuteAsync(context.HttpContext)
-            : defaultRedirectToLogin(context);
-
-    options.Events.OnRedirectToAccessDenied = context =>
-        IsBrowserInteractiveEndpoint(context.HttpContext)
-            ? Results.Redirect(context.RedirectUri).ExecuteAsync(context.HttpContext)
-            : defaultRedirectToAccessDenied(context);
 });
 
 // Configure external authentication providers (Azure AD / Microsoft Entra ID)
@@ -290,6 +271,22 @@ builder.Services.AddOpenIddict()
                 "andy-service-template/docs/ports.md for mode-specific issuer URLs.");
         }
         options.SetIssuer(new Uri(configuredIssuer));
+
+        // Self-contained JWT access tokens cannot be recalled from downstream
+        // resource servers. Keep their residual revocation window explicit and
+        // short; refresh tokens remain server-side reference tokens and are
+        // checked against the backing interactive session on redemption (#172).
+        var accessTokenLifetime = builder.Configuration.GetValue(
+            "OpenIddict:AccessTokenLifetime", TimeSpan.FromMinutes(5));
+        var refreshTokenLifetime = builder.Configuration.GetValue(
+            "OpenIddict:RefreshTokenLifetime", TimeSpan.FromDays(14));
+        if (accessTokenLifetime <= TimeSpan.Zero || refreshTokenLifetime <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException(
+                "OpenIddict access-token and refresh-token lifetimes must be positive.");
+        }
+        options.SetAccessTokenLifetime(accessTokenLifetime)
+            .SetRefreshTokenLifetime(refreshTokenLifetime);
 
         // Enable the authorization, token, introspection, and revocation endpoints
         // Note: userinfo and logout are handled by custom controller endpoints
@@ -553,6 +550,7 @@ builder.Services.AddAuthorization(options =>
 
 // Register session management service
 builder.Services.AddScoped<SessionService>();
+builder.Services.AddScoped<InteractiveSessionCookieEvents>();
 
 // Tears down tokens/authorizations/sessions when an admin disables an account
 // (andy-auth#146) — blocking future sign-ins alone leaves existing refresh
@@ -568,6 +566,8 @@ builder.Services.AddScoped<IAuditService, AuditService>();
 // Account Linking").
 builder.Services.Configure<ExternalLoginOptions>(
     builder.Configuration.GetSection(ExternalLoginOptions.SectionName));
+builder.Services.Configure<SelfRegistrationOptions>(
+    builder.Configuration.GetSection(SelfRegistrationOptions.SectionName));
 
 // Register Dynamic Client Registration (RFC 7591)
 builder.Services.Configure<DcrSettings>(builder.Configuration.GetSection(DcrSettings.SectionName));

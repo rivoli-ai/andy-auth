@@ -71,6 +71,7 @@ public class TokenClaimsPrincipalFactory
     {
         var principal = await _signInManager.CreateUserPrincipalAsync(user);
         var identity = (ClaimsIdentity)principal.Identity!;
+        principal.SetScopes(scopes.Distinct(StringComparer.Ordinal));
 
         // The tenant is the deployment's, and only the deployment's. Any `tid`
         // already on the principal came from somewhere else — a claim persisted
@@ -88,38 +89,64 @@ public class TokenClaimsPrincipalFactory
 
         identity.AddClaim(new Claim(DeploymentTenant.ClaimType, _tenant.ClaimValue));
 
-        // Claims persisted into the tokens.
+        // Subject is the only unconditional user claim. Every descriptive or
+        // authorization claim below requires its dedicated granted scope.
         identity.AddClaim(new Claim(Claims.Subject, user.Id)
             .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        identity.AddClaim(new Claim(Claims.Email, user.Email!)
-            .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        identity.AddClaim(new Claim(Claims.Name, user.FullName ?? user.UserName ?? user.Email!)
-            .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        identity.AddClaim(new Claim(Claims.PreferredUsername, user.UserName ?? user.Email!)
-            .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
 
-        // Group claims for RBAC integration.
-        foreach (var groupCode in await GetUserGroupsAsync(user.Id))
+        if (principal.HasScope(Scopes.Email) && !string.IsNullOrWhiteSpace(user.Email))
         {
-            identity.AddClaim(new Claim("groups", groupCode)
+            identity.AddClaim(new Claim(Claims.Email, user.Email)
+                .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+            identity.AddClaim(new Claim(
+                    Claims.EmailVerified,
+                    user.EmailConfirmed ? "true" : "false",
+                    ClaimValueTypes.Boolean)
                 .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
         }
 
-        // Permission claims for RBAC integration. Downstream services
-        // authorize on a flat `permission` claim — e.g. andy-tasks'
-        // tasks:approvePlan / tasks:editPlan policies do
-        // RequireClaim("permission", …). Project the principal's role bindings
-        // onto the permission strings those roles grant
-        // (Authorization:RolePermissions config). Interim until the full
-        // AL-rbac roll-out sources effective permissions from andy-rbac.
-        var roles = await _userManager.GetRolesAsync(user);
-        foreach (var permission in _rolePermissionResolver.Resolve(roles))
+        if (principal.HasScope(Scopes.Profile))
         {
-            identity.AddClaim(new Claim("permission", permission)
-                .SetDestinations(Destinations.AccessToken));
+            identity.AddClaim(new Claim(
+                    Claims.Name,
+                    user.FullName ?? user.UserName ?? user.Id)
+                .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+
+            // Local usernames are email addresses. Do not smuggle the address
+            // into a profile-only token as preferred_username (#173).
+            if (!string.IsNullOrWhiteSpace(user.UserName) &&
+                (!string.Equals(user.UserName, user.Email, StringComparison.OrdinalIgnoreCase) ||
+                 principal.HasScope(Scopes.Email)))
+            {
+                identity.AddClaim(new Claim(Claims.PreferredUsername, user.UserName)
+                    .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+            }
         }
 
-        principal.SetScopes(scopes);
+        if (principal.HasScope(Scopes.Roles))
+        {
+            // Group/role membership and derived permissions are authority, not
+            // generic profile data. OpenIddict also verifies that the client is
+            // permitted to request the roles scope before this factory runs.
+            foreach (var groupCode in await GetUserGroupsAsync(user.Id))
+            {
+                identity.AddClaim(new Claim("groups", groupCode)
+                    .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+            }
+
+            var roles = await _userManager.GetRolesAsync(user);
+            foreach (var role in roles)
+            {
+                identity.AddClaim(new Claim(Claims.Role, role)
+                    .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+            }
+
+            foreach (var permission in _rolePermissionResolver.Resolve(roles))
+            {
+                identity.AddClaim(new Claim("permission", permission)
+                    .SetDestinations(Destinations.AccessToken));
+            }
+        }
 
         var resources = new List<string>();
         await foreach (var resource in _scopeManager.ListResourcesAsync(principal.GetScopes()))
@@ -176,21 +203,37 @@ public class TokenClaimsPrincipalFactory
     {
         switch (claim.Type)
         {
-            case Claims.Name:
-            case Claims.Email:
-            case Claims.PreferredUsername:
+            case Claims.Subject:
                 yield return Destinations.AccessToken;
+                yield return Destinations.IdentityToken;
+                yield break;
 
-                if (principal.HasScope(Scopes.Profile) || principal.HasScope(Scopes.Email))
+            case Claims.Name:
+            case Claims.PreferredUsername:
+                if (principal.HasScope(Scopes.Profile))
+                {
+                    yield return Destinations.AccessToken;
                     yield return Destinations.IdentityToken;
+                }
+
+                yield break;
+
+            case Claims.Email:
+            case Claims.EmailVerified:
+                if (principal.HasScope(Scopes.Email))
+                {
+                    yield return Destinations.AccessToken;
+                    yield return Destinations.IdentityToken;
+                }
 
                 yield break;
 
             case Claims.Role:
-                yield return Destinations.AccessToken;
-
                 if (principal.HasScope(Scopes.Roles))
+                {
+                    yield return Destinations.AccessToken;
                     yield return Destinations.IdentityToken;
+                }
 
                 yield break;
 
@@ -206,17 +249,22 @@ public class TokenClaimsPrincipalFactory
                 yield return Destinations.IdentityToken;
                 yield break;
 
-            // Groups claim for RBAC integration - always include in access token
             case "groups":
-                yield return Destinations.AccessToken;
-                yield return Destinations.IdentityToken;
+                if (principal.HasScope(Scopes.Roles))
+                {
+                    yield return Destinations.AccessToken;
+                    yield return Destinations.IdentityToken;
+                }
+
                 yield break;
 
             // Permission claim for RBAC integration — access token only
             // (downstream service policies read it; it has no place in the
             // identity token, which is for the client/UI).
             case "permission":
-                yield return Destinations.AccessToken;
+                if (principal.HasScope(Scopes.Roles))
+                    yield return Destinations.AccessToken;
+
                 yield break;
 
             // Session identifier — access token only. SessionApiController
@@ -233,7 +281,6 @@ public class TokenClaimsPrincipalFactory
                 yield break;
 
             default:
-                yield return Destinations.AccessToken;
                 yield break;
         }
     }

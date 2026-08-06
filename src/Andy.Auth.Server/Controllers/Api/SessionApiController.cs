@@ -70,6 +70,13 @@ public class SessionApiController : ControllerBase
     [ProducesResponseType(typeof(SessionErrorDto), StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> GetSession()
     {
+        // Session truth is security state, not reusable content. In particular,
+        // an intermediary must never replay a cached 200 after the backing
+        // session has been revoked (#172).
+        Response.Headers.CacheControl = "no-store, no-cache, max-age=0";
+        Response.Headers.Pragma = "no-cache";
+        Response.Headers.Expires = "0";
+
         // OpenIddict's validation handler has already rejected structurally
         // invalid/expired tokens with a 401 before we get here, so a missing
         // subject means the token is well-formed but bound to nothing we trust.
@@ -150,7 +157,10 @@ public class SessionApiController : ControllerBase
         return StatusCode(StatusCodes.Status410Gone, new SessionErrorDto
         {
             Reason = SessionErrorCodes.SessionRevoked,
-            Description = truth.Reason
+            Description = truth.Reason,
+            Subject = truth.Subject,
+            SessionId = truth.SessionId,
+            RevokedAt = truth.RevokedAt
         });
     }
 

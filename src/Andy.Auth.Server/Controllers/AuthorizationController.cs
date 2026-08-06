@@ -32,6 +32,7 @@ public class AuthorizationController : ControllerBase
     private readonly TokenClaimsPrincipalFactory _principalFactory;
     private readonly DcrClientGate _dcrGate;
     private readonly ConsentGrantService _consentGrantService;
+    private readonly SessionService _sessionService;
     private readonly DeploymentTenant _tenant;
     private readonly ILogger<AuthorizationController> _logger;
 
@@ -47,6 +48,7 @@ public class AuthorizationController : ControllerBase
         TokenClaimsPrincipalFactory principalFactory,
         DcrClientGate dcrGate,
         ConsentGrantService consentGrantService,
+        SessionService sessionService,
         DeploymentTenant tenant,
         ILogger<AuthorizationController> logger)
     {
@@ -61,6 +63,7 @@ public class AuthorizationController : ControllerBase
         _principalFactory = principalFactory;
         _dcrGate = dcrGate;
         _consentGrantService = consentGrantService;
+        _sessionService = sessionService;
         _tenant = tenant;
         _logger = logger;
     }
@@ -375,9 +378,11 @@ public class AuthorizationController : ControllerBase
         {
             // Retrieve the claims principal stored in the authorization code/refresh token
             var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            var redeemedPrincipal = result.Principal ??
+                throw new InvalidOperationException("The grant principal cannot be retrieved.");
 
             // Retrieve the user profile corresponding to the authorization code/refresh token
-            var user = await _userManager.FindByIdAsync(result.Principal!.GetClaim(Claims.Subject)!);
+            var user = await _userManager.FindByIdAsync(redeemedPrincipal.GetClaim(Claims.Subject)!);
             if (user == null)
             {
                 return Forbid(
@@ -401,7 +406,38 @@ public class AuthorizationController : ControllerBase
                     }));
             }
 
-            var principal = await CreateClaimsPrincipalAsync(user, result.Principal.GetScopes());
+            // Authorization codes, refresh tokens, and approved device codes
+            // are delegated from an interactive browser session. Do not let a
+            // redeemed artifact outlive revocation of that backing session.
+            // This also rejects legacy/unbound artifacts instead of silently
+            // converting them into a new session (#169).
+            var sessionId = redeemedPrincipal.GetClaim(
+                AndyAuthSignInManager.SessionIdClaimType);
+            if (!await _sessionService.IsSessionValidForUserAsync(sessionId, user.Id))
+            {
+                _logger.LogWarning(
+                    "Token redemption refused for inactive session {SessionId} and user {UserId}",
+                    sessionId, user.Id);
+                return Forbid(
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                    properties: new AuthenticationProperties(new Dictionary<string, string?>
+                    {
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                            "The authorization session is no longer valid."
+                    }));
+            }
+
+            var principal = await CreateClaimsPrincipalAsync(user, redeemedPrincipal.GetScopes());
+
+            // Rebuilding the Identity principal at the token endpoint would
+            // otherwise mint a fresh session_id: there is no application
+            // cookie on this request for AndyAuthSignInManager to carry
+            // forward. Preserve the validated grant binding across access and
+            // refresh token rotation.
+            principal.SetClaim(AndyAuthSignInManager.SessionIdClaimType, sessionId);
+            principal.FindFirst(AndyAuthSignInManager.SessionIdClaimType)!
+                .SetDestinations(Destinations.AccessToken);
 
             // Handle resource parameter (RFC 8707 - MCP requirement)
             var requestedResources = request.GetResources();
@@ -530,8 +566,10 @@ public class AuthorizationController : ControllerBase
             return TokenExchangeError(Errors.InvalidRequest,
                 "subject_token parameter is required.");
         }
-        if (!string.IsNullOrWhiteSpace(subjectTokenType)
-            && !string.Equals(subjectTokenType, TokenExchangeConstants.AccessTokenType, StringComparison.Ordinal))
+        if (!string.Equals(
+                subjectTokenType,
+                TokenExchangeConstants.AccessTokenType,
+                StringComparison.Ordinal))
         {
             return TokenExchangeError(Errors.InvalidRequest,
                 "subject_token_type must be urn:ietf:params:oauth:token-type:access_token.");
@@ -575,6 +613,24 @@ public class AuthorizationController : ControllerBase
                 "subject_token is not a valid access token issued by this server.");
         }
 
+        // The subject token must have been intended for a resource trusted as
+        // the source of this OBO hop. A valid Andy Auth token for an unrelated
+        // API is not authority for this actor/target pair (#170).
+        var trustedSubjectAudiences =
+            _tokenExchangePolicy.SubjectAudiences(actorClientId, audience);
+        var subjectAudiences = validation.Audiences ?? Array.Empty<string>();
+        if (!TokenExchangeAttenuation.HasTrustedAudience(
+                subjectAudiences,
+                trustedSubjectAudiences))
+        {
+            _logger.LogWarning(
+                "Token-exchange rejected: subject audience is not trusted for actor {ActorClientId} and target {Audience}",
+                actorClientId,
+                audience);
+            return TokenExchangeError(Errors.InvalidGrant,
+                "subject_token is not valid for this token exchange relationship.");
+        }
+
         // 4b. The subject token proves only that this server minted it, not
         //     that the account behind it is still permitted to authenticate.
         //     Access tokens are unencrypted JWTs validated offline, so without
@@ -592,27 +648,35 @@ public class AuthorizationController : ControllerBase
                 "subject_token is not a valid access token issued by this server.");
         }
 
-        // 5. Scope handling. If the policy has an explicit AllowedScopes
-        //    list, the requested scopes (or, if none requested, the
-        //    subject token's scopes) must be a subset of that list.
-        //    Otherwise, the subject token's scopes pass through.
-        var requestedScopes = request.GetScopes().ToList();
-        var effectiveScopes = requestedScopes.Count > 0
-            ? requestedScopes
-            : validation.Scopes.ToList();
-
-        var allowedScopes = _tokenExchangePolicy.AllowedScopes(actorClientId, audience);
-        if (allowedScopes.Count > 0)
+        // A delegated token may not detach from the interactive session that
+        // authorized the subject token. Missing, expired, revoked, or
+        // cross-user session bindings fail closed.
+        if (!await _sessionService.IsSessionValidForUserAsync(
+                validation.SessionId, subjectUser.Id))
         {
-            var disallowed = effectiveScopes
-                .Where(s => !allowedScopes.Contains(s, StringComparer.Ordinal))
-                .ToList();
-            if (disallowed.Count > 0)
-            {
-                return TokenExchangeError(Errors.InvalidScope,
-                    $"requested scope(s) not allowed for this actor/audience: {string.Join(" ", disallowed)}");
-            }
+            _logger.LogWarning(
+                "Token-exchange rejected: inactive subject session for user {Subject} and actor {ActorClientId}",
+                validation.Subject,
+                actorClientId);
+            return TokenExchangeError(Errors.InvalidGrant,
+                "subject_token session is no longer valid.");
         }
+
+        // 5. Scope handling is strict attenuation: subject authority,
+        //    actor/target policy, and the optional request are intersected.
+        //    No requested scope may be introduced by this exchange.
+        var requestedScopes = request.GetScopes().ToList();
+        var allowedScopes = _tokenExchangePolicy.AllowedScopes(actorClientId, audience);
+        var scopeAttenuation = TokenExchangeAttenuation.AttenuateScopes(
+            validation.Scopes,
+            allowedScopes,
+            requestedScopes);
+        if (!scopeAttenuation.IsAllowed)
+        {
+            return TokenExchangeError(Errors.InvalidScope,
+                $"requested scope(s) exceed the subject or actor/target policy: {string.Join(" ", scopeAttenuation.DisallowedScopes)}");
+        }
+        var effectiveScopes = scopeAttenuation.EffectiveScopes;
 
         // 6. Build the exchanged principal. The user is the subject;
         //    the actor is recorded in the `act` claim as a JSON object
@@ -625,6 +689,11 @@ public class AuthorizationController : ControllerBase
 
         identity.AddClaim(new Claim(Claims.Subject, validation.Subject)
             .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+
+        identity.AddClaim(new Claim(
+                AndyAuthSignInManager.SessionIdClaimType,
+                validation.SessionId!)
+            .SetDestinations(Destinations.AccessToken));
 
         // RFC 8693 §4.1: the act claim is a JSON object {"sub": "<actor>"}.
         // OpenIddict serializes claims of type JSON into structured
@@ -648,6 +717,20 @@ public class AuthorizationController : ControllerBase
             principal.SetScopes(effectiveScopes);
         }
         principal.SetResources(audience);
+
+        // Never let delegation extend authority in time. An exchanged token
+        // receives the smaller of the configured exchange lifetime and the
+        // subject token's remaining lifetime.
+        var exchangedLifetime = TokenExchangeAttenuation.CapLifetime(
+            validation.ExpiresAt,
+            DateTimeOffset.UtcNow,
+            _tokenExchangePolicy.ExchangedTokenLifetime);
+        if (exchangedLifetime is null)
+        {
+            return TokenExchangeError(Errors.InvalidGrant,
+                "subject_token has no usable remaining lifetime.");
+        }
+        principal.SetAccessTokenLifetime(exchangedLifetime.Value);
 
         _logger.LogInformation(
             "Token-exchange issued. Subject: {Subject}, Actor: {ActorClientId}, Audience: {Audience}, Scopes: {Scopes}",
@@ -723,6 +806,32 @@ public class AuthorizationController : ControllerBase
     [HttpPost("~/connect/logout")]
     public async Task<IActionResult> Logout()
     {
+        // RP-initiated logout ends only the browser session represented by
+        // this cookie. Revoking its server-side session immediately prevents
+        // refresh-token redemption via the session binding enforced at the
+        // token endpoint, without signing the user out of unrelated devices.
+        var user = await _userManager.GetUserAsync(User);
+        var sessionId = User.GetClaim(AndyAuthSignInManager.SessionIdClaimType);
+        if (user is not null && !string.IsNullOrWhiteSpace(sessionId))
+        {
+            try
+            {
+                await _sessionService.RevokeSessionForUserAsync(
+                    sessionId, user.Id, "OpenID Connect logout");
+            }
+            catch (Exception ex)
+            {
+                // A backend failure must not trap the user in a local browser
+                // session. The access token remains bounded by its lifetime;
+                // surface the failure for operators and still clear the cookie.
+                _logger.LogError(
+                    ex,
+                    "Failed to revoke session {SessionId} for user {UserId} during logout",
+                    sessionId,
+                    user.Id);
+            }
+        }
+
         // Ask OpenIddict to sign the user out
         await _signInManager.SignOutAsync();
 

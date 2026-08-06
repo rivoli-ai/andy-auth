@@ -90,6 +90,10 @@ public class AuthorizationControllerTests
             new DcrClientGate(_dbContext),
             new ConsentGrantService(
                 _dbContext, Mock.Of<ILogger<ConsentGrantService>>()),
+            new SessionService(
+                _dbContext,
+                Mock.Of<ILogger<SessionService>>(),
+                new ConfigurationBuilder().Build()),
             TestTenant,
             _mockLogger.Object);
 
@@ -374,6 +378,29 @@ public class AuthorizationControllerTests
     public async Task Logout_SignsOutUser()
     {
         // Arrange
+        var user = new ApplicationUser
+        {
+            Id = "logout-user",
+            Email = "logout@example.com",
+            UserName = "logout@example.com"
+        };
+        _mockUserManager
+            .Setup(m => m.GetUserAsync(It.IsAny<ClaimsPrincipal>()))
+            .ReturnsAsync(user);
+        _httpContext.User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.Id),
+            new Claim(AndyAuthSignInManager.SessionIdClaimType, "logout-session")
+        }, "Identity.Application"));
+        _dbContext.UserSessions.Add(new UserSession
+        {
+            UserId = user.Id,
+            SessionId = "logout-session",
+            CreatedAt = DateTime.UtcNow.AddMinutes(-5),
+            LastActivity = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddDays(1)
+        });
+        await _dbContext.SaveChangesAsync();
         _mockSignInManager.Setup(m => m.SignOutAsync())
             .Returns(Task.CompletedTask);
 
@@ -381,6 +408,38 @@ public class AuthorizationControllerTests
         var result = await _controller.Logout();
 
         // Assert
+        _mockSignInManager.Verify(m => m.SignOutAsync(), Times.Once);
+        var session = await _dbContext.UserSessions.SingleAsync();
+        session.IsRevoked.Should().BeTrue();
+        session.RevocationReason.Should().Be("OpenID Connect logout");
+    }
+
+    [Fact]
+    public async Task Logout_DoesNotRevokeSessionOwnedByAnotherUser()
+    {
+        var user = new ApplicationUser { Id = "user-a", UserName = "a@example.com" };
+        _mockUserManager
+            .Setup(m => m.GetUserAsync(It.IsAny<ClaimsPrincipal>()))
+            .ReturnsAsync(user);
+        _httpContext.User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.Id),
+            new Claim(AndyAuthSignInManager.SessionIdClaimType, "user-b-session")
+        }, "Identity.Application"));
+        _dbContext.UserSessions.Add(new UserSession
+        {
+            UserId = "user-b",
+            SessionId = "user-b-session",
+            CreatedAt = DateTime.UtcNow.AddMinutes(-5),
+            LastActivity = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddDays(1)
+        });
+        await _dbContext.SaveChangesAsync();
+        _mockSignInManager.Setup(m => m.SignOutAsync()).Returns(Task.CompletedTask);
+
+        await _controller.Logout();
+
+        (await _dbContext.UserSessions.SingleAsync()).IsRevoked.Should().BeFalse();
         _mockSignInManager.Verify(m => m.SignOutAsync(), Times.Once);
     }
 

@@ -70,6 +70,14 @@ public class TokenExchangePolicyEntry
     public string Audience { get; set; } = string.Empty;
 
     /// <summary>
+    /// Audiences for which the subject token may have been issued. In a
+    /// normal OBO hop this is the actor service's own resource identifier:
+    /// service A may exchange only a user token that was intended for A.
+    /// An empty list fails closed.
+    /// </summary>
+    public List<string> SubjectAudiences { get; set; } = new();
+
+    /// <summary>
     /// Optional allow-list of scopes the actor may request on the
     /// exchanged token. If empty, the original subject token's scopes
     /// pass through unchanged. If non-empty, requested scopes must be

@@ -25,9 +25,14 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="OpenIddict.AspNetCore" />
     <PackageReference Include="OpenIddict.EntityFrameworkCore" />
+    <!-- Security overrides for vulnerable transitive versions in Andy.Telemetry. -->
+    <PackageReference Include="OpenTelemetry.Api" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <!-- OT4 (rivoli-ai/conductor#1262) — service-specific EF Core tracing; not bundled in Andy.Telemetry. -->
     <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" />
     <PackageReference Include="QRCoder" />
+    <!-- Native SQLite and JSON security overrides; see security issue #176. -->
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
   </ItemGroup>
 
 </Project>

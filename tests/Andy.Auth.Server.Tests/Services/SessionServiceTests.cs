@@ -573,6 +573,23 @@ public class SessionServiceTests : IDisposable
         updatedSession.RevocationReason.Should().Be("Inactivity timeout");
     }
 
+    [Fact]
+    public async Task IsSessionValidForUserAsync_RequiresActiveSubjectBoundSession()
+    {
+        await _service.CreateSessionAsync("user-1", "session-1", null, null);
+
+        (await _service.IsSessionValidForUserAsync("session-1", "user-1"))
+            .Should().BeTrue();
+        (await _service.IsSessionValidForUserAsync("session-1", "other-user"))
+            .Should().BeFalse();
+        (await _service.IsSessionValidForUserAsync(null, "user-1"))
+            .Should().BeFalse();
+
+        await _service.RevokeSessionByIdAsync("session-1", "Test revocation");
+        (await _service.IsSessionValidForUserAsync("session-1", "user-1"))
+            .Should().BeFalse();
+    }
+
     // ==================== CleanupExpiredSessionsAsync Tests ====================
 
     [Fact]
