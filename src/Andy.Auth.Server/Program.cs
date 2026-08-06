@@ -592,6 +592,10 @@ builder.Services.Configure<RolePermissionOptions>(
     builder.Configuration.GetSection(RolePermissionOptions.SectionName));
 builder.Services.AddScoped<RolePermissionResolver>();
 
+// The tenant every token this deployment issues names. Resolved once, from
+// configuration only, so that no request can influence it (andy-ahp#103).
+builder.Services.AddSingleton(DeploymentTenant.Resolve(builder.Configuration));
+
 // One claims-principal builder for every user-bearing grant. The auth-code and
 // device flows each had their own copy and drifted — device-flow tokens lost
 // the `permission` claims entirely (andy-auth#149).
@@ -707,6 +711,17 @@ if (allowedOrigins.Length == 0)
     app.Logger.LogWarning(
         "CorsOrigins:AllowedOrigins is empty — no cross-origin browser client can call this server. " +
         "Set it for every origin that needs access (andy-auth#55).");
+}
+
+// Stated at startup because the tenant is what resource servers partition
+// their storage on: an operator whose tenant-scoped rows stopped resolving
+// needs to see whether the id was pinned or derived, and what it currently is.
+{
+    var deploymentTenant = app.Services.GetRequiredService<DeploymentTenant>();
+    app.Logger.LogInformation(
+        "Tokens will carry tenant {TenantId}, resolved from {TenantSource}.",
+        deploymentTenant.ClaimValue,
+        deploymentTenant.Source);
 }
 
 // Configure the HTTP request pipeline

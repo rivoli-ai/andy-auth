@@ -36,6 +36,21 @@ public class AuthorizationControllerTests
     private readonly AuthorizationController _controller;
     private readonly DefaultHttpContext _httpContext;
 
+    /// <summary>
+    /// The tenant this deployment issues. Pinned here so the client-credentials
+    /// assertions can name it; a real deployment resolves it from its own
+    /// configuration, and no request can influence it.
+    /// </summary>
+    internal const string TestTenantId = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
+
+    private static DeploymentTenant TestTenant =>
+        DeploymentTenant.Resolve(new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [DeploymentTenant.ConfigurationKey] = TestTenantId,
+            })
+            .Build());
+
     public AuthorizationControllerTests()
     {
         _mockAppManager = new Mock<IOpenIddictApplicationManager>();
@@ -70,7 +85,8 @@ public class AuthorizationControllerTests
                 _mockScopeManager.Object,
                 new RolePermissionResolver(
                     Microsoft.Extensions.Options.Options.Create(new RolePermissionOptions())),
-                _dbContext),
+                _dbContext,
+                TestTenant),
             new DcrClientGate(_dbContext),
             new ConsentGrantService(
                 _dbContext, Mock.Of<ILogger<ConsentGrantService>>()),
@@ -78,6 +94,7 @@ public class AuthorizationControllerTests
                 _dbContext,
                 Mock.Of<ILogger<SessionService>>(),
                 new ConfigurationBuilder().Build()),
+            TestTenant,
             _mockLogger.Object);
 
         _httpContext = new DefaultHttpContext();
