@@ -4,8 +4,8 @@
 # rebuild is reproducible and a base-image bump is a reviewable commit
 # (andy-auth#126). Update policy: bump both tags together on the monthly .NET
 # patch cadence, or immediately for a CVE affecting the runtime.
-ARG DOTNET_SDK_TAG=8.0.423-noble
-ARG DOTNET_RUNTIME_TAG=8.0.29-noble
+ARG DOTNET_SDK_TAG=10.0.302-noble
+ARG DOTNET_RUNTIME_TAG=10.0.9-noble
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Build stage

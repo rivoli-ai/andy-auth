@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
@@ -33,7 +33,6 @@
     <PackageReference Include="QRCoder" />
     <!-- Native SQLite and JSON security overrides; see security issue #176. -->
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
-    <PackageReference Include="System.Text.Json" />
   </ItemGroup>
 
 </Project>
