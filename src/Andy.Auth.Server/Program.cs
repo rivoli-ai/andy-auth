@@ -175,6 +175,40 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Lax;
+
+    // .NET 10 stops the cookie handler redirecting to LoginPath for endpoints it
+    // considers APIs (anything carrying IApiEndpointMetadata — which every
+    // [ApiController] action does) and returns 401 instead. See
+    // https://learn.microsoft.com/aspnet/core/breaking-changes/10/cookie-authentication-api-endpoints
+    //
+    // That default is right for our REST surface and WRONG for the OpenIddict
+    // interactive endpoints: /connect/authorize and /connect/logout live on an
+    // [ApiController] but are driven by a *browser*. Without this, an
+    // unauthenticated authorization request 401s instead of redirecting to
+    // sign-in, which breaks the entire interactive OAuth flow for every client.
+    //
+    // So: redirect for the browser-driven endpoints, keep the .NET 10 default
+    // (Location header + 401) everywhere else.
+    static bool IsBrowserInteractiveEndpoint(HttpContext context) =>
+        context.Request.Path.StartsWithSegments("/connect/authorize", StringComparison.OrdinalIgnoreCase) ||
+        context.Request.Path.StartsWithSegments("/connect/logout", StringComparison.OrdinalIgnoreCase) ||
+        context.Request.Path.StartsWithSegments("/connect/verify", StringComparison.OrdinalIgnoreCase);
+
+    // Delegate to the framework default for every other path so the rest of the
+    // surface keeps whatever .NET decides — only the OpenIddict interactive
+    // endpoints are forced back to redirecting.
+    var defaultRedirectToLogin = options.Events.OnRedirectToLogin;
+    var defaultRedirectToAccessDenied = options.Events.OnRedirectToAccessDenied;
+
+    options.Events.OnRedirectToLogin = context =>
+        IsBrowserInteractiveEndpoint(context.HttpContext)
+            ? Results.Redirect(context.RedirectUri).ExecuteAsync(context.HttpContext)
+            : defaultRedirectToLogin(context);
+
+    options.Events.OnRedirectToAccessDenied = context =>
+        IsBrowserInteractiveEndpoint(context.HttpContext)
+            ? Results.Redirect(context.RedirectUri).ExecuteAsync(context.HttpContext)
+            : defaultRedirectToAccessDenied(context);
 });
 
 // Configure external authentication providers (Azure AD / Microsoft Entra ID)
