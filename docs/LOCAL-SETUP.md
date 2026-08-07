@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- .NET 8.0 SDK
+- .NET 10.0 SDK
 - Docker Desktop (for PostgreSQL)
 - IDE (Visual Studio, VS Code, or Rider)
 
