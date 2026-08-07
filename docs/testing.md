@@ -124,10 +124,10 @@ dotnet test --filter "FullyQualifiedName~LoginPage_WithValidCredentials"
 
 ```bash
 # First time setup - install Playwright browsers
-pwsh tests/Andy.Auth.E2E.Tests/bin/Debug/net8.0/playwright.ps1 install
+pwsh tests/Andy.Auth.E2E.Tests/bin/Debug/net10.0/playwright.ps1 install
 # Or on Linux/macOS without PowerShell:
 dotnet build tests/Andy.Auth.E2E.Tests
-./tests/Andy.Auth.E2E.Tests/bin/Debug/net8.0/playwright.sh install
+./tests/Andy.Auth.E2E.Tests/bin/Debug/net10.0/playwright.sh install
 
 # Run E2E tests only
 dotnet test tests/Andy.Auth.E2E.Tests

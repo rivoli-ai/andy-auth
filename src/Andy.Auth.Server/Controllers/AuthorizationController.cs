@@ -68,9 +68,14 @@ public class AuthorizationController : ControllerBase
         _logger = logger;
     }
 
+    // This action lives on an [ApiController] but is driven by a *browser*: an
+    // unauthenticated authorization request must be redirected to sign-in, not
+    // 401'd. Without the attribute, .NET 10 classifies it as an API endpoint and
+    // breaks the interactive OAuth flow for every registered client.
     [HttpGet("~/connect/authorize")]
     [HttpPost("~/connect/authorize")]
     [IgnoreAntiforgeryToken]
+    [AllowCookieRedirect]
     public async Task<IActionResult> Authorize()
     {
         var request = HttpContext.GetOpenIddictServerRequest() ??
@@ -802,6 +807,9 @@ public class AuthorizationController : ControllerBase
         return Ok(claims);
     }
 
+    // No [AllowCookieRedirect] here, unlike Authorize: this action never issues
+    // a cookie challenge — it is not [Authorize]-protected and handles an
+    // anonymous caller — so the .NET 10 API-endpoint rule cannot reach it.
     [HttpGet("~/connect/logout")]
     [HttpPost("~/connect/logout")]
     public async Task<IActionResult> Logout()

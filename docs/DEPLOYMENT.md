@@ -33,7 +33,7 @@ Railway uses **Nixpacks** to detect and build .NET applications automatically.
 **nixpacks.toml** (in repo root):
 ```toml
 [phases.setup]
-nixPkgs = ["dotnet-sdk_8"]
+nixPkgs = ["dotnet-sdk_10"]
 
 [phases.build]
 cmds = ["dotnet publish src/Andy.Auth.Server/Andy.Auth.Server.csproj -c Release -o out"]
