@@ -487,6 +487,11 @@ public class AuthorizationController : ControllerBase
             identity.AddClaim(new Claim(Claims.Subject, await _applicationManager.GetClientIdAsync(application)!)
                 .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
 
+            // Resource servers must positively identify workload tokens; the
+            // absence of optional human profile claims is not proof of M2M.
+            identity.AddClaim(new Claim(Claims.ClientId, await _applicationManager.GetClientIdAsync(application)!)
+                .SetDestinations(Destinations.AccessToken));
+
             identity.AddClaim(new Claim(Claims.Name, await _applicationManager.GetDisplayNameAsync(application)!)
                 .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
 
