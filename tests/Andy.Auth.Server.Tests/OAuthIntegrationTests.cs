@@ -66,6 +66,10 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         Assert.NotNull(accessToken.GetString());
         Assert.False(string.IsNullOrEmpty(accessToken.GetString()));
 
+        var jwt = new Microsoft.IdentityModel.JsonWebTokens.JsonWebToken(accessToken.GetString());
+        Assert.Equal("andy-docs-api", jwt.Subject);
+        Assert.Contains(jwt.Claims, claim => claim.Type == "client_id" && claim.Value == jwt.Subject);
+
         Assert.True(tokenResponse.RootElement.TryGetProperty("token_type", out var tokenType));
         Assert.Equal("Bearer", tokenType.GetString());
 
