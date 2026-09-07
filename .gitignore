@@ -93,3 +93,4 @@ certs/*.key
 
 # Claude Code session state (worktrees, local settings)
 .claude/
+.coord/state/
