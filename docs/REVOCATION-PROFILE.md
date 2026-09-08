@@ -57,9 +57,9 @@ process-local entity caches. Revoked entries return 401. It also checks account 
 and session inactivity. The `roles` response contains only roles already present in the
 token that the account still holds; it does not disclose additional memberships.
 
-The endpoint is currently HTTP pull. Durable authenticated push notifications remain
-part of #172; #33 tracks the optional NATS transport. Push must never replace fresh
-session truth for high-risk operations.
+Session truth uses HTTP pull. Optional [durable signed revocation events](operations/revocation-events.md)
+use a transactional outbox and HTTPS SET delivery; #33 tracks the optional NATS
+transport. Push never replaces fresh session truth for high-risk operations.
 
 ## Failure policy
 
@@ -87,8 +87,9 @@ failures return 503 with `Retry-After: 5`. Responses are not cacheable. Normal O
 authentication still rejects invalid or expired tokens before privileged execution.
 
 These checks enforce the high-risk profile locally. Other consuming resources
-must enforce their own fresh truth checks; this does not implement push logout
-notifications or establish deployed cross-resource acceptance.
+must enable equivalent fresh truth enforcement. The consumer option below and the
+signed event receiver are tested integrations, not evidence of an existing deployed
+cross-resource rollout.
 
 ## Consuming resource enforcement
 
