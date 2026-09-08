@@ -444,9 +444,17 @@ public class TwoFactorIndexViewModel
 
 public class EnableAuthenticatorViewModel
 {
+    // Display-only values are rebuilt from the user store, never posted by the form.
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    [Microsoft.AspNetCore.Mvc.ModelBinding.Validation.ValidateNever]
     public string SharedKey { get; set; } = null!;
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    [Microsoft.AspNetCore.Mvc.ModelBinding.Validation.ValidateNever]
     public string AuthenticatorUri { get; set; } = null!;
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    [Microsoft.AspNetCore.Mvc.ModelBinding.Validation.ValidateNever]
     public string QrCodeBase64 { get; set; } = null!;
+    [System.ComponentModel.DataAnnotations.Required]
     public string? Code { get; set; }
 }
 
