@@ -93,6 +93,7 @@ public class E2ETestServer : IAsyncDisposable
         // Register custom services
         builder.Services.AddScoped<IAuditService, AuditService>();
         builder.Services.AddScoped<SessionService>();
+        builder.Services.AddScoped<AdminAccessFilter>();
         builder.Services.AddScoped<InteractiveSessionCookieEvents>();
         builder.Services.AddScoped<IUserAccessRevoker, UserAccessRevoker>();
         builder.Services.Configure<RolePermissionOptions>(
