@@ -193,6 +193,9 @@ jobs:
         [ "$health" = "200" ] || { echo "::error::/health returned $health"; exit 1; }
         [ "$ready" = "200" ]  || { echo "::error::/ready returned $ready"; exit 1; }
 
+    - name: Verify Production replica ingress and readiness
+      run: python3 tests/deployment/replica_acceptance.py --image andy-auth:ci
+
     - name: Tear down
       if: always()
       run: docker rm -f andy-ci || true
