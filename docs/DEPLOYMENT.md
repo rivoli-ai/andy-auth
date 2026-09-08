@@ -465,3 +465,9 @@ UAT and Production require `RateLimiting__RedisConnectionString` and refuse star
 `RateLimiting__RequireDistributed=false` is only for isolated single-process fixtures or local deployments. A real multi-replica deployment must retain the hardened default. Configured IP policies remain local immutable configuration; counters use Redis. The real regression test runs in CI against Redis and can be run locally with `ANDY_TEST_REDIS=localhost:16379 dotnet test tests/Andy.Auth.Server.Tests --filter FullyQualifiedName~DistributedRateLimitingTests`.
 
 Before increasing replicas, alternate requests at the login/token limit across two instances and verify one shared allowance; disconnect Redis and verify 503 without any fallback. These checks supplement the ingress and readiness acceptance above.
+
+### Privileged browser access
+
+UAT, Staging and Production require an authenticator step-up for both interactive admin controllers. An ordinary Admin-role login first routes to `/AdminAccess`; authenticator enrollment remains available under `/TwoFactor`. Password accounts must provide both their current password and an authenticator code. External-only accounts must have signed in within 15 minutes and provide a local authenticator code. Failed proof attempts use Identity lockout.
+
+Admin proof expires after 15 minutes without sliding renewal. Its Secure/HttpOnly/SameSite=Strict cookie is bound to the current user, server-side session id, and security stamp, and the filter rechecks Admin membership and MFA enrollment. Logout/new sessions, password/security-stamp changes, removal of Admin, or disabling MFA invalidate access. Every admin mutation retains CSRF validation. Local/embedded development can opt in with `AdminAccess__EnforceInLocal=true`; hardened environments cannot disable the requirement through this local setting. Bearer-authorized service APIs retain their separate authorization contract.

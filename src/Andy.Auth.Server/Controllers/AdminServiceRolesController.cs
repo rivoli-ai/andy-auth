@@ -10,6 +10,7 @@ namespace Andy.Auth.Server.Controllers;
 
 [AutoValidateAntiforgeryToken]
 [Authorize(Roles = "Admin", AuthenticationSchemes = "Identity.Application")]
+[ServiceFilter(typeof(AdminAccessFilter))]
 public sealed class AdminServiceRolesController(
     UserManager<ApplicationUser> users,
     RoleManager<IdentityRole> roles,
