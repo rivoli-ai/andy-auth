@@ -52,10 +52,14 @@ clients must not reuse a prior 200. A 410 response includes `subject`,
 `sessionId`, and `revokedAt`, allowing clients to reconcile the revocation
 watermark without treating an older observation as newer state.
 
-The endpoint is currently HTTP pull. Durable authenticated push notifications
-will use the transactional outbox and NATS work tracked by #33; consumers must
-not treat that future push channel as more authoritative than a fresh session
-truth read.
+The endpoint reads token and authorization status directly from the database, bypassing
+process-local entity caches. Revoked entries return 401. It also checks account lockout
+and session inactivity. The `roles` response contains only roles already present in the
+token that the account still holds; it does not disclose additional memberships.
+
+The endpoint is currently HTTP pull. Durable authenticated push notifications remain
+part of #172; #33 tracks the optional NATS transport. Push must never replace fresh
+session truth for high-risk operations.
 
 ## Failure policy
 
@@ -85,3 +89,40 @@ authentication still rejects invalid or expired tokens before privileged executi
 These checks enforce the high-risk profile locally. Other consuming resources
 must enforce their own fresh truth checks; this does not implement push logout
 notifications or establish deployed cross-resource acceptance.
+
+## Consuming resource enforcement
+
+Configure the public `Andy.Auth` library for a high-risk user API:
+
+```csharp
+services.AddAndyAuth(options =>
+{
+    options.Authority = "https://auth.example.com/";
+    options.Audience = "sensitive-api";
+    options.RequireLiveSession = true;
+});
+```
+
+With normal authentication/authorization middleware and protected endpoints, each
+validated bearer request fetches fresh HTTPS session truth. The exact subject and
+`session_id` must match, and every role in the token must still be current. There is
+no cached allowance. A missing session is rejected; machine-only endpoints need a
+separate scheme/profile. Existing custom bearer events are preserved and cannot
+replace the live check. The client does not follow redirects, limits response size,
+and times out after five seconds. Permanent denial returns 401; malformed responses,
+timeouts, and upstream failures return 503 with `Retry-After: 5` and `no-store`.
+
+Andy.Auth validates access token types (`at+jwt` or legacy `JWT`) and uses zero expiry
+clock skew. Its previous five-minute grace would have doubled the documented default
+offline window. Keep resource and issuer clocks synchronized, and configure other
+JWT libraries without an expiry grace if they claim the same five-minute absolute
+profile. Security Event Tokens are not accepted as access credentials.
+
+`LiveAdminApiIntegrationTests` now includes an independent consuming resource using
+this public option and real cookie/PKCE-issued tokens. It verifies token/grant and
+cross-replica revocation, single/all-session revocation, both logout paths, disable,
+delete, lockout, role removal, session expiry/inactivity, subject mismatch, missing
+sessions, and truth-store outage. Separate library tests cover response confusion,
+wrong token types/audiences, expired tokens, timeout, and custom event preservation.
+This proves the integration behavior; each deployed resource must adopt the option
+(or equivalent mandatory enforcement) before claiming the high-risk profile.

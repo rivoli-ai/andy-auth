@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Andy.Auth.Server\Andy.Auth.Server.csproj" />
+    <ProjectReference Include="..\..\src\Andy.Auth\Andy.Auth.csproj" />
   </ItemGroup>
 
   <ItemGroup>

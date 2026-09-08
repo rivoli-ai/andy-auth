@@ -1,5 +1,6 @@
 using Andy.Auth.Configuration;
 using Andy.Auth.Models;
+using Andy.Auth.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,6 +55,20 @@ public class AndyAuthProvider : IAuthProvider
                 "serve substitute signing keys.");
         }
 
+        if (options.RequireLiveSession)
+        {
+            if (!Uri.TryCreate(options.Authority, UriKind.Absolute, out var liveAuthority) ||
+                liveAuthority.Scheme != Uri.UriSchemeHttps || !string.IsNullOrEmpty(liveAuthority.UserInfo) ||
+                !string.IsNullOrEmpty(liveAuthority.Query) || !string.IsNullOrEmpty(liveAuthority.Fragment))
+                throw new ArgumentException("Live session authority must be an absolute HTTPS URL without credentials, query or fragment.");
+            builder.Services.AddHttpClient(LiveSessionValidation.HttpClientName, client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(5);
+                client.MaxResponseContentBufferSize = 16 * 1024;
+            }).ConfigurePrimaryHttpMessageHandler(() =>
+                    new HttpClientHandler { AllowAutoRedirect = false });
+        }
+
         builder.AddJwtBearer(options.AuthenticationScheme, jwtOptions =>
         {
             jwtOptions.Authority = options.Authority;
@@ -82,7 +97,8 @@ public class AndyAuthProvider : IAuthProvider
                 ValidAudiences = validAudiences,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                ClockSkew = TimeSpan.FromMinutes(5),
+                ValidTypes = new[] { "at+jwt", "JWT" },
+                ClockSkew = TimeSpan.Zero,
                 NameClaimType = ClaimTypes.NameIdentifier,
                 RoleClaimType = ClaimTypes.Role
             };
@@ -92,6 +108,9 @@ public class AndyAuthProvider : IAuthProvider
             {
                 jwtOptions.Events = options.Events;
             }
+            if (options.RequireLiveSession)
+                jwtOptions.Events = LiveSessionValidation.Create(jwtOptions.Events,
+                    new Uri(options.Authority.TrimEnd('/') + "/auth/session"));
         });
     }
 

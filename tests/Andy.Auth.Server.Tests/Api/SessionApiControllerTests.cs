@@ -46,6 +46,8 @@ public class SessionApiControllerTests : IDisposable
         _sessionService = new SessionService(_context, new Mock<ILogger<SessionService>>().Object, config);
 
         _userManagerMock = MockUserManager();
+        _userManagerMock.Setup(manager => manager.GetRolesAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(new List<string>());
         _signInManagerMock = MockSignInManager(_userManagerMock.Object);
         _loggerMock = new Mock<ILogger<SessionApiController>>();
 

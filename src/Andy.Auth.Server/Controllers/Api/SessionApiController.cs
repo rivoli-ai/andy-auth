@@ -64,6 +64,7 @@ public class SessionApiController : ControllerBase
     /// <c>temporarily_unavailable</c> (→ retry), distinct from the above.
     /// </summary>
     [HttpGet("session")]
+    [ServiceFilter(typeof(LiveSessionTokenFilter))]
     [ProducesResponseType(typeof(SessionTruthDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(SessionErrorDto), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(SessionErrorDto), StatusCodes.Status410Gone)]
@@ -102,7 +103,7 @@ public class SessionApiController : ControllerBase
                 return InvalidToken("The access token is bound to an account that no longer exists.");
             }
 
-            if (!await _signInManager.CanSignInAsync(user))
+            if (!await _signInManager.CanSignInAsync(user) || await _userManager.IsLockedOutAsync(user))
             {
                 _logger.LogInformation(
                     "[SM.2.1] /auth/session: subject {Subject} is no longer allowed to sign in.", subject);
@@ -126,6 +127,8 @@ public class SessionApiController : ControllerBase
                 Subject = truth.Subject ?? subject,
                 SessionId = truth.SessionId,
                 ExpiresAt = truth.ExpiresAt,
+                Roles = (await _userManager.GetRolesAsync(user))
+                    .Where(role => User.GetClaims(Claims.Role).Contains(role)).ToArray(),
                 Revoked = false
             };
             return Ok(dto);
