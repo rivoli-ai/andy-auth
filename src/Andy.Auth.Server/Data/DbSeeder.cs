@@ -242,7 +242,8 @@ public class DbSeeder
 
         foreach (var scope in client.Scopes ?? Array.Empty<string>())
         {
-            descriptor.Permissions.Add(scope);
+            descriptor.Permissions.Add(scope.StartsWith(OpenIddictConstants.Permissions.Prefixes.Scope, StringComparison.Ordinal)
+                ? scope : OpenIddictConstants.Permissions.Prefixes.Scope + scope);
         }
 
         var redirectUris = CollectRedirectUris(manifest, client, postLogout: false);

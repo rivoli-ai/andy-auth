@@ -1,4 +1,7 @@
 using System.Net;
+using Andy.Auth.Server.Data;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using System.Text.RegularExpressions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -129,6 +132,33 @@ public class AdminCsrfProtectionTests : IDisposable
                 HttpStatusCode.Redirect,
                 because: $"{name} should execute and redirect back to the admin listing when the token is valid");
         }
+    }
+
+    [Fact]
+    public async Task ServiceRoles_RenderAndMutateThroughProtectedAdminForms()
+    {
+        using var factory = CreateFactory();
+        using var client = await LoginAsAdminAsync(factory);
+        var page = "/AdminServiceRoles?userId=" + TargetUserId;
+        foreach (var action in new[] { "Create", "Grant", "Remove" })
+        {
+            var fields = new Dictionary<string, string> { ["userId"] = TargetUserId, ["role"] = "AHP Viewer" };
+            var token = await GetAntiforgeryTokenAsync(client, page);
+            var rejected = await client.PostAsync("/AdminServiceRoles/" + action, new FormUrlEncodedContent(fields));
+            rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            fields["__RequestVerificationToken"] = token;
+            var accepted = await client.PostAsync("/AdminServiceRoles/" + action, new FormUrlEncodedContent(fields));
+            accepted.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            using var scope = factory.Services.CreateScope();
+            var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var user = await users.FindByIdAsync(TargetUserId);
+            (await users.IsInRoleAsync(user!, "AHP Viewer")).Should().Be(action == "Grant");
+        }
+        using var anonymous = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost/"), AllowAutoRedirect = false
+        });
+        (await anonymous.GetAsync(page)).StatusCode.Should().Be(HttpStatusCode.Redirect);
     }
 
     private EnvironmentWebApplicationFactory CreateFactory() =>

@@ -1,0 +1,43 @@
+@model Andy.Auth.Server.Controllers.AdminServiceRolesController.RolePage
+@{ ViewData["Title"] = "Service roles"; }
+<div class="container">
+    <a asp-controller="Admin" asp-action="Users">Back to users</a>
+    <h1>Service roles</h1>
+    <p>@Model.Email</p>
+    @if (TempData["SuccessMessage"] is string success)
+    {
+        <div class="alert alert-success" role="status">@success</div>
+    }
+    @if (TempData["ErrorMessage"] is string error)
+    {
+        <div class="alert alert-danger" role="alert">@error</div>
+    }
+    <p>Grant the role names your services recognize, such as AHP Viewer. Membership changes require the user to sign in again. Existing access tokens may remain valid until they expire.</p>
+    <table class="table">
+        <thead><tr><th scope="col">Service role</th><th scope="col">Membership</th><th scope="col">Action</th></tr></thead>
+        <tbody>
+        @foreach (var role in Model.Available)
+        {
+            var assigned = Model.Assigned.Contains(role, StringComparer.OrdinalIgnoreCase);
+            <tr>
+                <td>@role</td><td>@(assigned ? "Granted" : "Not granted")</td>
+                <td>
+                    <form method="post" asp-action="@(assigned ? "Remove" : "Grant")">
+                        <input type="hidden" name="userId" value="@Model.UserId" />
+                        <input type="hidden" name="role" value="@role" />
+                        <button type="submit" class="btn btn-secondary">@(assigned ? "Remove" : "Grant")</button>
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    @if (Model.Available.Count == 0) { <p>No service roles have been created.</p> }
+    <h2>Create a service role</h2>
+    <form method="post" asp-action="Create">
+        <input type="hidden" name="userId" value="@Model.UserId" />
+        <label for="service-role-name">Role name</label>
+        <input id="service-role-name" name="role" required maxlength="256" class="form-control" />
+        <button type="submit" class="btn btn-primary">Create role</button>
+    </form>
+</div>
