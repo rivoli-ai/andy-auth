@@ -1,0 +1,28 @@
+@model Andy.Auth.Server.Controllers.DeleteAccountViewModel
+@{ ViewData["Title"] = "Delete account"; }
+<section style="max-width: 640px; margin: 0 auto;">
+    <h1>Delete your account</h1>
+    <p>This permanently removes your Andy Auth profile, sign-in methods, sessions, application consent, and login history. You will be signed out.</p>
+    <p>Data held by connected applications is managed separately. Access already granted to an application may continue briefly until it expires.</p>
+    <div asp-validation-summary="All" role="alert"></div>
+    @if (Model.RequireSignIn)
+    {
+        <p>For your security, sign in again, then return here within five minutes.</p>
+        <form asp-action="SignInAgain" method="post"><button type="submit" class="btn btn-primary">Sign in again</button></form>
+    }
+    else
+    {
+        <form asp-action="Index" method="post">
+            @if (Model.RequirePassword)
+            {
+                <div class="form-group"><label asp-for="Password">Current password</label>
+                    <input asp-for="Password" type="password" autocomplete="current-password" required /></div>
+            }
+            <div class="form-group"><label asp-for="Confirmation">Type DELETE to confirm</label>
+                <input asp-for="Confirmation" autocomplete="off" required /></div>
+            <p>This cannot be undone.</p>
+            <button type="submit" class="btn btn-danger">Permanently delete my account</button>
+        </form>
+    }
+    <p><a asp-controller="Home" asp-action="Index">Cancel and keep my account</a></p>
+</section>
