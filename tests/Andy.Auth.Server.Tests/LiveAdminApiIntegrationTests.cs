@@ -9,6 +9,8 @@ using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.Hosting;
+using Andy.Auth.Server.Services.Revocation;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,7 +44,7 @@ public sealed class LiveAdminApiIntegrationTests
     [InlineData("unavailable")]
     public async Task IssuedAdminToken_ReconcilesAuthorityOnEveryPrivilegedRequest(string mutation)
     {
-        using var factory = new CustomWebApplicationFactory();
+        using var factory = new CaptureFactory();
         using var browser = factory.CreateClient(new WebApplicationFactoryClientOptions
             { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
         using var api = factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -162,6 +164,28 @@ public sealed class LiveAdminApiIntegrationTests
                 after.StatusCode);
             Assert.True(after.Headers.CacheControl?.NoStore);
             if (mutation == "unavailable") Assert.Equal(TimeSpan.FromSeconds(5), after.Headers.RetryAfter?.Delta);
+        }
+        if (mutation is "single" or "all" or "disabled" or "deleted" or "missing" or "logout" or "oidc-logout")
+        {
+            using var scope = factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            Assert.True(await db.RevocationOutbox.AsNoTracking().AnyAsync(message => message.SessionId == sessionId && message.Recipient == "test-resource"));
+        }
+    }
+
+    private sealed class CaptureFactory : CustomWebApplicationFactory
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+            // Enable transactional capture through options. The environment flag
+            // stays off, so no outbound background worker is registered here.
+            // Dispatcher/receiver integration is tested separately with real HTTP.
+            builder.ConfigureTestServices(services => services.Configure<RevocationDeliveryOptions>(options =>
+            {
+                options.Enabled = true;
+                options.Targets = new() { new() { Audience = "test-resource", Endpoint = "https://receiver.invalid/auth/events" } };
+            }));
         }
     }
 }

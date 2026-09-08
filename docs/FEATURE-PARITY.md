@@ -30,7 +30,7 @@ not a claim of protocol certification or complete coverage of every deployment.
 | Public signup and email verification | Registration is disabled by default; enabled registration requires confirmed email and does not sign in a new unverified account | No verification email sender, confirmation callback or resend workflow exists. #80 remains incomplete; a generic submitted response is not email delivery |
 | External providers | Conditional Microsoft account/Entra configuration and explicit verified-identity linking policy exist | `Program.cs`, `ExternalLoginOptions`, `ExternalRegistrationIntegrationTests`; actual tenant/provider acceptance remains #81/#82. Google, GitHub and configurable generic OIDC providers are not registered |
 | Browser and bearer sessions | Server session tracking and per-session revocation; interactive cookie enforcement; live local REST/MCP admin bearer enforcement | PRs #187/#200, `InteractiveSessionCookieEventsTests`, `LiveAdminApiIntegrationTests`. Offline downstream JWT validation still has the residual lifetime described in `docs/REVOCATION-PROFILE.md` |
-| Back-channel logout | No authenticated push logout delivery implementation | #172. `/auth/session` polling and local session revocation are not OpenID Connect back-channel logout |
+| Logout/revocation notifications | Durable signed Security Event Tokens over HTTPS, with transactional capture, retries, shared consumer denial checks and mandatory live-check option | #172; `RevocationDeliveryIntegrationTests`, `RevocationReceiverTests`, and `LiveAdminApiIntegrationTests`. This is the authenticated-event alternative, not OIDC back-channel logout. See `docs/operations/revocation-events.md`; deployed adoption is separate acceptance. |
 | Consent | Consent UI, durable grants, expiry and revocation exist | `ConsentControllerTests`, `ConsentGrantServiceTests`; removing a remembered choice is distinct from revoking credentials |
 | Claims privacy | Email/profile/roles are projected according to granted scopes; profile aliases do not leak an ungranted email address | #173/PR #191, `TokenClaimsPrincipalFactoryTests`; this does not establish signup email delivery |
 | Signing, encryption and Data Protection | Production requires protected certificate bundles, shared persistent Data Protection configuration and rotation overlap support | #175/PR #184, `ProductionKeyMaterialTests`, `ProductionModeIntegrationTests`, `docs/operations/key-rotation.md`; deployed rotation/replica acceptance remains outstanding |
@@ -63,11 +63,11 @@ matrix is merged; doing so must not close the implementation children.
    deployed/client acceptance under #15. Add DPoP
    end-to-end proof binding and CIBA only with complete validation, replay state,
    approval and notification behavior; no advertisement before enforcement.
-2. Complete #172's authenticated logout sender/receiver contract, durable delivery,
-   replay protection and integration tests. Validate actual consuming resources.
-3. For #175/#174, exercise shared storage, key overlap, counters and trusted ingress
-   with multiple running instances, then run the same acceptance against the real
-   deployment. A local topology must not be presented as production evidence.
+2. Roll out #172's tested authenticated event sender/receiver and mandatory live
+   enforcement to consuming resources according to their revocation class.
+3. #175/#174 automated acceptance is complete: PRs #204/#205 exercise independent
+   Production hosts and a real TLS/container topology. Operators still verify their
+   own shared mounts and ingress configuration; these tests do not assert a hosted rollout.
 4. Implement #44's reusable certificate trust/identity contract and test both sides
    before migrating actual consumers. The issue explicitly requires cross-repo and
    deployment work; choosing a CA does not establish that migration is complete.

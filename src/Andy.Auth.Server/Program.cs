@@ -1,3 +1,4 @@
+using Andy.Auth.Server.Services.Revocation;
 using Andy.Auth.Server.Configuration;
 using Andy.Auth.Server.Controllers.Api;
 using Andy.Auth.Server.Data;
@@ -466,6 +467,7 @@ builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationM
 // Register session management service
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<LiveSessionTokenFilter>();
+builder.Services.AddRevocationDelivery(builder.Configuration);
 builder.Services.AddScoped<AdminAccessFilter>();
 builder.Services.AddAuthentication().AddCookie(AdminAccessFilter.Scheme, options =>
 {

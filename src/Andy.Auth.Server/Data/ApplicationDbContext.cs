@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Andy.Auth.Server.Services.Revocation;
 using Microsoft.EntityFrameworkCore;
 
 namespace Andy.Auth.Server.Data;
@@ -7,11 +9,12 @@ namespace Andy.Auth.Server.Data;
 /// Database context for Andy Auth Server.
 /// Includes ASP.NET Core Identity and OpenIddict entities.
 /// </summary>
-public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IOptions<RevocationDeliveryOptions>? revocation = null)
         : base(options)
     {
+        _revocationOptions = revocation?.Value ?? new RevocationDeliveryOptions();
     }
 
     /// <summary>
@@ -70,6 +73,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        builder.Entity<RevocationOutboxMessage>(entity =>
+        {
+            entity.HasKey(message => message.Id);
+            entity.Property(message => message.Id).HasMaxLength(32);
+            entity.Property(message => message.SessionId).HasMaxLength(256).IsRequired();
+            entity.Property(message => message.Recipient).HasMaxLength(256).IsRequired();
+            entity.Property(message => message.LeaseToken).HasMaxLength(32);
+            entity.Property(message => message.LastError).HasMaxLength(64);
+            entity.HasIndex(message => new { message.NextAttemptAtUtc, message.LeaseUntilUtc });
+        });
 
         builder.Entity<AuditLog>().HasIndex(entry => new { entry.PerformedById, entry.Id });
 

@@ -1,6 +1,7 @@
 using Andy.Auth.Configuration;
 using Andy.Auth.Models;
 using Andy.Auth.Services;
+using Andy.Auth.Revocation;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
@@ -69,6 +70,9 @@ public class AndyAuthProvider : IAuthProvider
                     new HttpClientHandler { AllowAutoRedirect = false });
         }
 
+        if (options.CheckRevocationNotifications)
+            builder.Services.AddHostedService<RequireRevocationStoreStartup>();
+
         builder.AddJwtBearer(options.AuthenticationScheme, jwtOptions =>
         {
             jwtOptions.Authority = options.Authority;
@@ -108,6 +112,8 @@ public class AndyAuthProvider : IAuthProvider
             {
                 jwtOptions.Events = options.Events;
             }
+            if (options.CheckRevocationNotifications)
+                jwtOptions.Events = RevocationBearerEvents.Create(jwtOptions.Events);
             if (options.RequireLiveSession)
                 jwtOptions.Events = LiveSessionValidation.Create(jwtOptions.Events,
                     new Uri(options.Authority.TrimEnd('/') + "/auth/session"));

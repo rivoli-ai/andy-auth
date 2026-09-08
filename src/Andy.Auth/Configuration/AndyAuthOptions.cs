@@ -60,6 +60,9 @@ public class AndyAuthOptions
     /// </summary>
     public bool RequireLiveSession { get; set; }
 
+    /// <summary>Consult the shared denial store populated by AddAndyRevocationReceiver on every user-token request.</summary>
+    public bool CheckRevocationNotifications { get; set; }
+
 
     /// <summary>
     /// Require HTTPS metadata (default: true for production)
