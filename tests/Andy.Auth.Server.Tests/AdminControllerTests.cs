@@ -452,6 +452,20 @@ public class AdminControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task ChangeUserRole_PreservesServiceRoles()
+    {
+        var user = new ApplicationUser { Id = "user-1", Email = "user@test.com" };
+        _userManagerMock.Setup(x => x.FindByIdAsync("user-1")).ReturnsAsync(user);
+        _userManagerMock.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "User", "AHP Viewer" });
+        _userManagerMock.Setup(x => x.RemoveFromRolesAsync(user, It.IsAny<IEnumerable<string>>())).ReturnsAsync(IdentityResult.Success);
+        _userManagerMock.Setup(x => x.AddToRoleAsync(user, "Admin")).ReturnsAsync(IdentityResult.Success);
+        await _controller.ChangeUserRole(user.Id, "Admin");
+        _userManagerMock.Verify(x => x.RemoveFromRolesAsync(user,
+            It.Is<IEnumerable<string>>(r => r.SequenceEqual(new[] { "User" }))), Times.Once);
+        _accessRevokerMock.Verify(x => x.RevokeAllAccessAsync(user, "Built-in role membership changed"), Times.Once);
+    }
+
+    [Fact]
     public async Task ChangeUserRole_RejectsInvalidRole()
     {
         // Act

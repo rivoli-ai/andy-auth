@@ -777,10 +777,24 @@ public class AdminController : Controller
             }
         }
 
-        // Remove current roles and add new role
+        // Built-in role changes must preserve independent service-role grants.
         var currentRoles = await _userManager.GetRolesAsync(user);
-        await _userManager.RemoveFromRolesAsync(user, currentRoles);
-        await _userManager.AddToRoleAsync(user, role);
+        var builtInRoles = currentRoles.Where(AdminServiceRolesController.IsBuiltIn).ToArray();
+        var removeResult = await _userManager.RemoveFromRolesAsync(user, builtInRoles);
+        if (!removeResult.Succeeded)
+        {
+            TempData["ErrorMessage"] = string.Join(" ", removeResult.Errors.Select(e => e.Description));
+            return RedirectToAction(nameof(Users));
+        }
+        var addResult = await _userManager.AddToRoleAsync(user, role);
+        if (!addResult.Succeeded)
+        {
+            // Restore the prior built-in grants if Identity rejects the replacement.
+            await _userManager.AddToRolesAsync(user, builtInRoles);
+            TempData["ErrorMessage"] = string.Join(" ", addResult.Errors.Select(e => e.Description));
+            return RedirectToAction(nameof(Users));
+        }
+        await _accessRevoker.RevokeAllAccessAsync(user, "Built-in role membership changed");
 
         var oldRole = currentRoles.FirstOrDefault() ?? "None";
         await LogAuditAsync("UserRoleChanged", user.Id, user.Email,

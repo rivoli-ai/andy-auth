@@ -238,6 +238,8 @@
                                             </svg>
                                         </button>
 
+                                        <a class="btn btn-secondary" asp-controller="AdminServiceRoles" asp-action="Index" asp-route-userId="@user.Id">Service roles</a>
+
                                         <button class="btn-action @(isAdmin ? "btn-admin-role" : "btn-user-role")" onclick="showRoleModal('@user.Id', '@user.Email', '@(isAdmin ? "Admin" : "User")')" title="Change Role">
                                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M8 2C9.1 2 10 2.9 10 4C10 5.1 9.1 6 8 6C6.9 6 6 5.1 6 4C6 2.9 6.9 2 8 2Z" stroke="currentColor" stroke-width="1.5"/>

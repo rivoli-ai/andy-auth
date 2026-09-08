@@ -942,7 +942,7 @@ public class DbSeederTests : IDisposable
                     clientSecretEnvVar = "PLAIN_API_SECRET",
                     displayName = "Plain API",
                     grantTypes = new[] { "client_credentials" },
-                    scopes = new[] { "openid" }
+                    scopes = new[] { "openid", "profile", "email", "roles", "scp:urn:plain-api" }
                 }
             }
         });
@@ -980,6 +980,11 @@ public class DbSeederTests : IDisposable
         Assert.DoesNotContain(
             OpenIddictConstants.Permissions.Prefixes.GrantType + Andy.Auth.Server.Services.TokenExchangeConstants.GrantType,
             plain.Permissions);
+
+        foreach (var name in new[] { "openid", "profile", "email", "roles", "urn:plain-api" })
+            Assert.Contains(OpenIddictConstants.Permissions.Prefixes.Scope + name, plain.Permissions);
+        Assert.DoesNotContain("profile", plain.Permissions);
+        Assert.DoesNotContain("scp:scp:urn:plain-api", plain.Permissions);
 
         Environment.SetEnvironmentVariable("PLAIN_API_SECRET", null);
     }

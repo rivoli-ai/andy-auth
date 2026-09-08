@@ -120,6 +120,17 @@ public class TokenClaimsPrincipalFactoryTests
             .Should().BeEquivalentTo("tasks:approvePlan", "tasks:editPlan");
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CreateAsync_EmitsExactServiceRoleOnlyWithRolesScope(bool requestRoles)
+    {
+        _userManager.Setup(x => x.GetRolesAsync(User)).ReturnsAsync(new List<string> { "User", "AHP Viewer" });
+        var scopes = requestRoles ? new[] { "openid", "roles" } : new[] { "openid" };
+        var principal = await _factory.CreateAsync(User, scopes, "andy-cli");
+        principal.FindAll(Claims.Role).Select(c => c.Value).Contains("AHP Viewer").Should().Be(requestRoles);
+    }
+
     [Fact]
     public async Task CreateAsync_RoutesPermissionClaimsToAccessTokenOnly()
     {
