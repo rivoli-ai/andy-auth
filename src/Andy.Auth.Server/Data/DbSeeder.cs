@@ -179,12 +179,16 @@ public class DbSeeder
             descriptor.ClientType = OpenIddictConstants.ClientTypes.Public;
         }
 
+        if (client.RequirePar)
+            descriptor.Requirements.Add(OpenIddictConstants.Requirements.Features.PushedAuthorizationRequests);
+
         var grantTypes = client.GrantTypes ?? Array.Empty<string>();
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Token);
 
         if (grantTypes.Contains("authorization_code", StringComparer.OrdinalIgnoreCase))
         {
             descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Authorization);
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.PushedAuthorization);
             descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode);
             descriptor.Permissions.Add(OpenIddictConstants.Permissions.ResponseTypes.Code);
         }

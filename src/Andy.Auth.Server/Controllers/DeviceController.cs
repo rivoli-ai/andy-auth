@@ -62,8 +62,8 @@ public class DeviceController : Controller
     [HttpGet("~/connect/verify")]
     public async Task<IActionResult> Verify()
     {
-        var request = HttpContext.GetOpenIddictServerRequest() ??
-            throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+        var request = HttpContext.GetOpenIddictServerRequest();
+        if (request is null) return NotFound();
 
         // No user_code: show the entry form. The form posts back here
         // with the user_code in the request body, which OpenIddict
@@ -111,8 +111,11 @@ public class DeviceController : Controller
     /// </summary>
     [HttpPost("~/connect/verify")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> VerifyAccept(string userCode, string decision)
+    public async Task<IActionResult> VerifyAccept([FromForm(Name = "user_code")] string userCode, string decision)
     {
+        if (HttpContext.GetOpenIddictServerRequest() is null) return NotFound();
+        if (decision is not "allow" and not "deny")
+            return BadRequest("An explicit allow or deny decision is required.");
         var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         if (result.Principal is null || !result.Succeeded)
         {

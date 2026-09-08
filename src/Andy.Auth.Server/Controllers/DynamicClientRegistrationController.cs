@@ -184,6 +184,7 @@ public class DynamicClientRegistrationController : ControllerBase
 
         // Add endpoint permissions
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Authorization);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.PushedAuthorization);
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Token);
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Introspection);
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Revocation);

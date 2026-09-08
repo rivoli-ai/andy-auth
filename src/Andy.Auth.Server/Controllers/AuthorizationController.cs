@@ -111,6 +111,23 @@ public class AuthorizationController : ControllerBase
         var user = await _userManager.GetUserAsync(result.Principal) ??
             throw new InvalidOperationException("The user details cannot be retrieved.");
 
+        var pushedUri = Request.HasFormContentType
+            ? Request.Form["request_uri"].ToString() : Request.Query["request_uri"].ToString();
+        if (!string.IsNullOrEmpty(pushedUri))
+        {
+            var consentData = HttpContext.RequestServices
+                .GetRequiredService<Microsoft.AspNetCore.Mvc.ViewFeatures.ITempDataDictionaryFactory>()
+                .GetTempData(HttpContext);
+            if (ParConsentContext.ConsumeDenial(consentData, pushedUri, user.Id))
+                return Forbid(authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                    properties: new AuthenticationProperties(new Dictionary<string, string?>
+                    {
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.AccessDenied,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The user denied consent."
+                    }));
+            ParConsentContext.Capture(consentData, pushedUri, user.Id, request);
+        }
+
         // Retrieve the application details from the database
         var application = await _applicationManager.FindByClientIdAsync(request.ClientId!) ??
             throw new InvalidOperationException("Details concerning the calling client application cannot be found.");

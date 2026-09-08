@@ -72,7 +72,7 @@
 
     <form method="post" action="/connect/verify">
         @Html.AntiForgeryToken()
-        <input type="hidden" name="userCode" value="@Model.UserCode" />
+        <input type="hidden" name="user_code" value="@Model.UserCode" />
         <div class="device-actions">
             <button type="submit" name="decision" value="deny" class="btn btn-secondary">Deny</button>
             <button type="submit" name="decision" value="allow" class="btn btn-primary">Allow</button>
