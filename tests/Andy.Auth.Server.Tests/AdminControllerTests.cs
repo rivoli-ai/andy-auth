@@ -456,7 +456,7 @@ public class AdminControllerTests : IDisposable
     {
         var user = new ApplicationUser { Id = "user-1", Email = "user@test.com" };
         _userManagerMock.Setup(x => x.FindByIdAsync("user-1")).ReturnsAsync(user);
-        _userManagerMock.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "User", "AHP Viewer" });
+        _userManagerMock.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "AHP Viewer", "User" });
         _userManagerMock.Setup(x => x.RemoveFromRolesAsync(user, It.IsAny<IEnumerable<string>>())).ReturnsAsync(IdentityResult.Success);
         _userManagerMock.Setup(x => x.AddToRoleAsync(user, "Admin")).ReturnsAsync(IdentityResult.Success);
         await _controller.ChangeUserRole(user.Id, "Admin");

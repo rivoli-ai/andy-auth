@@ -796,7 +796,7 @@ public class AdminController : Controller
         }
         await _accessRevoker.RevokeAllAccessAsync(user, "Built-in role membership changed");
 
-        var oldRole = currentRoles.FirstOrDefault() ?? "None";
+        var oldRole = builtInRoles.FirstOrDefault() ?? "None";
         await LogAuditAsync("UserRoleChanged", user.Id, user.Email,
             $"Role changed from {oldRole} to {role}");
 
