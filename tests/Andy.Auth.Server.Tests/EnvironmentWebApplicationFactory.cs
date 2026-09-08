@@ -47,6 +47,11 @@ internal sealed class EnvironmentWebApplicationFactory : WebApplicationFactory<P
         _configureTestServices = configureTestServices;
         SetEnv("ASPNETCORE_ENVIRONMENT", environmentName);
         SetEnv("OpenIddict__Issuer", issuer);
+        // Successful-boot tests need successful required seeding now that
+        // readiness admission is enforced. Failure tests override these below.
+        SetEnv("ADMIN_PASSWORD_SAM", Environment.GetEnvironmentVariable("ADMIN_PASSWORD_SAM") ?? "TestAdmin123!");
+        SetEnv("ADMIN_PASSWORD_TY", Environment.GetEnvironmentVariable("ADMIN_PASSWORD_TY") ?? "TestAdmin123!");
+        SetEnv("ADMIN_PASSWORD_DEFAULT", Environment.GetEnvironmentVariable("ADMIN_PASSWORD_DEFAULT") ?? "TestAdmin123!");
         SetEnv("Database__Provider", "Sqlite");
         SetEnv("ConnectionStrings__Sqlite", $"Data Source={dbPath}");
         SetEnv("ConnectionStrings__DefaultConnection", $"Data Source={dbPath}");
@@ -97,7 +102,7 @@ internal sealed class EnvironmentWebApplicationFactory : WebApplicationFactory<P
 
     private void SetEnv(string key, string? value)
     {
-        _priorEnvValues[key] = Environment.GetEnvironmentVariable(key);
+        _priorEnvValues.TryAdd(key, Environment.GetEnvironmentVariable(key));
         Environment.SetEnvironmentVariable(key, value);
     }
 }
