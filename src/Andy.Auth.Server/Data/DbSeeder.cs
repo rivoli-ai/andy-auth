@@ -208,6 +208,13 @@ public class DbSeeder
             descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.DeviceCode);
             descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.DeviceAuthorization);
         }
+        if (grantTypes.Contains(Services.Ciba.CibaOptions.GrantType, StringComparer.Ordinal))
+        {
+            if (!isConfidential || client.BackchannelTokenDeliveryMode != "poll")
+                throw new InvalidOperationException("CIBA registration requires a confidential client and poll delivery mode.");
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.Prefixes.GrantType + Services.Ciba.CibaOptions.GrantType);
+            descriptor.Properties[Services.Ciba.CibaOptions.DeliveryModeProperty] = System.Text.Json.JsonSerializer.SerializeToElement("poll");
+        }
         // RFC 8693 token exchange. Manifests opt in via either the short
         // alias "token_exchange" or the canonical URN. The (actor,
         // audience) allow-list in TokenExchange:Policies is the real

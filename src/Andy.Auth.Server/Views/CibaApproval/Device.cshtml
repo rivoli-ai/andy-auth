@@ -1,0 +1,18 @@
+@{ ViewData["Title"] = "Sign-in approval device"; }
+<div class="container py-4" style="max-width: 36rem">
+    <h1>Sign-in approval device</h1>
+    <p>Register this browser to receive sign-in approval notifications. Only approve requests you started on another device.</p>
+    @if (ViewBag.Registered == true) { <p>A device is registered. Registering here replaces your previous device.</p> }
+    <form id="push-enrollment" method="post" action="@Url.Content("~/Ciba/Device")" data-key="@ViewBag.PublicKey" data-root="@Url.Content("~/")">
+        @Html.AntiForgeryToken()
+        <label for="password" class="form-label">Password</label>
+        <input id="password" name="password" type="password" class="form-control mb-3" autocomplete="current-password" required />
+        <label for="code" class="form-label">Authenticator code (if enabled)</label>
+        <input id="code" name="code" type="text" class="form-control mb-3" inputmode="numeric" autocomplete="one-time-code" />
+        <button type="submit" class="btn btn-primary">Register this device</button>
+        @if (ViewBag.Registered == true)
+        { <button type="submit" formaction="@Url.Content("~/Ciba/Device/Remove")" class="btn btn-outline-danger">Remove registered device</button> }
+    </form>
+    <p id="push-status" role="status" class="mt-3"></p>
+</div>
+<script src="@Url.Content("~/js/ciba-device.js")" defer></script>

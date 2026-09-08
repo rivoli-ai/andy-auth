@@ -1,6 +1,6 @@
 # IdentityServer capability assessment
 
-Reviewed 2026-09-08; updated with the device-flow/PAR implementation under #15
+Reviewed 2026-09-08; updated with device, PAR, DPoP and CIBA implementation under #15
 (.NET 10, OpenIddict 7.2). This replaces the unsupported “90% parity” and
 “ready for production” assertions in issue #9. A merged implementation, a
 passing regression, and acceptance in a deployed environment are distinct facts.
@@ -21,11 +21,11 @@ not a claim of protocol certification or complete coverage of every deployment.
 | --- | --- | --- |
 | Authorization code, PKCE, client credentials, refresh, discovery, introspection, revocation, UserInfo | Implemented through OpenIddict and application controllers | `OAuthIntegrationTests`, `PkceEnforcementTests`, `AndyDocsWebIntegrationTests`; real assistant/resource acceptance remains #7/#118 |
 | JWT versus opaque tokens | JWT access tokens and reference refresh tokens are configured | `src/Andy.Auth.Server/Program.cs` calls `UseReferenceRefreshTokens`; it does not enable reference access tokens. The old blanket “reference tokens” checkbox overstated the deployed configuration |
-| Device authorization | `/connect/device`, `/connect/verify`, code storage and token polling are implemented | `DeviceController`, `DeviceFlowTests`, `DeviceFlowAcceptanceTests`; real browser approval and CLI polling, denial, CSRF, replay, expiry and session revocation are covered. Actual smart-TV/deployment acceptance remains #15 |
+| Device authorization | `/connect/device`, `/connect/verify`, code storage and token polling are implemented | `DeviceController`, `DeviceFlowTests`, `DeviceFlowAcceptanceTests`; real browser approval and CLI polling, denial, CSRF, replay, expiry and session revocation are covered. Controlled browserless-client acceptance is automated; verify actual devices during rollout |
 | RFC 8693 exchange | Implemented with subject, actor, resource, scope, session and absolute lifetime checks | `TokenExchangeIntegrationTests`, `docs/testing/obo-regression.md`, PRs #186/#189; actual downstream acceptance remains #118 |
 | PAR | Opt-in `/connect/par`, per-client permission/requirement, protected consent context, request expiry/client binding and replay enforcement | `PushedAuthorizationIntegrationTests`, `docs/ADVANCED-OAUTH.md`; migrate existing client permissions before enabling discovery |
 | DPoP | Opt-in proof validation, nonce challenges, shared replay defense, key-bound code/access/refresh tokens, resource enforcement and live introspection | `DpopProofTests`, `DpopIntegrationTests`, `docs/ADVANCED-OAUTH.md`; existing clients must opt in and retain their key |
-| CIBA | No backchannel approval/notification implementation | #15 remains open; package support alone does not enable an application feature |
+| CIBA | Opt-in native client authentication, durable poll-mode requests, encrypted Web Push enrollment/delivery and mobile approval with fresh credentials/MFA | `CibaIntegrationTests`, `AdvancedFlowLoadTests`, `docs/ADVANCED-OAUTH.md`; controlled mobile Chromium and separate notification decryption acceptance. Verify hosted browser push delivery during rollout |
 | Client administration and DCR | Admin client CRUD, secret management, scoped permissions, manifest registrations, IAT/RAT and reapproval controls exist | `AdminControllerTests`, `DynamicClientRegistrationControllerTests`; PR #190 fixes approved-baseline preservation, #198 packages consumer manifests |
 | Local password accounts, MFA and lifecycle | Login, password hashing, TOTP/recovery, lockout, suspend/expire/delete and explicit account linking exist | `AccountControllerTests`, `TwoFactorControllerTests`, `ExternalRegistrationIntegrationTests`, `AdminAccessIntegrationTests`, browser MFA acceptance in PR #199 |
 | Public signup and email verification | Registration is disabled by default; enabled registration requires confirmed email and does not sign in a new unverified account | No verification email sender, confirmation callback or resend workflow exists. #80 remains incomplete; a generic submitted response is not email delivery |
@@ -59,11 +59,10 @@ The owner has now requested **all** children of #177, including the previously
 P3 #15, #44 and this analysis. The analysis itself can close when this evidence
 matrix is merged; doing so must not close the implementation children.
 
-1. Device-flow browser/CLI acceptance and native PAR client policy, replay/expiry
-   tests, feature configuration and discovery checks are implemented. Complete real
-   deployed/client acceptance under #15. DPoP proof binding is implemented. Add
-   CIBA only with complete validation, replay state,
-   approval and notification behavior; no advertisement before enforcement.
+1. Device, PAR, DPoP and CIBA have controlled end-to-end and concurrency acceptance,
+   feature configuration and discovery checks. CIBA includes encrypted notification
+   delivery and mobile approval; no feature is advertised before enforcement.
+   Operators verify actual client/device rollout separately.
 2. Roll out #172's tested authenticated event sender/receiver and mandatory live
    enforcement to consuming resources according to their revocation class.
 3. #175/#174 automated acceptance is complete: PRs #204/#205 exercise independent

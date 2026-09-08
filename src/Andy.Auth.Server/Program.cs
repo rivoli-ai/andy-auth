@@ -1,3 +1,4 @@
+using Andy.Auth.Server.Services.Ciba;
 using Andy.Auth.Server.Services.Revocation;
 using Andy.Auth.Server.Services.Dpop;
 using Andy.Auth.Server.Configuration;
@@ -307,6 +308,7 @@ builder.Services.AddOpenIddict()
             .AllowCustomFlow(TokenExchangeConstants.GrantType);
 
         options.AddDpopHandlers(builder.Configuration);
+        options.AddCibaFlow(builder.Configuration);
 
         options.AddEventHandler<OpenIddict.Server.OpenIddictServerEvents.ProcessSignInContext>(handler =>
             handler.SetOrder(OpenIddict.Server.OpenIddictServerHandlers.PrepareIssuedTokenPrincipal.Descriptor.Order + 500)
@@ -474,6 +476,7 @@ builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<LiveSessionTokenFilter>();
 builder.Services.AddRevocationDelivery(builder.Configuration);
 builder.Services.AddDpopServices(builder.Configuration);
+builder.Services.AddCibaServices(builder.Configuration);
 builder.Services.AddScoped<AdminAccessFilter>();
 builder.Services.AddAuthentication().AddCookie(AdminAccessFilter.Scheme, options =>
 {

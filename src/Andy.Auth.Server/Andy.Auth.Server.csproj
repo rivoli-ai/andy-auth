@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="Andy.Telemetry" />
+    <PackageReference Include="Lib.Net.Http.WebPush" />
     <PackageReference Include="AspNetCoreRateLimit" />
     <PackageReference Include="AspNetCoreRateLimit.Redis" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" />

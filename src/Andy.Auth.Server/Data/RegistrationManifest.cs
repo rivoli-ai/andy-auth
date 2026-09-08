@@ -59,7 +59,8 @@ public sealed record RegistrationOAuthClient(
     [property: JsonPropertyName("requirePkce")] bool RequirePkce = false,
     [property: JsonPropertyName("useConfiguredMcpResources")] bool UseConfiguredMcpResources = false,
     [property: JsonPropertyName("requirePar")] bool RequirePar = false,
-    [property: JsonPropertyName("requireDpop")] bool RequireDpop = false
+    [property: JsonPropertyName("requireDpop")] bool RequireDpop = false,
+    [property: JsonPropertyName("backchannelTokenDeliveryMode")] string? BackchannelTokenDeliveryMode = null
 );
 
 public sealed record RegistrationProductionUris(

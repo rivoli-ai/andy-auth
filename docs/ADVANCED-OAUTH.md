@@ -1,4 +1,4 @@
-# Device authorization and pushed authorization requests
+# Advanced OAuth flows
 
 Device authorization is available at `/connect/device`, with browser approval at
 `/connect/verify` and CLI polling at `/connect/token` using
@@ -162,3 +162,141 @@ nonce requirement above applies to the authorization server.
 consumer, revocation, UserInfo, wrong-key refresh, outage behavior and 100 racing
 proof submissions across independent Redis connections. These are automated
 acceptance tests, not a protocol certification or a claim of deployed adoption.
+
+## CIBA: approve on a registered device, then poll for tokens
+
+CIBA is opt-in at `/connect/bc-authorize`. It implements the **poll delivery mode**
+of [OpenID CIBA Core 1.0](https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html).
+The user receives an encrypted Web Push notification and approves on their
+registered browser/device; the confidential client polls `/connect/token` for the
+result. This is distinct from CIBA's optional `push` token-delivery mode, which is
+not advertised or implemented. Signed authentication requests, pairwise subjects,
+`user_code`, `acr_values`, `login_hint_token` and `id_token_hint` are not supported
+by this profile; requests containing those unsupported parameters are rejected.
+
+Deploy the `AddCibaAuthentication` migration before enabling CIBA. Configure:
+
+```json
+{
+  "OpenIddict": {
+    "Issuer": "https://auth.example",
+    "AdvancedFlows": {
+      "CIBA": {
+        "Enabled": true,
+        "AuthenticationLifetime": "00:05:00",
+        "PollingInterval": "00:00:05",
+        "VapidPublicKey": "<base64url uncompressed P-256 public point>",
+        "VapidPrivateKey": "<base64url 32-byte private scalar>",
+        "VapidSubject": "mailto:operator@example.com"
+      }
+    }
+  },
+  "RateLimiting": { "RedisConnectionString": "<shared Redis connection>" }
+}
+```
+
+Supply the VAPID private key through the deployment's secret store. All replicas
+use the same VAPID keys, shared Redis and persistent database/Data Protection
+ring. Startup validates the key pair, HTTPS issuer and configuration. Lifetime
+is bounded to 30 seconds–10 minutes, polling to 5–30 seconds. The browser push
+provider is selected by the browser; the default allowlist contains the exact
+HTTPS origins `fcm.googleapis.com`, `updates.push.services.mozilla.com` and
+`web.push.apple.com`. `PushOrigins` can configure trusted operator-approved
+origins. Enrollment and delivery both validate the origin, and HTTP redirects
+are disabled.
+
+A service manifest opts in explicitly:
+
+```json
+{
+  "clientId": "my-confidential-client",
+  "clientType": "confidential",
+  "clientSecretEnvVar": "MY_CLIENT_SECRET",
+  "grantTypes": ["urn:openid:params:grant-type:ciba", "refresh_token"],
+  "backchannelTokenDeliveryMode": "poll",
+  "scopes": ["scp:roles", "scp:urn:my-api"]
+}
+```
+
+This is the `apiClient`/`webClient` portion of an existing registration manifest.
+For registrations managed through OpenIddict, grant `gt:urn:openid:params:grant-type:ciba`,
+token-endpoint and appropriate scope permissions, and set the application
+property `backchannel_token_delivery_mode` to the JSON string `poll`. Public,
+unapproved and disabled clients are rejected. Native client authentication is
+reused; the tests cover both `client_secret_post` and `client_secret_basic`.
+Only trusted confidential clients should receive this capability: the endpoint's
+standard `unknown_user_id` result reveals that a hint is not currently eligible.
+
+The user visits `/Ciba/Device`, grants browser notification permission and confirms
+their password and authenticator code (when enabled). One device is enrolled per
+user; replacing it removes the old device from delivery. Subscription endpoints
+and encryption secrets are protected at rest. Only confirmed email addresses or
+unambiguous, confirmed E.164 phone numbers can be used as `login_hint`. The user
+must be able to sign in and have an enrolled device. This flow does not perform
+email/phone verification itself.
+
+The client initiates a request with form fields:
+
+```text
+client_id=my-confidential-client
+client_secret=<secret>
+scope=openid roles urn:my-api offline_access
+login_hint=user@example.com
+binding_message=ORDER-4821
+```
+
+Show the same short `binding_message` on the initiating device so the user can
+match the request. It must be at most 128 printable ASCII characters. Optional
+`requested_expiry` is a positive number of seconds, capped at the configured
+lifetime. The response contains a random `auth_req_id`, `expires_in` and
+`interval`. Only a hash of the request identifier is stored. Initiation is
+limited by the configured HTTP rate rules and a shared per-user 30-second prompt
+cooldown. A cooldown response is 429 with `Retry-After: 30`.
+
+The notification contains an approval URL and binding message, encrypted using
+RFC 8291 and authenticated to the push provider with VAPID. Delivery is durable:
+replicas claim expiring leases, retry failures until request expiry, and clean up
+request records one day after expiry. Notifications are hints; possession of a
+notification URL never authorizes approval. The approval page requires the exact
+user, a live session, CSRF validation, and fresh password/MFA. Denial requires the
+user's live session and CSRF. Approval is bound to that session and credential
+stamp. The page works at a 375-pixel mobile viewport.
+
+Poll with the same client authentication and form fields:
+
+```text
+grant_type=urn:openid:params:grant-type:ciba
+auth_req_id=<returned identifier>
+```
+
+Wait at least `interval` seconds before the first poll and between requests.
+`authorization_pending` means continue; `slow_down` increases the interval by at
+least five seconds. Repeated early polling eventually terminates with
+`invalid_request`. Stop on `access_denied`, `expired_token`, `invalid_grant` or
+`invalid_request`. A request belonging to another authenticated client returns
+`invalid_grant`. Dependency outages return 503 with `Retry-After: 5` and do not
+permit access.
+
+A successful poll consumes the approval once and returns standard access/identity
+and, when approved, refresh tokens. Concurrent polls cannot mint multiple grants.
+Current account, lockout, exact session, credential stamp, client delivery mode
+and scope permissions are rechecked before issuance. Disabling an account,
+revoking its session or changing credentials after approval prevents redemption.
+The shared claims factory supplies current roles and resource audiences.
+DPoP clients can use the same token-endpoint proof/nonce process described above.
+
+For VAPID rotation, provision a new matching key pair on all replicas and have
+users register their devices again; enrollment replaces subscriptions tied to an
+old application-server key. Shared Data Protection rotation uses the existing key
+ring runbook. To disable the flow, turn off `CIBA:Enabled`; discovery and initiation
+are removed, and token requests cannot use the disabled grant. Already-issued
+access/refresh tokens follow the normal revocation profile.
+
+`CibaIntegrationTests` covers encrypted notification decryption by a separate
+receiver, real client authentication, mobile Chromium approval, CSRF/user/MFA
+checks, expiry/denial, revocation, credential/permission changes, outages, delivery
+retry and concurrent requests/redemption. `AdvancedFlowLoadTests` exercises
+concurrent device and PAR artifact creation; DPoP's shared replay race and CIBA's
+prompt throttle cover their concurrency boundaries. These bounded acceptance
+loads do not constitute a production throughput benchmark. Operator browser push
+credentials and real hosted-device delivery remain rollout checks.

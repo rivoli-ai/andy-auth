@@ -1,0 +1,5 @@
+@{ ViewData["Title"] = "Sign-in request completed"; }
+<div class="container py-4" style="max-width: 36rem">
+    <h1>@(ViewBag.Approved == true ? "Sign-in approved" : "Request denied")</h1>
+    <p>You can return to your other device and close this page.</p>
+</div>

@@ -391,6 +391,26 @@ public class AuthorizationController : ControllerBase
         // step (DeviceController.VerifyAccept), and we re-issue tokens
         // from it. Treating the three grants uniformly keeps the
         // resource-claim and last-login-update logic in one place.
+        if (request.GrantType == Andy.Auth.Server.Services.Ciba.CibaOptions.GrantType)
+        {
+            try
+            {
+                var result = await HttpContext.RequestServices.GetRequiredService<Andy.Auth.Server.Services.Ciba.CibaService>()
+                    .PollAsync(request.ClientId!, (string?)request["auth_req_id"], HttpContext.RequestAborted);
+                if (result.Error != null)
+                    return Forbid(authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                        properties: new AuthenticationProperties(new Dictionary<string, string?>
+                        { [OpenIddictServerAspNetCoreConstants.Properties.Error] = result.Error }));
+                return SignIn(result.Principal!, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
+            catch (Exception error)
+            {
+                _logger.LogError("CIBA polling authority unavailable ({FailureType})", error.GetType().Name);
+                Response.Headers.RetryAfter = "5";
+                Response.Headers.CacheControl = "no-store";
+                return StatusCode(503, new { error = "temporarily_unavailable" });
+            }
+        }
         if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType() || request.IsDeviceCodeGrantType())
         {
             // Retrieve the claims principal stored in the authorization code/refresh token
