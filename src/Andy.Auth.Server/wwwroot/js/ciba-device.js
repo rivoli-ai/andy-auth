@@ -10,10 +10,18 @@
             const permission = await Notification.requestPermission();
             if (permission !== 'granted') throw new Error('Allow notifications to register this device.');
             const registration = await navigator.serviceWorker.register(form.dataset.root + 'ciba-sw.js', { scope: form.dataset.root + 'Ciba/' });
-            if (!registration.active) await new Promise(resolve => {
+            if (!registration.active) await new Promise((resolve, reject) => {
                 const worker = registration.installing || registration.waiting;
-                if (!worker) return resolve();
-                worker.addEventListener('statechange', () => { if (worker.state === 'activated') resolve(); });
+                if (!worker) return reject(new Error('Notification worker did not install. Try again.'));
+                const changed = () => {
+                    if (worker.state === 'activated' || worker.state === 'redundant') {
+                        worker.removeEventListener('statechange', changed);
+                        if (worker.state === 'activated') resolve();
+                        else reject(new Error('Notification worker installation failed. Try again.'));
+                    }
+                };
+                worker.addEventListener('statechange', changed);
+                changed();
             });
             const raw = form.dataset.key.replace(/-/g, '+').replace(/_/g, '/');
             const key = Uint8Array.from(atob(raw + '='.repeat((4 - raw.length % 4) % 4)), char => char.charCodeAt(0));
