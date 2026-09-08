@@ -326,6 +326,28 @@ public class AuthorizationControllerTests
         Assert.Equal(user.ProfilePictureUrl, claimsDict["profile_picture_url"]);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Userinfo_EmailUsername_RequiresEmailScope(bool emailScope)
+    {
+        var user = new ApplicationUser
+        {
+            Id = "profile-user", Email = "user@example.com", UserName = "USER@example.com"
+        };
+        _httpContext.User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(Claims.Subject, user.Id) }, "Test"));
+        _httpContext.User.SetScopes(emailScope ? new[] { Scopes.Profile, Scopes.Email } : new[] { Scopes.Profile });
+        _mockUserManager.Setup(m => m.FindByIdAsync(user.Id)).ReturnsAsync(user);
+        _mockUserManager.Setup(m => m.GetUserIdAsync(user)).ReturnsAsync(user.Id);
+        _mockUserManager.Setup(m => m.GetEmailAsync(user)).ReturnsAsync(user.Email);
+
+        var result = Assert.IsType<OkObjectResult>(await _controller.Userinfo());
+        var claims = Assert.IsType<Dictionary<string, object>>(result.Value);
+        Assert.Equal(emailScope ? user.UserName : user.Id, claims[Claims.Name]);
+        Assert.Equal(emailScope, claims.ContainsKey(Claims.PreferredUsername));
+        Assert.Equal(emailScope, claims.ContainsKey(Claims.Email));
+    }
+
     [Fact]
     public async Task Userinfo_WithRolesScope_ReturnsRoleClaims()
     {
