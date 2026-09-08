@@ -15,7 +15,7 @@ namespace Andy.Auth.Server.Controllers.Api;
 /// </summary>
 [ApiController]
 [Route("api/groups")]
-[Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme, Roles = "Admin")]
+[Authorize(Policy = LiveAdminRequirement.Policy)]
 [Produces("application/json")]
 public class GroupsApiController : ControllerBase
 {
