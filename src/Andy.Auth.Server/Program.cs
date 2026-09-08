@@ -458,6 +458,7 @@ builder.Services.AddScoped<InteractiveSessionCookieEvents>();
 // (andy-auth#146) — blocking future sign-ins alone leaves existing refresh
 // tokens minting access tokens indefinitely.
 builder.Services.AddScoped<IUserAccessRevoker, UserAccessRevoker>();
+builder.Services.AddScoped<AccountDeletionService>();
 
 // Register audit logging service
 builder.Services.AddScoped<IAuditService, AuditService>();
