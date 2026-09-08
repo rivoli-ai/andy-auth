@@ -594,6 +594,39 @@ public class DynamicClientRegistrationControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateConfiguration_PendingResubmission_PreservesLastApprovedBaseline()
+    {
+        var (dcr, rat, clientId) = await CreateRegisteredClientAsync();
+        dcr.RequiresApproval = true;
+        dcr.IsApproved = false;
+        dcr.MetadataJson = System.Text.Json.JsonSerializer.Serialize(new DcrMetadataChangeReview
+        {
+            PreviousRedirectUris = new() { "https://example.com/approved" },
+            ProposedRedirectUris = new() { "https://example.com/pending" },
+            PreviousPostLogoutRedirectUris = new() { "https://example.com/approved-logout" },
+            ProposedPostLogoutRedirectUris = new() { "https://example.com/pending-logout" }
+        });
+        await _context.SaveChangesAsync();
+        _controller.ControllerContext.HttpContext.Request.Headers.Authorization = $"Bearer {rat}";
+        SetupApplicationForUpdate(clientId, new[] { "https://example.com/pending" },
+            new[] { "https://example.com/pending-logout" });
+
+        var result = await _controller.UpdateConfiguration(clientId, new ClientRegistrationRequest
+        {
+            RedirectUris = new() { "https://example.com/latest" },
+            PostLogoutRedirectUris = new() { "https://example.com/latest-logout" }
+        });
+
+        result.Should().BeOfType<OkObjectResult>();
+        dcr.IsApproved.Should().BeFalse();
+        var review = System.Text.Json.JsonSerializer.Deserialize<DcrMetadataChangeReview>(dcr.MetadataJson!)!;
+        review.PreviousRedirectUris.Should().Equal("https://example.com/approved");
+        review.PreviousPostLogoutRedirectUris.Should().Equal("https://example.com/approved-logout");
+        review.ProposedRedirectUris.Should().Equal("https://example.com/latest");
+        review.ProposedPostLogoutRedirectUris.Should().Equal("https://example.com/latest-logout");
+    }
+
+    [Fact]
     public async Task UpdateConfiguration_SameRedirectSetInDifferentOrder_KeepsApproval()
     {
         var (dcr, rat, clientId) = await CreateRegisteredClientAsync();
