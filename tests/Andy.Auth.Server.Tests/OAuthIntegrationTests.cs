@@ -550,8 +550,12 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 
     #region Authorization Code Flow Tests
 
-    [Fact]
-    public async Task Authorization_WithRevokedInteractiveSession_ReturnsToLoginBeforeIssuance()
+    [Theory]
+    [InlineData("revoked")]
+    [InlineData("deleted")]
+    [InlineData("cross-user")]
+    [InlineData("evicted")]
+    public async Task Authorization_WithInvalidInteractiveSession_ReturnsToLoginBeforeIssuance(string mutation)
     {
         var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
         {
@@ -595,8 +599,20 @@ public class OAuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
             sessionId = session!.SessionId;
 
             var sessionService = scope.ServiceProvider.GetRequiredService<SessionService>();
-            Assert.True(await sessionService.RevokeSessionByIdAsync(
-                sessionId, "OAuth integration revocation test"));
+            if (mutation == "revoked")
+                Assert.True(await sessionService.RevokeSessionByIdAsync(sessionId, "OAuth integration revocation test"));
+            else if (mutation == "evicted")
+            {
+                for (var i = 0; i < sessionService.MaxConcurrentSessions; i++)
+                    await sessionService.CreateSessionAsync(user.Id, Guid.NewGuid().ToString("N"), null, null);
+                Assert.False(await sessionService.IsSessionValidAsync(sessionId));
+            }
+            else
+            {
+                if (mutation == "deleted") dbContext.UserSessions.Remove(session);
+                else session.UserId = await dbContext.Users.Where(u => u.Id != user.Id).Select(u => u.Id).FirstAsync();
+                await dbContext.SaveChangesAsync();
+            }
         }
 
         var verifier = GenerateCodeVerifier();

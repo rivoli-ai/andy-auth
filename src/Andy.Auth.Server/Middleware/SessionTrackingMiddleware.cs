@@ -45,70 +45,33 @@ public class SessionTrackingMiddleware
             return;
         }
 
-        // Only track authenticated users
-        if (context.User.Identity?.IsAuthenticated == true)
+        // Validate the application cookie specifically. Bearer identities do not
+        // require an interactive session, even on non-/connect API routes.
+        var cookie = await context.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+        if (cookie.Succeeded)
         {
-            var sessionId = GetSessionId(context);
-            var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var sessionId = cookie.Principal?.FindFirst(AndyAuthSignInManager.SessionIdClaimType)?.Value;
+            var userId = cookie.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var session = string.IsNullOrWhiteSpace(sessionId) ? null :
+                await dbContext.UserSessions.FirstOrDefaultAsync(s => s.SessionId == sessionId);
 
-            if (!string.IsNullOrEmpty(sessionId) && !string.IsNullOrEmpty(userId))
+            // SigningIn creates the record before issuing the cookie. Missing
+            // records must fail closed; recreating one would undo revocation.
+            if (session is null || string.IsNullOrWhiteSpace(userId) ||
+                !string.Equals(session.UserId, userId, StringComparison.Ordinal) ||
+                !await sessionService.IsSessionValidAsync(session))
             {
-                // One load instead of an existence probe followed by a second
-                // read inside IsSessionValidAsync — this runs on every
-                // non-skipped authenticated request (andy-auth#154).
-                var session = await dbContext.UserSessions
-                    .FirstOrDefaultAsync(s => s.SessionId == sessionId);
-
-                if (session is null)
-                {
-                    // Auto-create session for authenticated user (first request after login)
-                    var ipAddress = context.Connection.RemoteIpAddress?.ToString();
-                    var userAgent = context.Request.Headers.UserAgent.FirstOrDefault();
-
-                    try
-                    {
-                        await sessionService.CreateSessionAsync(userId, sessionId, ipAddress, userAgent);
-                        _logger.LogInformation("Auto-created session {SessionId} for user {UserId}", sessionId, userId);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to auto-create session {SessionId}", sessionId);
-                    }
-                }
+                _logger.LogInformation("Rejecting invalid backing session {SessionId}", sessionId);
+                await context.SignOutAsync(IdentityConstants.ApplicationScheme);
+                if (IsApiRequest(context))
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 else
-                {
-                    // Validate session is still active, reusing the row we just
-                    // loaded rather than reading it again.
-                    var isValid = await sessionService.IsSessionValidAsync(session);
-
-                    if (!isValid)
-                    {
-                        // Session has been revoked - sign out user
-                        _logger.LogInformation("Session {SessionId} is no longer valid, signing out user", sessionId);
-
-                        // Clear authentication cookie
-                        await context.SignOutAsync(IdentityConstants.ApplicationScheme);
-
-                        // Redirect to login if this is a web request
-                        if (!IsApiRequest(context))
-                        {
-                            context.Response.Redirect("/Account/Login?sessionExpired=true");
-                            return;
-                        }
-                        else
-                        {
-                            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                            return;
-                        }
-                    }
-
-                    // Update session activity (throttled to avoid too many DB writes)
-                    if (ShouldUpdateActivity(context, sessionId))
-                    {
-                        await sessionService.UpdateActivityAsync(sessionId);
-                    }
-                }
+                    context.Response.Redirect("/Account/Login?sessionExpired=true");
+                return;
             }
+
+            if (ShouldUpdateActivity(context, sessionId!))
+                await sessionService.UpdateActivityAsync(sessionId!);
         }
 
         await _next(context);
@@ -134,20 +97,6 @@ public class SessionTrackingMiddleware
         var value = path.Value;
         return value is not null
             && value.StartsWith(prefix + ".", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string? GetSessionId(HttpContext context)
-    {
-        // AndyAuthSignInManager stamps this at sign-in and carries it across
-        // principal re-issues, so it is stable for the life of the session.
-        //
-        // The previous fallback — SHA-256 of the raw Identity cookie — changed
-        // every time sliding expiration re-issued that cookie, so each renewal
-        // looked like a brand-new session: another UserSessions row, and the
-        // concurrency limit evicting the user's older rows (andy-auth#154).
-        // There is no fallback now; a request with no claim is simply not
-        // tracked, which is correct for bearer-token API calls.
-        return context.User.FindFirst(Services.AndyAuthSignInManager.SessionIdClaimType)?.Value;
     }
 
     private static bool IsApiRequest(HttpContext context)

@@ -6,6 +6,8 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -90,6 +92,42 @@ public sealed class InteractiveSessionCookieEventsTests : IDisposable
         var act = () => _events.SigningIn(CreateContext(userId, sessionId));
 
         await act.Should().ThrowAsync<InvalidOperationException>();
+        (await _dbContext.UserSessions.CountAsync()).Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ValidatePrincipal_DelegatesToIdentityAndPreservesSessionOnRenewal(bool reject)
+    {
+        var signingIn = CreateContext("user-1", "original-session");
+        var context = new CookieValidatePrincipalContext(signingIn.HttpContext,
+            signingIn.Scheme, signingIn.Options,
+            new AuthenticationTicket(signingIn.Principal!, new AuthenticationProperties(), signingIn.Scheme.Name));
+        var validator = new Mock<ISecurityStampValidator>();
+        validator.Setup(v => v.ValidateAsync(context)).Returns(() =>
+        {
+            if (reject) context.RejectPrincipal();
+            else
+            {
+                context.ReplacePrincipal(CreateContext("user-1", "replacement-session").Principal!);
+                context.ShouldRenew = true;
+            }
+            return Task.CompletedTask;
+        });
+        context.HttpContext.RequestServices = new ServiceCollection()
+            .AddSingleton(validator.Object).BuildServiceProvider();
+
+        await _events.ValidatePrincipal(context);
+
+        validator.Verify(v => v.ValidateAsync(context), Times.Once);
+        if (reject) context.Principal.Should().BeNull();
+        else
+        {
+            context.Principal!.FindAll(AndyAuthSignInManager.SessionIdClaimType)
+                .Should().ContainSingle().Which.Value.Should().Be("original-session");
+            context.ShouldRenew.Should().BeTrue();
+        }
         (await _dbContext.UserSessions.CountAsync()).Should().Be(0);
     }
 

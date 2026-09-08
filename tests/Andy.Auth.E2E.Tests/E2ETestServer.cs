@@ -81,6 +81,7 @@ public class E2ETestServer : IAsyncDisposable
         // Configure cookie authentication
         builder.Services.ConfigureApplicationCookie(options =>
         {
+            options.EventsType = typeof(InteractiveSessionCookieEvents);
             options.LoginPath = "/Account/Login";
             options.AccessDeniedPath = "/Account/AccessDenied";
             options.LogoutPath = "/Account/Logout";
@@ -92,6 +93,7 @@ public class E2ETestServer : IAsyncDisposable
         // Register custom services
         builder.Services.AddScoped<IAuditService, AuditService>();
         builder.Services.AddScoped<SessionService>();
+        builder.Services.AddScoped<InteractiveSessionCookieEvents>();
         builder.Services.AddScoped<IUserAccessRevoker, UserAccessRevoker>();
         builder.Services.Configure<RolePermissionOptions>(
             builder.Configuration.GetSection(RolePermissionOptions.SectionName));
@@ -160,8 +162,8 @@ public class E2ETestServer : IAsyncDisposable
         _app.UseStaticFiles();
         _app.UseRouting();
         _app.UseAuthentication();
-        _app.UseAuthorization();
         _app.UseMiddleware<SessionTrackingMiddleware>();
+        _app.UseAuthorization();
         _app.MapControllers();
         _app.MapControllerRoute(
             name: "default",
