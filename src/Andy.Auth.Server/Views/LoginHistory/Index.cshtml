@@ -1,0 +1,45 @@
+@model Andy.Auth.Server.Controllers.LoginHistoryViewModel
+@{
+    ViewData["Title"] = "Login history";
+}
+<style>
+    .login-history { max-width: 960px; margin: 0 auto; }
+    .login-history p { color: var(--text-muted); }
+    .login-history .history-table { overflow-x: auto; margin: 1.5rem 0; }
+    .login-history table { width: 100%; border-collapse: collapse; text-align: left; }
+    .login-history th, .login-history td { padding: 1rem; border-bottom: 1px solid var(--border); }
+    .login-history nav { display: flex; gap: 1.5rem; }
+</style>
+<section class="login-history">
+    <h1>Login history</h1>
+    <p>Recent sign-in attempts recorded for your account, newest first. If you see activity you don't recognize, change your password and review your active sessions.</p>
+    <a asp-controller="Session" asp-action="Index">Review active sessions</a>
+    @if (Model.Entries.Count == 0)
+    {
+        <p>No sign-in activity on this page.</p>
+    }
+    else
+    {
+        <div class="history-table">
+            <table>
+                <caption class="visually-hidden">Sign-in attempts for your account</caption>
+                <thead><tr><th scope="col">Time</th><th scope="col">Result</th><th scope="col">Method</th><th scope="col">IP address</th></tr></thead>
+                <tbody>
+                @foreach (var entry in Model.Entries)
+                {
+                    <tr>
+                        <td><time datetime="@entry.Timestamp.ToString("o")" data-utc="@entry.Timestamp.ToString("o")" data-format="datetime">@entry.Timestamp.ToString("u")</time></td>
+                        <td>@(entry.Succeeded ? "Successful" : "Unsuccessful")</td>
+                        <td>@entry.Method</td>
+                        <td>@(entry.IpAddress ?? "Unavailable")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+    <nav aria-label="Login history pages">
+        @if (Model.IsOlderPage) { <a asp-action="Index">Latest activity</a> }
+        @if (Model.NextCursor.HasValue) { <a asp-action="Index" asp-route-before="@Model.NextCursor">Older activity</a> }
+    </nav>
+</section>
