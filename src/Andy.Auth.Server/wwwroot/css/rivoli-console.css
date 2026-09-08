@@ -1,0 +1,51 @@
+:root { --sidebar-width:248px; --header-height:72px; }
+.app-layout .sidebar { background:var(--surface); }
+.app-layout .sidebar-header { min-height:96px; padding:24px 20px; border-bottom:0; }
+.app-layout .sidebar-brand { gap:12px; }
+.app-layout .sidebar-brand svg { color:#087c77; }
+.app-layout .sidebar-brand h1 { font-size:16px; color:var(--text); letter-spacing:-.3px; }
+.brand-eyebrow { display:block; font:10px/1.4 ui-monospace,monospace; letter-spacing:1.4px; color:var(--text-secondary); margin-bottom:5px; }
+.app-layout .sidebar-nav { padding:0 16px 24px; }
+.app-layout .nav-section { margin-bottom:28px; }
+.app-layout .nav-section-title { font:10px/1.4 ui-monospace,monospace; letter-spacing:1.2px; color:var(--text-secondary); margin-bottom:10px; }
+.app-layout .nav-link { font-size:14px; min-height:42px; padding:10px 12px; border-radius:8px; }
+.app-layout .nav-link.active { background:#eaf4f2; color:#075f5a; }
+.app-layout .main-header { min-height:72px; padding:16px 32px; border-bottom:1px solid var(--border); box-shadow:none; }
+.console-location { display:flex; gap:12px; align-items:center; color:var(--text-secondary); font-size:12px; }
+.console-location strong { color:var(--text); font-weight:500; }
+.app-layout .main-content { padding:40px; max-width:1536px; }
+.app-layout .main-content h1 { font-size:32px; font-weight:600; letter-spacing:-.8px; }
+.app-layout .main-content .subtitle { font-size:14px; color:var(--text-secondary); line-height:1.7; }
+.console-workflows { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr)); gap:16px; margin:28px 0 32px; }
+.console-workflows a { display:block; padding:20px; border:1px solid var(--border); border-radius:12px; background:var(--surface); color:var(--text); text-decoration:none; }
+.console-workflows a:hover { border-color:#087c77; }
+.console-workflows strong { display:block; font-size:14px; margin-bottom:10px; }
+.console-workflows span { display:block; font-size:12px; color:var(--text-secondary); line-height:1.65; }
+.app-layout .card,.app-layout .stat-card { border-radius:12px; box-shadow:none; border:1px solid var(--border); }
+.identity-page { background:#fafafa; color:#171717; }
+.identity-page .login-container { max-width:1040px; display:grid; grid-template-columns:1fr 1fr; border:1px solid #e5e5e5; border-radius:16px; overflow:hidden; background:white; }
+.identity-intro { background:#0a1f22; color:#fafafa; padding:56px 44px; display:flex; flex-direction:column; justify-content:center; }
+.identity-intro .brand-eyebrow { color:#2bc0b9; }
+.identity-intro h2 { font-size:36px; line-height:1.15; letter-spacing:-1px; font-weight:600; margin:24px 0; }
+.identity-intro p { color:#b6cccb; font-size:14px; line-height:1.8; }
+.identity-page .login-card { padding:48px 40px; border:0; border-radius:0; box-shadow:none; }
+.identity-page .login-header { text-align:left; }
+.identity-page .login-logo { display:none; }
+.identity-page .login-header h1 { font-size:26px; letter-spacing:-.5px; }
+.identity-page .login-header p { font-size:14px; line-height:1.7; }
+.identity-page .form-group input { min-height:44px; border-radius:8px; font-size:14px; }
+.identity-page .btn-login { min-height:44px; border-radius:8px; background:#0a0a0a; box-shadow:none; }
+.identity-page .brand-footer { grid-column:1/-1; color:#737373; background:#fafafa; border-top:1px solid #e5e5e5; margin:0; padding:16px; font-size:12px; }
+.native-drawer-close { display:none; }
+@media(max-width:768px) {
+ .app-layout .main-content { padding:24px 16px; }
+ .app-layout .main-header { padding:12px 16px; }
+ .app-layout .sidebar { width:min(300px,calc(100vw - 40px)); }
+ .native-drawer-close { display:block; border:1px solid var(--border); background:var(--surface); border-radius:8px; padding:4px 8px; color:var(--text); font-size:22px; }
+ .identity-page { padding:24px 16px; }
+ .identity-page .login-container { grid-template-columns:1fr; }
+ .identity-intro { padding:28px; }
+ .identity-intro h2 { font-size:28px; margin:16px 0; }
+ .identity-intro p { margin:0; }
+ .identity-page .login-card { padding:28px; }
+}
