@@ -31,7 +31,7 @@ Self-hosted OAuth 2.0 / OpenID Connect server built with ASP.NET Core and OpenId
 
 ### Prerequisites
 
-- .NET 8.0 SDK
+- .NET 10.0 SDK
 - Docker Desktop (for PostgreSQL)
 - IDE (VS Code, Visual Studio, or Rider)
 
@@ -178,7 +178,7 @@ Working example applications for integrating with Andy Auth:
 
 | Example | Language/Framework | Description |
 |---------|-------------------|-------------|
-| [csharp-web](./examples/csharp-web/) | C# / ASP.NET Core | .NET 8 with OpenID Connect |
+| [csharp-web](./examples/csharp-web/) | C# / ASP.NET Core | .NET 10 with OpenID Connect |
 | [python-flask](./examples/python-flask/) | Python / Flask | OAuth 2.0 + PKCE |
 | [javascript-express](./examples/javascript-express/) | JavaScript / Express | OAuth 2.0 + PKCE |
 | [typescript-express](./examples/typescript-express/) | TypeScript / Express | Type-safe OAuth 2.0 |

@@ -43,7 +43,7 @@ A **self-hosted OAuth 2.0 + OIDC server** built on OpenIddict. It authenticates 
 
 | Layer | Technology |
 |-------|-----------|
-| Runtime | .NET 8.0 |
+| Runtime | .NET 10.0 |
 | OAuth server | **OpenIddict 7.2** |
 | Identity | ASP.NET Core Identity (PBKDF2, 100k iterations, lockout) |
 | UI | Razor Pages / MVC Views |

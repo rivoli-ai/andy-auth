@@ -1,10 +1,10 @@
 # C# / .NET Web Application Example
 
-This example demonstrates how to integrate Andy Auth with a .NET 8 web application using OpenID Connect.
+This example demonstrates how to integrate Andy Auth with a .NET 10 web application using OpenID Connect.
 
 ## Prerequisites
 
-- .NET 8 SDK
+- .NET 10 SDK
 - Andy Auth server running (default: https://localhost:5001)
 
 ## Setup

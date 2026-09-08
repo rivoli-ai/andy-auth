@@ -245,7 +245,7 @@
 
             <h3 id="nixpacks-toml">nixpacks.toml (Alternative)</h3>
 
-            <p>For builds without Docker, Railway can use Nixpacks. The included <code>nixpacks.toml</code> configures a self-contained .NET 8 build:</p>
+            <p>For builds without Docker, Railway can use Nixpacks. The included <code>nixpacks.toml</code> configures a self-contained .NET 10 build:</p>
 
             <div class="code-block">
                 <div class="code-block-header">
@@ -256,7 +256,7 @@
                     </button>
                 </div>
                 <pre><code class="language-toml">[phases.setup]
-nixPkgs = ["dotnet-sdk_8"]
+nixPkgs = ["dotnet-sdk_10"]
 
 [phases.build]
 cmds = ["dotnet publish src/Andy.Auth.Server/Andy.Auth.Server.csproj -c Release -o out --self-contained true -r linux-x64"]

@@ -6,7 +6,7 @@ This directory contains example applications demonstrating how to integrate Andy
 
 | Example | Language/Framework | Description |
 |---------|-------------------|-------------|
-| [csharp-web](./csharp-web/) | C# / ASP.NET Core | .NET 8 web app with OpenID Connect |
+| [csharp-web](./csharp-web/) | C# / ASP.NET Core | .NET 10 web app with OpenID Connect |
 | [python-flask](./python-flask/) | Python / Flask | Flask web app with OAuth 2.0 + PKCE |
 | [javascript-express](./javascript-express/) | JavaScript / Express | Express.js web app with OAuth 2.0 + PKCE |
 | [typescript-express](./typescript-express/) | TypeScript / Express | TypeScript Express web app with type safety |
