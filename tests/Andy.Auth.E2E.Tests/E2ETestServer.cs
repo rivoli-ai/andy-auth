@@ -193,9 +193,8 @@ public class E2ETestServer : IAsyncDisposable
         var db = services.GetRequiredService<ApplicationDbContext>();
         await db.Database.EnsureCreatedAsync();
 
-        await AndyDocsWebRegistration.SeedAsync(
-            services.GetRequiredService<OpenIddict.Abstractions.IOpenIddictApplicationManager>(),
-            Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+        await new DbSeeder(services, _app.Configuration,
+            services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<DbSeeder>>(), _app.Environment).SeedFromManifestsAsync();
 
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();

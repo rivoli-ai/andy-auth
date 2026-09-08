@@ -1,0 +1,35 @@
+{
+  "service": {
+    "name": "external-andy-narration-web",
+    "displayName": "Andy Narration",
+    "description": "Bundled external OAuth consumer registration.",
+    "embeddedProxyPrefix": ""
+  },
+  "auth": {
+    "audience": "urn:andy-narration-api",
+    "registerAudience": true,
+    "webClient": {
+      "clientId": "andy-narration-web",
+      "clientType": "public",
+      "displayName": "Andy Narration Web",
+      "grantTypes": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "scopes": [
+        "email",
+        "profile",
+        "roles",
+        "urn:andy-narration-api"
+      ],
+      "redirectUris": [
+        "https://localhost:5310/callback",
+        "https://localhost:4200/callback"
+      ],
+      "postLogoutRedirectUris": [
+        "https://localhost:5310/",
+        "https://localhost:4200/"
+      ]
+    }
+  }
+}

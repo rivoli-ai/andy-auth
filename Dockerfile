@@ -63,6 +63,7 @@ COPY src/Andy.Auth.Server/Andy.Auth.Server.csproj src/Andy.Auth.Server/
 RUN dotnet restore src/Andy.Auth.Server/Andy.Auth.Server.csproj
 
 COPY src/Andy.Auth.Server/ src/Andy.Auth.Server/
+COPY config/registrations/external/ config/registrations/external/
 RUN dotnet publish src/Andy.Auth.Server/Andy.Auth.Server.csproj \
         -c Release -o /app/publish /p:UseAppHost=false
 

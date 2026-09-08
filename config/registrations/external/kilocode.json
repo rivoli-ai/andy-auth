@@ -1,0 +1,37 @@
+{
+  "service": {
+    "name": "external-kilocode",
+    "displayName": "Kilocode (VS Code)",
+    "description": "Bundled external OAuth consumer registration.",
+    "embeddedProxyPrefix": ""
+  },
+  "auth": {
+    "audience": "urn:andy-docs-api",
+    "registerAudience": false,
+    "webClient": {
+      "clientId": "kilocode",
+      "clientType": "public",
+      "displayName": "Kilocode (VS Code)",
+      "grantTypes": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "scopes": [
+        "email",
+        "profile",
+        "offline_access",
+        "urn:andy-docs-api",
+        "urn:andy-code-index-api"
+      ],
+      "redirectUris": [
+        "http://127.0.0.1/callback",
+        "http://127.0.0.1:3000/callback",
+        "http://127.0.0.1:8080/callback",
+        "http://localhost/callback",
+        "http://localhost:3000/callback",
+        "http://localhost:8080/callback",
+        "vscode://kilocode.kilo-code/callback"
+      ]
+    }
+  }
+}

@@ -37,4 +37,8 @@
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="../../config/registrations/external/*.json" Link="config/registrations/external/%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

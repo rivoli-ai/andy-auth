@@ -1,0 +1,35 @@
+{
+  "service": {
+    "name": "external-claude-desktop",
+    "displayName": "Claude Desktop",
+    "description": "Bundled external OAuth consumer registration.",
+    "embeddedProxyPrefix": ""
+  },
+  "auth": {
+    "audience": "urn:andy-docs-api",
+    "registerAudience": false,
+    "webClient": {
+      "clientId": "claude-desktop",
+      "clientType": "public",
+      "displayName": "Claude Desktop",
+      "grantTypes": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "scopes": [
+        "email",
+        "profile",
+        "offline_access",
+        "urn:andy-docs-api",
+        "urn:andy-code-index-api"
+      ],
+      "redirectUris": [
+        "https://claude.ai/api/mcp/auth_callback",
+        "https://claude.com/api/mcp/auth_callback",
+        "http://127.0.0.1/callback",
+        "http://localhost/callback"
+      ],
+      "useConfiguredMcpResources": true
+    }
+  }
+}

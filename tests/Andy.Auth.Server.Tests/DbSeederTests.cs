@@ -92,14 +92,9 @@ public class DbSeederTests : IDisposable
     }
 
     [Fact]
-    public async Task SeedAsync_SeedsHardcodedClients_WhenClientsDoNotExist()
+    public async Task SeedAsync_SeedsBundledClients_WhenClientsDoNotExist()
     {
-        // Arrange - no client exists yet, and no registration manifests are
-        // configured, so the legacy hardcoded SeedClientsAsync path is what
-        // runs here. andy-docs-api is deliberately NOT asserted: it moved to
-        // the manifest-driven SeedFromManifestsAsync path (see the
-        // `// andy-docs-api: now manifest-driven` comment in DbSeeder), so it
-        // is never created by the hardcoded path a manifest-less run exercises.
+        // Bundled manifests are available even without sibling-service configuration.
         _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
             .ReturnsAsync((object?)null);
 
@@ -127,11 +122,9 @@ public class DbSeederTests : IDisposable
     }
 
     [Fact]
-    public async Task SeedAsync_RecreatesHardcodedClients_WhenClientsAlreadyExist()
+    public async Task SeedAsync_UpdatesBundledClients_WhenClientsAlreadyExist()
     {
-        // Arrange - every client already exists. The hardcoded clients use a
-        // delete-then-create strategy on every run so config/manifest edits
-        // take effect, so an existing row is deleted and the client recreated.
+        // Existing identities must survive manifest reconciliation.
         var existingClient = new object();
         _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
             .ReturnsAsync(existingClient);
@@ -147,11 +140,9 @@ public class DbSeederTests : IDisposable
         // Act
         await seeder.SeedAsync();
 
-        // Assert - the pre-existing row was deleted, and representative
-        // always-recreated clients were re-created.
-        _mockAppManager.Verify(m => m.DeleteAsync(existingClient, default), Times.AtLeastOnce);
-        Assert.Contains("claude-desktop", createdIds);
-        Assert.DoesNotContain("andy-docs-web", createdIds);
+        Assert.Empty(createdIds);
+        _mockAppManager.Verify(m => m.UpdateAsync(existingClient,
+            It.Is<OpenIddictApplicationDescriptor>(d => d.ClientId == "claude-desktop"), default), Times.Once);
         _mockAppManager.Verify(m => m.UpdateAsync(existingClient,
             It.Is<OpenIddictApplicationDescriptor>(d => d.ClientId == "andy-docs-web"), default), Times.Once);
     }
@@ -301,23 +292,22 @@ public class DbSeederTests : IDisposable
     [Fact]
     public async Task SeedAsync_ShouldCreateClaudeDesktopClient_WithHttpRedirectUris()
     {
-        // Arrange - all clients exist (claude-desktop is always deleted and recreated)
+        // Existing client callback configuration is reconciled in place.
         _mockAppManager.Setup(m => m.FindByClientIdAsync(It.IsAny<string>(), default))
             .ReturnsAsync(new object());
 
         var configuration = CreateConfiguration("Production");
 
         var capturedDescriptors = new List<OpenIddictApplicationDescriptor>();
-        _mockAppManager.Setup(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), default))
-            .Callback<OpenIddictApplicationDescriptor, CancellationToken>((desc, _) => capturedDescriptors.Add(desc))
-            .ReturnsAsync(new object());
+        _mockAppManager.Setup(m => m.UpdateAsync(It.IsAny<object>(), It.IsAny<OpenIddictApplicationDescriptor>(), default))
+            .Callback<object, OpenIddictApplicationDescriptor, CancellationToken>((_, desc, _) => capturedDescriptors.Add(desc));
 
         var seeder = new DbSeeder(_serviceProvider, configuration, _mockLogger.Object, CreateHostEnvironment("Production"));
 
         // Act
         await seeder.SeedAsync();
 
-        // Assert - claude-desktop is always recreated
+        // Assert - callback URIs are retained on update.
         var claudeDescriptor = capturedDescriptors.FirstOrDefault(d => d.ClientId == "claude-desktop");
         Assert.NotNull(claudeDescriptor);
         Assert.Null(claudeDescriptor.ClientSecret); // Public client

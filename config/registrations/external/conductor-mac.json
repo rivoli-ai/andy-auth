@@ -1,0 +1,47 @@
+{
+  "service": {
+    "name": "external-conductor-mac",
+    "displayName": "Conductor macOS",
+    "description": "Bundled external OAuth consumer registration.",
+    "embeddedProxyPrefix": ""
+  },
+  "auth": {
+    "audience": "urn:andy-docs-api",
+    "registerAudience": false,
+    "webClient": {
+      "clientId": "conductor-mac",
+      "clientType": "public",
+      "displayName": "Conductor macOS",
+      "grantTypes": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "scopes": [
+        "email",
+        "profile",
+        "roles",
+        "offline_access",
+        "urn:andy-docs-api",
+        "urn:andy-code-index-api",
+        "urn:andy-issues-api",
+        "urn:andy-containers-api",
+        "urn:andy-rbac-api",
+        "urn:andy-tasks-api",
+        "urn:andy-models-api",
+        "urn:andy-settings-api",
+        "urn:andy-agents-api",
+        "urn:andy-policies-api",
+        "urn:andy-mcp-proxy-api"
+      ],
+      "redirectUris": [
+        "http://127.0.0.1/conductor/callback",
+        "http://localhost/conductor/callback",
+        "conductor://callback"
+      ],
+      "postLogoutRedirectUris": [
+        "http://127.0.0.1/conductor/logout",
+        "http://localhost/conductor/logout"
+      ]
+    }
+  }
+}

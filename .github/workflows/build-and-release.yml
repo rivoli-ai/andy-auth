@@ -145,6 +145,10 @@ jobs:
 
     # andy-auth#126 acceptance: the image must run unprivileged and must not
     # carry build tooling into the runtime layer.
+    - name: Verify bundled consumer manifests
+      run: |
+        docker run --rm --entrypoint sh andy-auth:ci -c 'test -f /app/config/registrations/external/andy-docs-web.json && test -f /app/config/registrations/external/conductor-mac.json'
+
     - name: Assert the runtime user is not root
       run: |
         uid=$(docker run --rm --entrypoint sh andy-auth:ci -c 'id -u')
