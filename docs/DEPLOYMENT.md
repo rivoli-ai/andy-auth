@@ -457,3 +457,11 @@ The application also rejects non-probe requests with non-cacheable 503 responses
 when migration or required seeding has failed, even if an edge misroutes traffic.
 This startup gate does not replace continuous platform readiness checks or
 shared rate-limit enforcement.
+
+### Shared rate-limit counters
+
+UAT and Production require `RateLimiting__RedisConnectionString` and refuse startup without it. Supply the same Redis endpoint/database to every replica through the deployment secret store; use TLS, authentication and a dedicated non-evicting database. Redis increments and expiry are atomic across replicas, and outages reject requests with 503 rather than reverting to local allowances. All replicas must use the same rate-limit rules. Redis data loss or eviction can reset allowances, so operate it with persistence and `noeviction`; monitor outages and capacity.
+
+`RateLimiting__RequireDistributed=false` is only for isolated single-process fixtures or local deployments. A real multi-replica deployment must retain the hardened default. Configured IP policies remain local immutable configuration; counters use Redis. The real regression test runs in CI against Redis and can be run locally with `ANDY_TEST_REDIS=localhost:16379 dotnet test tests/Andy.Auth.Server.Tests --filter FullyQualifiedName~DistributedRateLimitingTests`.
+
+Before increasing replicas, alternate requests at the login/token limit across two instances and verify one shared allowance; disconnect Redis and verify 503 without any fallback. These checks supplement the ingress and readiness acceptance above.
