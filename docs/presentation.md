@@ -194,7 +194,7 @@ Lifetimes: access **1 hour**, refresh **14 days** (rotated).
 
 **Dev / Staging / UAT** — ephemeral RSA keys generated on startup (see `Program.cs:160–190`).
 
-**Production** — requires explicit key configuration (key vault or `OpenIddict:UseEphemeralKeys`).
+**Production** — requires explicit key configuration (protected certificate bundles and shared encrypted Data Protection).
 
 JWKS endpoint returns only public keys. Reference refresh tokens (`options.UseReferenceRefreshTokens()`) let ops revoke individual sessions.
 
@@ -296,7 +296,7 @@ Key settings:
 - `CorsOrigins.AllowedOrigins`
 - `DynamicClientRegistration.{Enabled, RequireInitialAccessToken, RequireAdminApproval}`
 - `IpRateLimiting.*`
-- `OpenIddict.UseEphemeralKeys` — `true` in cloud
+- `OpenIddict:Certificates` — protected production signing/encryption bundles
 
 ---
 

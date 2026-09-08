@@ -77,22 +77,10 @@ ASPNETCORE_URLS=http://0.0.0.0:${{PORT}}
 # Issuer — must match the public URL clients reach this server on
 OpenIddict__Issuer=https://auth.example.com/
 
-# Signing keys. Point this at a mounted volume so the RSA keypair — and
-# therefore the JWKS `kid` — survives redeploys and previously-issued JWTs
-# keep validating.
-OpenIddict__SigningKeys__Path=/data/keys
+# Configure protected certificate bundles and shared Data Protection; see below.
 ```
 
-> Startup fails in Production unless either `OpenIddict__SigningKeys__Path` or
-> `OpenIddict__UseEphemeralKeys=true` is set. Prefer the path: ephemeral keys
-> rotate on every restart and invalidate every token in flight, which is only
-> acceptable for stateless pods where every consumer can re-authenticate on
-> demand.
->
-> There is no `OpenIddict__Server__SigningKey` / `__EncryptionKey`. Those
-> variables were documented for a long time but read by nothing — setting them
-> produced a false sense of security. They have been removed and the server now
-> refuses to start if they are present (andy-auth#152).
+> Production requires [protected certificates and a shared encrypted Data Protection ring](operations/key-rotation.md). Provision these before deployment; legacy PEM paths and ephemeral overrides are rejected.
 
 **Optional:**
 ```bash

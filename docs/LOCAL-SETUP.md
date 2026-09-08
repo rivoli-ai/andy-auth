@@ -86,8 +86,8 @@ Two settings control key material everywhere else:
 
 | Setting | Effect |
 |---|---|
-| `OpenIddict:SigningKeys:Path` | RSA keypair persisted in that directory. The JWKS `kid` survives restarts, so previously-issued JWTs keep validating. Required in Embedded mode; recommended in Production. |
-| `OpenIddict:UseEphemeralKeys` | Production opt-in to rotating keys on every start. Every token in flight becomes invalid — only safe for stateless pods where every consumer can re-authenticate on demand. |
+| `OpenIddict:SigningKeys:Path` | RSA keypair persisted in that directory. The JWKS `kid` survives restarts, so previously-issued JWTs keep validating. Required in Embedded mode; rejected in Production. |
+| `OpenIddict:UseEphemeralKeys` | Rejected in Production. See [protected production keys](operations/key-rotation.md). |
 
 Production startup fails unless one of the two is set.
 

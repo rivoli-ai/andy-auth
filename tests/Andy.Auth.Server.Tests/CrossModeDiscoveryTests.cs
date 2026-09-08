@@ -9,7 +9,7 @@ namespace Andy.Auth.Server.Tests;
 
 // Cross-mode parity smoke for the OIDC discovery contract. Each
 // supported deployment mode (Embedded, Production-with-keys,
-// Production-with-ephemeral-keys) must serve a discovery doc with
+// Docker) must serve a discovery doc with
 // the configured issuer and S256 PKCE advertised — otherwise a
 // consumer service that boots in one mode would fail to validate
 // tokens minted by andy-auth in another.
@@ -46,7 +46,6 @@ public class CrossModeDiscoveryTests : IDisposable
         new object[] { Mode.Embedded, "http://localhost:9100/auth/" },
         new object[] { Mode.Docker, "https://localhost:7001/" },
         new object[] { Mode.ProductionPersistedKeys, "https://auth.example.test/" },
-        new object[] { Mode.ProductionEphemeralKeys, "https://auth.example.test/" },
     };
 
     [Theory]
@@ -104,13 +103,6 @@ public class CrossModeDiscoveryTests : IDisposable
                 issuer: issuer,
                 keysPath: keysPath),
 
-            Mode.ProductionEphemeralKeys => new EnvironmentWebApplicationFactory(
-                environmentName: "Production",
-                dbPath: dbPath,
-                issuer: issuer,
-                keysPath: null,
-                useEphemeralKeys: true),
-
             _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
         };
     }
@@ -136,7 +128,6 @@ public class CrossModeDiscoveryTests : IDisposable
     {
         Embedded,
         Docker,
-        ProductionPersistedKeys,
-        ProductionEphemeralKeys
+        ProductionPersistedKeys
     }
 }

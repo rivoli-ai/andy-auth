@@ -4,35 +4,8 @@ using OpenIddict.Server;
 
 namespace Andy.Auth.Server.Configuration;
 
-// File-backed signing + encryption keys for deployment modes where the
-// server restarts frequently but clients hold long-lived tokens across
-// restarts. Used by Conductor embedded mode (single-user desktop app
-// with keys at `~/.conductor/keys`) and by Production deploys with a
-// mounted volume (e.g. Railway `/data/keys` per E3-S4) — same RSA
-// PEM-on-disk mechanism, different host trust model.
-//
-// AddEphemeralSigningKey()/AddEphemeralEncryptionKey() generate keys
-// in memory and rotate them on every process start. That is fine for
-// `dotnet run` development (browser clients reauthenticate on reload)
-// but catastrophic when the same server is bundled inside a desktop
-// app that the user relaunches frequently, or when it sits behind a
-// production load balancer where consumers hold issued JWTs across
-// pod restarts — every restart invalidates every previously-minted
-// JWT and every downstream service starts returning 401 until a token
-// refresh races through.
-//
-// This helper persists a 2048-bit RSA keypair as unencrypted PKCS#8
-// PEM to `<directoryPath>/signing.key` and `<directoryPath>/encryption.key`.
-// On first boot the keys are generated and written; on subsequent
-// boots they are loaded verbatim so the JWKS `kid` stays constant.
-//
-// Security model: directory+file permissions (0700/0600 on Unix) gate
-// access to the process's owning user. For Embedded that's the desktop
-// user; for Production that's the container's service account. The
-// volume itself must be the trust boundary — anyone who can read
-// `signing.key` can mint tokens. PFX-from-key-vault is a future
-// alternative for environments that need a tighter trust boundary,
-// but is not implemented here (see #69).
+// Local, single-user Embedded mode only. Production uses ProductionKeyMaterial.
+// These unencrypted PKCS#8 files rely on the desktop user's filesystem permissions.
 public static class PersistedDevelopmentKeys
 {
     /// <summary>
