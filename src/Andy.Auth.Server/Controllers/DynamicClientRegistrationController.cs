@@ -538,12 +538,19 @@ public class DynamicClientRegistrationController : ControllerBase
         {
             if (approvalReset)
             {
+                // A pending client may submit more edits, but the review must
+                // still compare against the last approved metadata, not an
+                // unapproved intermediate submission.
+                var pendingReview = !dcrMetadata.IsApproved &&
+                    !string.IsNullOrWhiteSpace(dcrMetadata.MetadataJson)
+                    ? JsonSerializer.Deserialize<DcrMetadataChangeReview>(dcrMetadata.MetadataJson)
+                    : null;
                 var review = new DcrMetadataChangeReview
                 {
                     ChangedAt = DateTime.UtcNow,
-                    PreviousRedirectUris = previousRedirectUris,
+                    PreviousRedirectUris = pendingReview?.PreviousRedirectUris ?? previousRedirectUris,
                     ProposedRedirectUris = ToSortedUriStrings(descriptor.RedirectUris),
-                    PreviousPostLogoutRedirectUris = previousPostLogoutRedirectUris,
+                    PreviousPostLogoutRedirectUris = pendingReview?.PreviousPostLogoutRedirectUris ?? previousPostLogoutRedirectUris,
                     ProposedPostLogoutRedirectUris = ToSortedUriStrings(
                         descriptor.PostLogoutRedirectUris)
                 };
