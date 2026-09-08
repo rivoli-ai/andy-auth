@@ -35,6 +35,10 @@ public class SessionTruthDto
     [JsonPropertyName("sessionId")]
     public string? SessionId { get; set; }
 
+    /// <summary>Current role membership, for consumers reconciling token roles.</summary>
+    [JsonPropertyName("roles")]
+    public string[] Roles { get; set; } = Array.Empty<string>();
+
     /// <summary>
     /// When the session expires (UTC), when known.
     /// </summary>

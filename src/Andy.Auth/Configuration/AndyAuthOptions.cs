@@ -53,6 +53,15 @@ public class AndyAuthOptions
     public JwtBearerEvents? Events { get; set; }
 
     /// <summary>
+    /// Require fresh /auth/session confirmation on every authenticated request.
+    /// Use for high-risk user APIs. Sessionless machine tokens are rejected;
+    /// configure a separate authentication scheme for machine-only resources.
+    /// Dependency failures deny access with 503, with no cached/fail-open fallback.
+    /// </summary>
+    public bool RequireLiveSession { get; set; }
+
+
+    /// <summary>
     /// Require HTTPS metadata (default: true for production)
     /// Set to false only in development environments
     /// </summary>

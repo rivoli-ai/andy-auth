@@ -361,7 +361,7 @@ public class SessionService
 
         // A live (non-revoked, non-expired) session wins — the subject is active.
         var live = sessions
-            .Where(s => !s.IsRevoked && s.ExpiresAt > now)
+            .Where(s => !s.IsRevoked && s.ExpiresAt > now && s.LastActivity.Add(InactivityTimeout) > now)
             .OrderByDescending(s => s.LastActivity)
             .FirstOrDefault();
 
@@ -387,7 +387,7 @@ public class SessionService
         return ClassifySession(latest, now);
     }
 
-    private static SessionTruth ClassifySession(UserSession session, DateTime now)
+    private SessionTruth ClassifySession(UserSession session, DateTime now)
     {
         if (session.IsRevoked)
         {
@@ -402,7 +402,7 @@ public class SessionService
             };
         }
 
-        if (session.ExpiresAt <= now)
+        if (session.ExpiresAt <= now || session.LastActivity.Add(InactivityTimeout) <= now)
         {
             return new SessionTruth
             {

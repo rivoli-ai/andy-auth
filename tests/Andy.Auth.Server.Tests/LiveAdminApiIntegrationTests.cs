@@ -8,6 +8,7 @@ using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -79,6 +80,12 @@ public sealed class LiveAdminApiIntegrationTests
         using var before = await api.GetAsync("/api/users");
         Assert.Equal(HttpStatusCode.OK, before.StatusCode);
 
+        using var resource = await LiveConsumerFixture.StartAsync(factory, token);
+        using var consumer = resource.GetTestClient();
+        consumer.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        using var consumerBefore = await consumer.GetAsync("/sensitive");
+        Assert.Equal(HttpStatusCode.OK, consumerBefore.StatusCode);
+
         if (mutation == "logout")
         {
             var page = await browser.GetStringAsync("/Session");
@@ -142,6 +149,10 @@ public sealed class LiveAdminApiIntegrationTests
             }
             await db.SaveChangesAsync();
         }
+
+        using var consumerAfter = await consumer.GetAsync("/sensitive");
+        Assert.Equal(mutation == "unavailable" ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.Unauthorized,
+            consumerAfter.StatusCode);
 
         Assert.True(token.ValidTo > DateTime.UtcNow, "The original token must still be unexpired.");
         foreach (var path in new[] { "/api/users", "/api/groups", "/mcp/tools/users/list", "/mcp" })
