@@ -96,12 +96,22 @@ Document the cutoff and verify rejection on each consumer before declaring recov
 
 ## Validation
 
-`dotnet test tests/Andy.Auth.Server.Tests --filter 'FullyQualifiedName~ProductionKeyMaterialTests|FullyQualifiedName~ProductionModeIntegrationTests'`
+`dotnet test tests/Andy.Auth.Server.Tests --filter 'FullyQualifiedName~ProductionKeyMaterialTests|FullyQualifiedName~ProductionModeIntegrationTests|FullyQualifiedName~ProductionReplicaKeyAcceptanceTests'`
 
-The tests cover boot rejection, certificate selection/overlap, token verification,
-and independent Data Protection providers reading cookies across rotation/restoration.
-Deployment acceptance additionally requires actual shared mounts, consistent JWKS on
-all replicas, cross-replica cookie/refresh redemption and ingress readiness routing.
+The tests cover boot rejection, certificate selection/overlap, and token verification.
+`ProductionReplicaKeyAcceptanceTests` starts independent Production application hosts
+sharing protected certificate files, a durable key ring, and a database. It verifies
+identical JWKS, cross-replica antiforgery and actual Identity cookies, authorization-code
+and refresh redemption across hosts, old JWT validation and new signing KIDs during
+rotation, and cookie/token/refresh recovery after deleting the original storage and
+restoring its backup. Cookies issued before and after wrapping-key rotation both
+survive recovery. These tests run in the normal server test suite.
+
+This is automated application acceptance with TestServer HTTP transport. Operators
+still verify their deployment mounts satisfy the shared-storage contract above;
+network isolation, TLS termination, and ingress readiness routing belong to the
+production topology acceptance in #174. No particular hosting provider is required
+to reproduce the key-lifecycle acceptance tests.
 
 References: [OpenIddict credential selection](https://documentation.openiddict.com/configuration/encryption-and-signing-credentials.html),
 [ASP.NET Data Protection configuration](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/configuration/overview?view=aspnetcore-10.0).
