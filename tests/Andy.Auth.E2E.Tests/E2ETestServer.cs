@@ -112,6 +112,9 @@ public class E2ETestServer : IAsyncDisposable
 
         builder.Services.AddScoped<TokenClaimsPrincipalFactory>();
         builder.Services.AddScoped<DcrClientGate>();
+        builder.Services.AddScoped<ConsentGrantService>();
+        builder.Services.AddSingleton<ITokenExchangePolicy, TokenExchangePolicy>();
+        builder.Services.AddSingleton<ISubjectTokenValidator, InProcessSubjectTokenValidator>();
 
         // Configure OpenIddict
         builder.Services.AddOpenIddict()
@@ -139,6 +142,7 @@ public class E2ETestServer : IAsyncDisposable
                     .AddEphemeralSigningKey();
 
                 options.UseAspNetCore()
+                    .DisableTransportSecurityRequirement() // local HTTP-only browser fixture
                     .EnableAuthorizationEndpointPassthrough()
                     .EnableTokenEndpointPassthrough()
                     .EnableEndSessionEndpointPassthrough()
@@ -188,6 +192,10 @@ public class E2ETestServer : IAsyncDisposable
 
         var db = services.GetRequiredService<ApplicationDbContext>();
         await db.Database.EnsureCreatedAsync();
+
+        await AndyDocsWebRegistration.SeedAsync(
+            services.GetRequiredService<OpenIddict.Abstractions.IOpenIddictApplicationManager>(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
 
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
