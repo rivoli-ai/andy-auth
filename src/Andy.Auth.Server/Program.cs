@@ -59,13 +59,14 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddSingleton<Andy.Auth.Server.Configuration.StartupReadinessState>();
 builder.Services.AddHealthChecks()
     .AddCheck<Andy.Auth.Server.Configuration.StartupReadinessHealthCheck>(
-        "startup", tags: new[] { "ready" });
+        "startup", tags: new[] { "ready" })
+    .AddCheck<RateLimitReadinessHealthCheck>("rate-limit-store", tags: new[] { "ready" });
 
 // Configure rate limiting
 builder.Services.AddMemoryCache();
 builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
 builder.Services.Configure<IpRateLimitPolicies>(builder.Configuration.GetSection("IpRateLimitPolicies"));
-builder.Services.AddInMemoryRateLimiting();
+builder.Services.AddAuthRateLimiting(builder.Configuration);
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
 // Configure database provider (SQLite by default for embedded mode,
@@ -737,6 +738,7 @@ app.Use(async (context, next) =>
 });
 
 // Add rate limiting
+app.UseMiddleware<RateLimitAvailabilityMiddleware>();
 app.UseIpRateLimiting();
 
 app.UseRouting();

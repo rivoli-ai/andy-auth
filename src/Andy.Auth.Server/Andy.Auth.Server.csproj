@@ -13,6 +13,7 @@
   <ItemGroup>
     <PackageReference Include="Andy.Telemetry" />
     <PackageReference Include="AspNetCoreRateLimit" />
+    <PackageReference Include="AspNetCoreRateLimit.Redis" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">

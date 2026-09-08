@@ -46,6 +46,10 @@ internal sealed class EnvironmentWebApplicationFactory : WebApplicationFactory<P
         _environmentName = environmentName;
         _configureTestServices = configureTestServices;
         SetEnv("ASPNETCORE_ENVIRONMENT", environmentName);
+        // Boot fixtures exercise a single isolated process. Distributed behavior has
+        // its own real Redis integration test; no developer Redis credentials are used.
+        SetEnv("RateLimiting__RequireDistributed", "false");
+        SetEnv("RateLimiting__RedisConnectionString", null);
         SetEnv("OpenIddict__Issuer", issuer);
         // Successful-boot tests need successful required seeding now that
         // readiness admission is enforced. Failure tests override these below.
