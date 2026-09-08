@@ -24,7 +24,8 @@ not a claim of protocol certification or complete coverage of every deployment.
 | Device authorization | `/connect/device`, `/connect/verify`, code storage and token polling are implemented | `DeviceController`, `DeviceFlowTests`, `DeviceFlowAcceptanceTests`; real browser approval and CLI polling, denial, CSRF, replay, expiry and session revocation are covered. Actual smart-TV/deployment acceptance remains #15 |
 | RFC 8693 exchange | Implemented with subject, actor, resource, scope, session and absolute lifetime checks | `TokenExchangeIntegrationTests`, `docs/testing/obo-regression.md`, PRs #186/#189; actual downstream acceptance remains #118 |
 | PAR | Opt-in `/connect/par`, per-client permission/requirement, protected consent context, request expiry/client binding and replay enforcement | `PushedAuthorizationIntegrationTests`, `docs/ADVANCED-OAUTH.md`; migrate existing client permissions before enabling discovery |
-| DPoP and CIBA | No DPoP proof enforcement/token binding or CIBA approval/notification implementation | #15 remains open for these capabilities; package support alone does not enable an application feature |
+| DPoP | Opt-in proof validation, nonce challenges, shared replay defense, key-bound code/access/refresh tokens, resource enforcement and live introspection | `DpopProofTests`, `DpopIntegrationTests`, `docs/ADVANCED-OAUTH.md`; existing clients must opt in and retain their key |
+| CIBA | No backchannel approval/notification implementation | #15 remains open; package support alone does not enable an application feature |
 | Client administration and DCR | Admin client CRUD, secret management, scoped permissions, manifest registrations, IAT/RAT and reapproval controls exist | `AdminControllerTests`, `DynamicClientRegistrationControllerTests`; PR #190 fixes approved-baseline preservation, #198 packages consumer manifests |
 | Local password accounts, MFA and lifecycle | Login, password hashing, TOTP/recovery, lockout, suspend/expire/delete and explicit account linking exist | `AccountControllerTests`, `TwoFactorControllerTests`, `ExternalRegistrationIntegrationTests`, `AdminAccessIntegrationTests`, browser MFA acceptance in PR #199 |
 | Public signup and email verification | Registration is disabled by default; enabled registration requires confirmed email and does not sign in a new unverified account | No verification email sender, confirmation callback or resend workflow exists. #80 remains incomplete; a generic submitted response is not email delivery |
@@ -33,8 +34,8 @@ not a claim of protocol certification or complete coverage of every deployment.
 | Logout/revocation notifications | Durable signed Security Event Tokens over HTTPS, with transactional capture, retries, shared consumer denial checks and mandatory live-check option | #172; `RevocationDeliveryIntegrationTests`, `RevocationReceiverTests`, and `LiveAdminApiIntegrationTests`. This is the authenticated-event alternative, not OIDC back-channel logout. See `docs/operations/revocation-events.md`; deployed adoption is separate acceptance. |
 | Consent | Consent UI, durable grants, expiry and revocation exist | `ConsentControllerTests`, `ConsentGrantServiceTests`; removing a remembered choice is distinct from revoking credentials |
 | Claims privacy | Email/profile/roles are projected according to granted scopes; profile aliases do not leak an ungranted email address | #173/PR #191, `TokenClaimsPrincipalFactoryTests`; this does not establish signup email delivery |
-| Signing, encryption and Data Protection | Production requires protected certificate bundles, shared persistent Data Protection configuration and rotation overlap support | #175/PR #184, `ProductionKeyMaterialTests`, `ProductionModeIntegrationTests`, `docs/operations/key-rotation.md`; deployed rotation/replica acceptance remains outstanding |
-| Proxy trust, throttling and readiness | Validated explicit proxy trust, readiness admission, Redis atomic rate counters and fail-closed outage behavior exist | #174/PRs #193/#196, `ForwardedProxyTrustConfigurationTests`, `DistributedRateLimitingTests`, `ReadinessCheckTests`; actual ingress isolation and replica routing are not verified by these fixtures |
+| Signing, encryption and Data Protection | Production requires protected certificate bundles, shared persistent Data Protection configuration and rotation overlap support | #175/PR #184, `ProductionKeyMaterialTests`, `ProductionModeIntegrationTests`, `docs/operations/key-rotation.md`; `ProductionReplicaKeyAcceptanceTests` (PR #204) verifies cross-replica cookies, key rotation and backup/restore |
+| Proxy trust, throttling and readiness | Validated explicit proxy trust, readiness admission, Redis atomic rate counters and fail-closed outage behavior exist | #174/PRs #193/#196, `ForwardedProxyTrustConfigurationTests`, `DistributedRateLimitingTests`, `ReadinessCheckTests`; `tests/deployment/replica_acceptance.py` (PR #205) verifies TLS ingress isolation, shared throttling and replica removal/recovery |
 | Interactive admin access | Hardened modes require a short-lived session-bound password/TOTP step-up cookie | #174/PR #197, `AdminAccessIntegrationTests`; production ingress acceptance remains separate |
 | mTLS | No ecosystem certificate authentication/rotation substrate | #44 spans the CA interface, server/client libraries, Conductor proxy trust and multiple consuming repositories. OAuth client credentials are the current S2S mechanism |
 | Diagnostics | Health/readiness, audit logging and OpenTelemetry registration exist | `HealthCheckTests`, `AuditLogIntegrationTests`, `Program.cs`; exporter configuration, alert delivery and actual operational monitoring remain deployment acceptance |
@@ -49,10 +50,10 @@ that Andy.Auth implements them.
 
 ## Epic #177 reconciliation and execution order
 
-The completed remediation children are #176, #169, #171, #170, #173 and #19.
-Their PRs and verification are recorded in #177. #175 and #174 contain merged
-implementation plus outstanding deployed acceptance; #172 has local enforcement
-but still needs actual notification delivery and consumer enforcement.
+The completed remediation children include #176, #169, #171, #170, #173, #175,
+#174 and #172. Their PRs and verification are recorded in #177. The replica, TLS
+ingress and signed notification acceptance tests are implemented and passing;
+operators must still verify their own rollout settings. #15 and #44 remain open.
 
 The owner has now requested **all** children of #177, including the previously
 P3 #15, #44 and this analysis. The analysis itself can close when this evidence
@@ -60,8 +61,8 @@ matrix is merged; doing so must not close the implementation children.
 
 1. Device-flow browser/CLI acceptance and native PAR client policy, replay/expiry
    tests, feature configuration and discovery checks are implemented. Complete real
-   deployed/client acceptance under #15. Add DPoP
-   end-to-end proof binding and CIBA only with complete validation, replay state,
+   deployed/client acceptance under #15. DPoP proof binding is implemented. Add
+   CIBA only with complete validation, replay state,
    approval and notification behavior; no advertisement before enforcement.
 2. Roll out #172's tested authenticated event sender/receiver and mandatory live
    enforcement to consuming resources according to their revocation class.

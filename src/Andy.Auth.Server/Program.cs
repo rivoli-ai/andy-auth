@@ -1,4 +1,5 @@
 using Andy.Auth.Server.Services.Revocation;
+using Andy.Auth.Server.Services.Dpop;
 using Andy.Auth.Server.Configuration;
 using Andy.Auth.Server.Controllers.Api;
 using Andy.Auth.Server.Data;
@@ -231,10 +232,10 @@ builder.Services.AddOpenIddict()
             .SetRefreshTokenLifetime(refreshTokenLifetime);
 
         // Enable the authorization, token, introspection, and revocation endpoints
-        // Note: userinfo and logout are handled by custom controller endpoints
         options.SetAuthorizationEndpointUris("connect/authorize")
             .SetTokenEndpointUris("connect/token")
             .SetIntrospectionEndpointUris("connect/introspect")
+            .SetUserInfoEndpointUris("connect/userinfo")
             .SetRevocationEndpointUris("connect/revoke")
             // OIDC RP-Initiated Logout. Registering the endpoint is what makes
             // `GetOpenIddictServerRequest()` return a parsed logout request in
@@ -304,6 +305,8 @@ builder.Services.AddOpenIddict()
             // in TokenExchange:Policies in config (see TokenExchangeSettings).
             // Drives Epic IDP (rivoli-ai/conductor#1246).
             .AllowCustomFlow(TokenExchangeConstants.GrantType);
+
+        options.AddDpopHandlers(builder.Configuration);
 
         options.AddEventHandler<OpenIddict.Server.OpenIddictServerEvents.ProcessSignInContext>(handler =>
             handler.SetOrder(OpenIddict.Server.OpenIddictServerHandlers.PrepareIssuedTokenPrincipal.Descriptor.Order + 500)
@@ -413,10 +416,11 @@ builder.Services.AddOpenIddict()
         options.UseReferenceRefreshTokens();
 
         // Register the ASP.NET Core host and configure based on environment
-        // Note: userinfo and logout endpoints are custom controllers, not OpenIddict passthrough
+        // Native request/token validation precedes the controller passthrough.
         var aspNetCoreBuilder = options.UseAspNetCore()
             .EnableAuthorizationEndpointPassthrough()
             .EnableTokenEndpointPassthrough()
+            .EnableUserInfoEndpointPassthrough()
             // /connect/device is handled natively by OpenIddict (it
             // validates client_id + scopes, mints device_code/user_code,
             // returns JSON). Only the user-facing verification UI needs
@@ -439,6 +443,7 @@ builder.Services.AddOpenIddict()
     .AddValidation(options =>
     {
         options.UseLocalServer();
+        options.AddDpopBindingValidation();
         options.UseAspNetCore();
     });
 
@@ -468,6 +473,7 @@ builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationM
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<LiveSessionTokenFilter>();
 builder.Services.AddRevocationDelivery(builder.Configuration);
+builder.Services.AddDpopServices(builder.Configuration);
 builder.Services.AddScoped<AdminAccessFilter>();
 builder.Services.AddAuthentication().AddCookie(AdminAccessFilter.Scheme, options =>
 {
@@ -615,7 +621,7 @@ builder.Services.AddCors(options =>
         if (allowedOrigins.Length > 0)
         {
             policy.WithOrigins(allowedOrigins)
-                .AllowAnyHeader()
+                .AllowAnyHeader().WithExposedHeaders("DPoP-Nonce", "WWW-Authenticate")
                 .AllowAnyMethod()
                 .AllowCredentials();
         }
@@ -625,7 +631,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowMcpClients", policy =>
     {
         policy.AllowAnyOrigin()
-              .AllowAnyHeader()
+              .AllowAnyHeader().WithExposedHeaders("DPoP-Nonce", "WWW-Authenticate")
               .AllowAnyMethod();
     });
 });
@@ -770,6 +776,7 @@ app.UseRouting();
 
 app.UseCors("AllowWebClients");
 
+app.UseMiddleware<DpopResourceMiddleware>();
 app.UseAuthentication();
 app.UseSessionTracking();
 app.UseAuthorization();

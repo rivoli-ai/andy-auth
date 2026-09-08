@@ -127,6 +127,13 @@ public class InProcessSubjectTokenValidator : ISubjectTokenValidator
                 $"subject_token rejected: {detail}");
         }
 
+        // RFC 8693 does not define transferring a sender constraint to a new
+        // actor key. Reject it until a complete constrained-exchange profile is
+        // supported; a stolen bound token must never become an ordinary bearer.
+        if (result.Claims.ContainsKey("cnf"))
+            return new SubjectTokenValidationResult(false, null, Array.Empty<string>(),
+                "sender-constrained subject tokens cannot be exchanged");
+
         var sub = result.ClaimsIdentity?.FindFirst("sub")?.Value;
         if (string.IsNullOrWhiteSpace(sub) && result.Claims.TryGetValue("sub", out var subClaim))
         {

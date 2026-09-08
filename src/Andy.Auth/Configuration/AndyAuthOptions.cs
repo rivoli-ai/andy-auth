@@ -62,6 +62,12 @@ public class AndyAuthOptions
 
     /// <summary>Consult the shared denial store populated by AddAndyRevocationReceiver on every user-token request.</summary>
     public bool CheckRevocationNotifications { get; set; }
+    /// <summary>Accept sender-constrained DPoP tokens; requires a shared IDpopReplayStore.</summary>
+    public bool EnableDpop { get; set; }
+    /// <summary>Resource credentials for live introspection of DPoP-bound user tokens.</summary>
+    public string? IntrospectionClientId { get; set; }
+    public string? IntrospectionClientSecret { get; set; }
+    public TimeSpan DpopProofLifetime { get; set; } = TimeSpan.FromMinutes(1);
 
 
     /// <summary>
