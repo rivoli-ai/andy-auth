@@ -19,11 +19,9 @@ namespace Andy.Auth.Server.Tests;
 /// <summary>
 /// Integration tests for the RFC 8693 token-exchange grant on the
 /// <c>/connect/token</c> endpoint. We cover the input-validation and
-/// policy-denial paths here because those don't require minting a real
-/// user access token in the test setup. Happy-path validation (which
-/// needs a real subject_token issued by the same server) is exercised
-/// by the validator unit tests + a follow-up E2E test in
-/// <c>Andy.Auth.E2E.Tests</c>.
+/// policy-denial paths and precisely controlled hand-signed token edge cases.
+/// Real cookie login, PKCE code issuance and authenticated OBO exchange are covered
+/// by OboIssuanceRegressionTests (fresh and stale manifest scope resources).
 ///
 /// Drives Epic IDP (rivoli-ai/conductor#1246).
 /// </summary>
