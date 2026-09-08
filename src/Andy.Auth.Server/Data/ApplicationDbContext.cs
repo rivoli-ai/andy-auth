@@ -73,6 +73,7 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        ConfigureCiba(builder);
 
         builder.Entity<RevocationOutboxMessage>(entity =>
         {

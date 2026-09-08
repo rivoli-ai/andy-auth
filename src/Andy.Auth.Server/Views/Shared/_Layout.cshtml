@@ -1,3 +1,4 @@
+@inject Microsoft.Extensions.Options.IOptions<Andy.Auth.Server.Services.Ciba.CibaOptions> CibaSettings
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -693,6 +694,10 @@
                             </svg>
                             <span>Login history</span>
                         </a>
+                        @if (CibaSettings.Value.Enabled)
+                        {
+                            <a href="@Url.Content("~/Ciba/Device")" class="nav-link"><span>Sign-in approvals</span></a>
+                        }
                         <a asp-controller="DeleteAccount" asp-action="Index" class="nav-link"><span>Delete account</span></a>
                         <a asp-controller="TwoFactor" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "TwoFactor" ? "active" : "")">
                             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">

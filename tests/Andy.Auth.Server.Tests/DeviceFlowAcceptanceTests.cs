@@ -44,13 +44,15 @@ public sealed class DeviceFlowAcceptanceTests
                         Permissions.GrantTypes.DeviceCode, Permissions.GrantTypes.RefreshToken, Permissions.Scopes.Profile }
                 });
         }
+        var issuance = System.Diagnostics.Stopwatch.StartNew();
         using var start = await cli.PostAsync("/connect/device", new FormUrlEncodedContent(new Dictionary<string, string>
             { ["client_id"] = "device-acceptance", ["scope"] = "openid profile offline_access" }));
         Assert.True(start.IsSuccessStatusCode, await start.Content.ReadAsStringAsync());
         using var json = JsonDocument.Parse(await start.Content.ReadAsStringAsync());
         var code = json.RootElement.GetProperty("device_code").GetString()!;
         var userCode = json.RootElement.GetProperty("user_code").GetString()!;
-        Assert.InRange(json.RootElement.GetProperty("expires_in").GetInt32(), 599, 600);
+        Assert.InRange(json.RootElement.GetProperty("expires_in").GetInt32(),
+            Math.Max(1, 600 - (int)Math.Ceiling(issuance.Elapsed.TotalSeconds) - 1), 600);
         var verify = QueryHelpers.AddQueryString("/connect/verify", "user_code", userCode);
         var poll = new Dictionary<string, string>
         {

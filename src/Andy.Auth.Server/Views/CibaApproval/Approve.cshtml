@@ -1,0 +1,22 @@
+@model Andy.Auth.Server.Data.CibaAuthentication
+@{ ViewData["Title"] = "Approve sign-in"; }
+<div class="container py-4" style="max-width: 36rem">
+    <h1>Approve sign-in</h1>
+    <p><strong>@ViewBag.ClientName</strong> requested access to your account.</p>
+    @if (!string.IsNullOrEmpty(Model.BindingMessage))
+    { <p>Check that this message matches the request on your other device:</p><p class="border rounded p-3 fs-4">@Model.BindingMessage</p> }
+    <p>Requested access: <strong>@Model.Scope</strong></p>
+    <p>If you did not start this request, deny it.</p>
+    <form method="post" action="@Url.Content("~/Ciba/Approve/" + Model.Id)">
+        @Html.AntiForgeryToken()
+        <label for="password" class="form-label">Confirm your password to approve</label>
+        <input id="password" name="password" type="password" class="form-control mb-3" autocomplete="current-password" />
+        @if (ViewBag.RequiresMfa == true)
+        {
+            <label for="code" class="form-label">Authenticator code</label>
+            <input id="code" name="code" type="text" class="form-control mb-3" inputmode="numeric" autocomplete="one-time-code" />
+        }
+        <button name="decision" value="allow" class="btn btn-primary">Approve sign-in</button>
+        <button name="decision" value="deny" class="btn btn-outline-danger">Deny request</button>
+    </form>
+</div>
