@@ -93,7 +93,9 @@ public class ConsentController : Controller
             return BadRequest("No query string found in return URL.");
         }
         var queryString = model.ReturnUrl.Substring(queryIndex);
-        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(queryString);
+        var query = ParConsentContext.Resolve(TempData,
+            Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(queryString), _userManager.GetUserId(User));
+        if (query is null) return BadRequest("Invalid or expired pushed consent request.");
 
         if (!query.TryGetValue("client_id", out var clientIdValues) || string.IsNullOrEmpty(clientIdValues.FirstOrDefault()))
         {
@@ -106,6 +108,12 @@ public class ConsentController : Controller
         if (model.Decision == "deny")
         {
             _logger.LogInformation("User {UserId} denied consent for client {ClientId}", userId, clientId);
+
+            if (query.TryGetValue("request_uri", out var pushedUri))
+            {
+                ParConsentContext.Deny(TempData, pushedUri.ToString(), userId);
+                return LocalRedirect(model.ReturnUrl);
+            }
 
             // Redirect back with error
             var errorUrl = AppendQueryString(model.ReturnUrl, "error", "access_denied");
@@ -259,7 +267,9 @@ public class ConsentController : Controller
             return null;
         }
         var queryString = returnUrl.Substring(queryIndex);
-        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(queryString);
+        var query = ParConsentContext.Resolve(TempData,
+            Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(queryString), _userManager.GetUserId(User));
+        if (query is null) return null;
 
         if (!query.TryGetValue("client_id", out var clientIdValues) || string.IsNullOrEmpty(clientIdValues.FirstOrDefault()))
         {

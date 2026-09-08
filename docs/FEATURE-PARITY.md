@@ -1,6 +1,6 @@
 # IdentityServer capability assessment
 
-Reviewed 2026-09-08 against Andy.Auth main `cb500f4a58884e7076989885cd67f777870e83b8`
+Reviewed 2026-09-08; updated with the device-flow/PAR implementation under #15
 (.NET 10, OpenIddict 7.2). This replaces the unsupported “90% parity” and
 “ready for production” assertions in issue #9. A merged implementation, a
 passing regression, and acceptance in a deployed environment are distinct facts.
@@ -21,9 +21,10 @@ not a claim of protocol certification or complete coverage of every deployment.
 | --- | --- | --- |
 | Authorization code, PKCE, client credentials, refresh, discovery, introspection, revocation, UserInfo | Implemented through OpenIddict and application controllers | `OAuthIntegrationTests`, `PkceEnforcementTests`, `AndyDocsWebIntegrationTests`; real assistant/resource acceptance remains #7/#118 |
 | JWT versus opaque tokens | JWT access tokens and reference refresh tokens are configured | `src/Andy.Auth.Server/Program.cs` calls `UseReferenceRefreshTokens`; it does not enable reference access tokens. The old blanket “reference tokens” checkbox overstated the deployed configuration |
-| Device authorization | `/connect/device`, `/connect/verify`, code storage and token polling are implemented | `DeviceController`, `DeviceFlowTests`; current tests establish discovery and rejection behavior, not complete real-device approval/denial/expiry acceptance. Finish those cases in #15 |
+| Device authorization | `/connect/device`, `/connect/verify`, code storage and token polling are implemented | `DeviceController`, `DeviceFlowTests`, `DeviceFlowAcceptanceTests`; real browser approval and CLI polling, denial, CSRF, replay, expiry and session revocation are covered. Actual smart-TV/deployment acceptance remains #15 |
 | RFC 8693 exchange | Implemented with subject, actor, resource, scope, session and absolute lifetime checks | `TokenExchangeIntegrationTests`, `docs/testing/obo-regression.md`, PRs #186/#189; actual downstream acceptance remains #118 |
-| PAR, DPoP and CIBA | No configured PAR endpoint, DPoP proof enforcement/token binding, or CIBA approval/notification implementation | #15. OpenIddict package support alone does not enable an application feature |
+| PAR | Opt-in `/connect/par`, per-client permission/requirement, protected consent context, request expiry/client binding and replay enforcement | `PushedAuthorizationIntegrationTests`, `docs/ADVANCED-OAUTH.md`; migrate existing client permissions before enabling discovery |
+| DPoP and CIBA | No DPoP proof enforcement/token binding or CIBA approval/notification implementation | #15 remains open for these capabilities; package support alone does not enable an application feature |
 | Client administration and DCR | Admin client CRUD, secret management, scoped permissions, manifest registrations, IAT/RAT and reapproval controls exist | `AdminControllerTests`, `DynamicClientRegistrationControllerTests`; PR #190 fixes approved-baseline preservation, #198 packages consumer manifests |
 | Local password accounts, MFA and lifecycle | Login, password hashing, TOTP/recovery, lockout, suspend/expire/delete and explicit account linking exist | `AccountControllerTests`, `TwoFactorControllerTests`, `ExternalRegistrationIntegrationTests`, `AdminAccessIntegrationTests`, browser MFA acceptance in PR #199 |
 | Public signup and email verification | Registration is disabled by default; enabled registration requires confirmed email and does not sign in a new unverified account | No verification email sender, confirmation callback or resend workflow exists. #80 remains incomplete; a generic submitted response is not email delivery |
@@ -57,8 +58,9 @@ The owner has now requested **all** children of #177, including the previously
 P3 #15, #44 and this analysis. The analysis itself can close when this evidence
 matrix is merged; doing so must not close the implementation children.
 
-1. Complete #15's device-flow acceptance and add native PAR with client policy,
-   replay/expiry tests, feature configuration and discovery checks. Add DPoP
+1. Device-flow browser/CLI acceptance and native PAR client policy, replay/expiry
+   tests, feature configuration and discovery checks are implemented. Complete real
+   deployed/client acceptance under #15. Add DPoP
    end-to-end proof binding and CIBA only with complete validation, replay state,
    approval and notification behavior; no advertisement before enforcement.
 2. Complete #172's authenticated logout sender/receiver contract, durable delivery,

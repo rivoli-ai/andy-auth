@@ -57,7 +57,8 @@ public sealed record RegistrationOAuthClient(
     [property: JsonPropertyName("redirectUris")]           string[]? RedirectUris,
     [property: JsonPropertyName("postLogoutRedirectUris")] string[]? PostLogoutRedirectUris,
     [property: JsonPropertyName("requirePkce")] bool RequirePkce = false,
-    [property: JsonPropertyName("useConfiguredMcpResources")] bool UseConfiguredMcpResources = false
+    [property: JsonPropertyName("useConfiguredMcpResources")] bool UseConfiguredMcpResources = false,
+    [property: JsonPropertyName("requirePar")] bool RequirePar = false
 );
 
 public sealed record RegistrationProductionUris(

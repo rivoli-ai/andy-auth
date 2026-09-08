@@ -235,14 +235,6 @@ builder.Services.AddOpenIddict()
             .SetTokenEndpointUris("connect/token")
             .SetIntrospectionEndpointUris("connect/introspect")
             .SetRevocationEndpointUris("connect/revoke")
-            // RFC 8628 device authorization grant. /connect/device starts
-            // the flow (issues device_code/user_code); /connect/verify is
-            // the user-facing endpoint where the operator enters the
-            // user_code, signs in, and authorizes the request. The CLI
-            // polls /connect/token with grant_type=urn:ietf:params:oauth:
-            // grant-type:device_code until the user completes verification.
-            .SetDeviceAuthorizationEndpointUris("connect/device")
-            .SetEndUserVerificationEndpointUris("connect/verify")
             // OIDC RP-Initiated Logout. Registering the endpoint is what makes
             // `GetOpenIddictServerRequest()` return a parsed logout request in
             // AuthorizationController.Logout — without it that call returned
@@ -253,6 +245,30 @@ builder.Services.AddOpenIddict()
             // against the client's registered list, so the redirect below is
             // not an open redirect.
             .SetEndSessionEndpointUris("connect/logout");
+
+        if (builder.Configuration.GetValue("OpenIddict:AdvancedFlows:DeviceFlow:Enabled", true))
+        {
+            var lifetime = builder.Configuration.GetValue(
+                "OpenIddict:AdvancedFlows:DeviceFlow:CodeLifetime", TimeSpan.FromMinutes(10));
+            if (lifetime <= TimeSpan.Zero || lifetime > TimeSpan.FromMinutes(30))
+                throw new InvalidOperationException("Device code lifetime must be positive and at most thirty minutes.");
+            options.AllowDeviceAuthorizationFlow()
+                .SetDeviceAuthorizationEndpointUris("connect/device")
+                .SetEndUserVerificationEndpointUris("connect/verify")
+                .SetDeviceCodeLifetime(lifetime).SetUserCodeLifetime(lifetime);
+        }
+
+        if (builder.Configuration.GetValue("OpenIddict:AdvancedFlows:PAR:Enabled", false))
+        {
+            var lifetime = builder.Configuration.GetValue(
+                "OpenIddict:AdvancedFlows:PAR:RequestUriLifetime", TimeSpan.FromSeconds(90));
+            if (lifetime <= TimeSpan.Zero || lifetime > TimeSpan.FromMinutes(10))
+                throw new InvalidOperationException("PAR request URI lifetime must be positive and at most ten minutes.");
+            options.SetPushedAuthorizationEndpointUris("connect/par");
+            options.AddEventHandler<OpenIddict.Server.OpenIddictServerEvents.ValidatePushedAuthorizationRequestContext>(handler =>
+                handler.UseScopedHandler<ValidatePushedClient>().SetOrder(int.MaxValue - 1_000));
+            options.Configure(configuration => configuration.RequestTokenLifetime = lifetime);
+        }
 
         // Add registration_endpoint to discovery document for DCR (RFC 7591)
         // OpenIddict doesn't natively support DCR, so we add it via a custom handler
@@ -276,10 +292,6 @@ builder.Services.AddOpenIddict()
             .RequireProofKeyForCodeExchange()
             .AllowRefreshTokenFlow()
             .AllowClientCredentialsFlow()
-            // Device flow for headless CLIs (andy-mcp-proxy stdio bridge,
-            // future IDE plugins). Per-client opt-in: only clients seeded
-            // with the device_code grant can use this flow (see DbSeeder).
-            .AllowDeviceAuthorizationFlow()
             // RFC 8693 OAuth 2.0 Token Exchange. The platform's primitive
             // for cross-service identity propagation: when a service
             // receives a user request and calls a downstream service, it
