@@ -18,6 +18,7 @@ namespace Andy.Auth.Server.Controllers;
 // the read-only GET actions. See andy-auth#51.
 [AutoValidateAntiforgeryToken]
 [Authorize(Roles = "Admin", AuthenticationSchemes = "Identity.Application")]
+[ServiceFilter(typeof(AdminAccessFilter))]
 public class AdminController : Controller
 {
     private readonly ApplicationDbContext _context;

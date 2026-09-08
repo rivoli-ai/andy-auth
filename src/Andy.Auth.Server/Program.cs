@@ -453,6 +453,16 @@ builder.Services.AddAuthorization(options =>
 
 // Register session management service
 builder.Services.AddScoped<SessionService>();
+builder.Services.AddScoped<AdminAccessFilter>();
+builder.Services.AddAuthentication().AddCookie(AdminAccessFilter.Scheme, options =>
+{
+    options.Cookie.Name = "__Host-Andy.AdminAccess";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.ExpireTimeSpan = AdminAccessFilter.Lifetime;
+    options.SlidingExpiration = false;
+});
 builder.Services.AddScoped<InteractiveSessionCookieEvents>();
 
 // Tears down tokens/authorizations/sessions when an admin disables an account
