@@ -256,7 +256,7 @@
                 <div class="validation-summary-errors">@registrationMessage</div>
             }
 
-            <form asp-controller="Account" asp-action="Login" method="post">
+            <form asp-controller="Account" asp-action="Login" method="post" data-signin-form>
                 <input type="hidden" asp-for="ReturnUrl" />
 
                 <div class="form-group">
@@ -291,5 +291,6 @@
             <p>Rivoli AI · Account access</p>
         </div>
     </div>
+    <script src="~/js/identity-signin.js" asp-append-version="true" defer></script>
 </body>
 </html>

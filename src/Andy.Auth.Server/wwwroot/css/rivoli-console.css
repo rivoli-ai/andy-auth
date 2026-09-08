@@ -49,3 +49,17 @@
  .identity-intro p { margin:0; }
  .identity-page .login-card { padding:28px; }
 }
+
+/* Keep keyboard focus visible over the legacy standalone form rules. */
+.identity-page .form-group input:focus-visible,
+.identity-page .btn-login:focus-visible {
+  outline: 2px solid #087c77;
+  outline-offset: 3px;
+}
+.identity-page .btn-login:disabled { opacity: .75; cursor: wait; transform: none; }
+
+.identity-page .form-group input { border-color: #767676; }
+.identity-page .form-group input::placeholder { color: #737373; }
+
+.identity-page .validation-summary-errors li,
+.identity-page .field-validation-error { color: #b42318; }
