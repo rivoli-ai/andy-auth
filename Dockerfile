@@ -4,11 +4,11 @@
 # rebuild is reproducible and a base-image bump is a reviewable commit
 # (andy-auth#126). Update policy: bump both tags together on the monthly .NET
 # patch cadence, or immediately for a CVE affecting the runtime. The two tags
-# must stay patch-aligned: SDK 10.0.302 ships runtime 10.0.10, so building here
-# and running on 10.0.9 would ship an app compiled against reference assemblies
+# must stay patch-aligned: SDK 10.0.400 ships runtime 10.0.11, so building here
+# and running on 10.0.10 would ship an app compiled against reference assemblies
 # newer than the runtime underneath it.
-ARG DOTNET_SDK_TAG=10.0.302-noble
-ARG DOTNET_RUNTIME_TAG=10.0.10-noble
+ARG DOTNET_SDK_TAG=10.0.400-noble
+ARG DOTNET_RUNTIME_TAG=10.0.11-noble
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Build stage
