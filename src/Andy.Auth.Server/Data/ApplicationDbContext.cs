@@ -71,6 +71,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         base.OnModelCreating(builder);
 
+        builder.Entity<AuditLog>().HasIndex(entry => new { entry.PerformedById, entry.Id });
+
         // Configure OpenIddict entities
         builder.UseOpenIddict();
 

@@ -97,6 +97,19 @@ public class LoginLogoutTests : E2ETestBase
     }
 
     [Fact]
+    public async Task LoginHistory_RequiresLoginAndShowsRecordedSignIn()
+    {
+        await NavigateToAsync("/LoginHistory");
+        Assert.Contains("/Account/Login", Page.Url);
+        await LoginAsAdminAsync();
+        await NavigateToAsync("/LoginHistory");
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        Assert.Contains("Login history", await Page.TextContentAsync(".login-history h1"));
+        Assert.Contains("Successful", await Page.TextContentAsync("table"));
+        Assert.Contains("Password", await Page.TextContentAsync("table"));
+    }
+
+    [Fact]
     public async Task Login_AsAdmin_CanAccessAdminDashboard()
     {
         // Login as admin
