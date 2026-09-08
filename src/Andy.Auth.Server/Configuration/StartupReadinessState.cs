@@ -22,7 +22,7 @@ public sealed class StartupReadinessState
     public string? FailureReason { get; private set; }
 
     /// <summary>The service is ready only when both migration and seeding have completed.</summary>
-    public bool IsReady => _migrationsApplied && _seedCompleted;
+    public bool IsReady => FailureReason is null && _migrationsApplied && _seedCompleted;
 
     public void MarkMigrationsApplied() => _migrationsApplied = true;
 

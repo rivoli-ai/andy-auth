@@ -43,80 +43,11 @@ else
     builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 }
 
-// Configure forwarded headers for the reverse proxy in front of the server
-// (Railway's HTTPS edge in Production/UAT, Conductor's unified proxy in
-// Embedded, a local proxy in Development/Docker). Honouring X-Forwarded-* from
-// ANY peer lets a caller spoof their client IP and request scheme (issue #125):
-// it evades per-IP rate limits on login/token and contaminates audit/session
-// records. So the trusted-proxy set is configurable per deployment mode:
-//
-//   ForwardedHeaders:TrustAllProxies  true  -> accept forwarded headers from any
-//                                             immediate peer (empty known-proxy
-//                                             set). Only safe when the platform
-//                                             guarantees the app is reachable
-//                                             solely through a trusted edge that
-//                                             strips inbound X-Forwarded-* (local
-//                                             dev proxy, Conductor unified proxy).
-//   ForwardedHeaders:KnownNetworks    CIDR list of trusted proxy networks.
-//   ForwardedHeaders:KnownProxies     individual trusted proxy IPs.
-//   ForwardedHeaders:ForwardLimit     max proxy hops to unwind (default 1).
-//
-// Base appsettings.json sets TrustAllProxies=true so the local-development modes
-// (Development/Docker/Embedded) keep their existing behaviour. Production/UAT
-// override it to false + the private ranges the Railway edge connects from (see
-// appsettings.Production.json / appsettings.UAT.json); the Railway edge
-// overwrites inbound X-Forwarded-* so an external client cannot forge it.
+// Production/UAT must name the actual ingress peers. Local/embedded proxies
+// may explicitly opt into trust-all; malformed trust lists always fail closed.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
-{
-    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
-                               Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
-
-    var forwardedConfig = builder.Configuration.GetSection("ForwardedHeaders");
-    options.ForwardLimit = forwardedConfig.GetValue<int?>("ForwardLimit", 1);
-
-    if (forwardedConfig.GetValue("TrustAllProxies", false))
-    {
-        // Empty KnownNetworks + KnownProxies makes the middleware accept
-        // forwarded headers from any immediate peer.
-        options.KnownNetworks.Clear();
-        options.KnownProxies.Clear();
-    }
-    else
-    {
-        var knownProxies = forwardedConfig.GetSection("KnownProxies").Get<string[]>() ?? Array.Empty<string>();
-        var knownNetworks = forwardedConfig.GetSection("KnownNetworks").Get<string[]>() ?? Array.Empty<string>();
-
-        // Only replace the framework default (loopback only) when explicit
-        // trusted proxies/networks are configured. When neither is set we keep
-        // the loopback default rather than clearing to empty — clearing would
-        // re-enable the trust-everything behaviour this fix removes.
-        if (knownProxies.Length > 0 || knownNetworks.Length > 0)
-        {
-            options.KnownNetworks.Clear();
-            options.KnownProxies.Clear();
-
-            foreach (var proxy in knownProxies)
-            {
-                if (System.Net.IPAddress.TryParse(proxy, out var ip))
-                {
-                    options.KnownProxies.Add(ip);
-                }
-            }
-
-            foreach (var network in knownNetworks)
-            {
-                var parts = network.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                if (parts.Length == 2
-                    && System.Net.IPAddress.TryParse(parts[0], out var prefix)
-                    && int.TryParse(parts[1], out var prefixLength))
-                {
-                    options.KnownNetworks.Add(
-                        new Microsoft.AspNetCore.HttpOverrides.IPNetwork(prefix, prefixLength));
-                }
-            }
-        }
-    }
-});
+    ForwardedProxyTrust.Configure(options, builder.Configuration.GetSection("ForwardedHeaders"),
+        hardened: !builder.Environment.IsLocalOrEmbedded()));
 
 // Add services to the container
 builder.Services.AddControllersWithViews();
@@ -678,6 +609,9 @@ if (productionKeys is not null)
 
 // Use forwarded headers - must be first
 app.UseForwardedHeaders();
+// Enforce admission in-process too: a misconfigured edge must not send usable
+// traffic to an instance whose migration or required seeding failed.
+app.UseMiddleware<Andy.Auth.Server.Middleware.ReadinessAdmissionMiddleware>();
 
 if (allowedOrigins.Length == 0)
 {

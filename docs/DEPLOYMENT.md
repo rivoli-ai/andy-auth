@@ -434,3 +434,26 @@ After successful deployment:
 **Last Updated:** 2025-11-16
 **Current Environment:** Local Development
 **Next Deployment:** UAT (Issue #3)
+
+
+## Ingress trust and readiness admission
+
+UAT and Production trust only loopback by default. Configure
+`ForwardedHeaders__KnownProxies__0` (an individual IP) or
+`ForwardedHeaders__KnownNetworks__0` (the dedicated ingress CIDR) using the actual
+peers assigned to the deployment. Do not substitute all RFC1918, CGNAT or IPv6
+private address space. `TrustAllProxies=true` is rejected outside local/embedded
+modes, and malformed entries fail startup instead of silently emptying the trust
+list. `ForwardLimit` must match the intended positive proxy-hop count.
+
+Before routing traffic, verify that the ingress overwrites inbound
+`X-Forwarded-For`/`X-Forwarded-Proto`, that a non-ingress private peer cannot
+change the application's observed IP/scheme, and that direct container access
+is blocked. The repository cannot establish those platform properties; record
+the deployed checks on issue #174.
+
+Route only to instances whose `/ready` returns 200. `/health` is liveness only.
+The application also rejects non-probe requests with non-cacheable 503 responses
+when migration or required seeding has failed, even if an edge misroutes traffic.
+This startup gate does not replace continuous platform readiness checks or
+shared rate-limit enforcement.

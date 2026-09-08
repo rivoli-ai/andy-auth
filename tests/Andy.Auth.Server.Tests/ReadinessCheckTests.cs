@@ -74,6 +74,10 @@ public class ReadinessCheckTests : IDisposable
         var health = await client.GetAsync("/health");
         health.StatusCode.Should().Be(HttpStatusCode.OK,
             "liveness must stay green even when the DB is down — the process itself is healthy");
+        var authorize = await client.GetAsync("/connect/authorize");
+        authorize.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable,
+            "misrouted traffic must not reach authentication on an unready instance");
+        authorize.Headers.CacheControl!.NoStore.Should().BeTrue();
     }
 
     [Fact]
