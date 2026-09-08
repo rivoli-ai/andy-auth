@@ -17,7 +17,7 @@ using OpenTelemetry.Trace;
 // Authorization policy gating the MCP tool endpoint. Declared here so the
 // registration site (AddAuthorization) and the mapping site (MapMcp) can't
 // drift apart.
-const string McpAdminPolicy = "McpAdmin";
+const string McpAdminPolicy = LiveAdminRequirement.Policy;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -438,18 +438,18 @@ builder.Services.AddAuthentication(options =>
 // Configure authorization
 builder.Services.AddAuthorization(options =>
 {
-    // The MCP tool surface (Mcp/AuthMcpTools.cs) is an admin surface: it can
-    // create/delete groups and add or remove any user from any group. Group
-    // membership is projected into the `groups` claim at token issuance and
-    // downstream services authorize on it, so an unauthenticated-role-checked
-    // /mcp let any token holder grant itself any group (andy-auth#145).
-    // Mirror the guard the equivalent REST controllers already carry:
-    // [Authorize(AuthenticationSchemes = OpenIddict validation, Roles = "Admin")].
+    // REST and MCP administration share the same live bearer authority checks.
+    // The issued role is necessary but cannot preserve access after revocation.
     options.AddPolicy(McpAdminPolicy, policy => policy
         .AddAuthenticationSchemes(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
         .RequireAuthenticatedUser()
-        .RequireRole("Admin"));
+        .RequireRole("Admin")
+        .AddRequirements(new LiveAdminRequirement()));
 });
+
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, LiveAdminAuthorizationHandler>();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler,
+    LiveAdminAuthorizationResultHandler>();
 
 // Register session management service
 builder.Services.AddScoped<SessionService>();

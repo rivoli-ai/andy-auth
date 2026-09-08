@@ -71,3 +71,17 @@ High-risk and privileged operations fail closed on 503: they must not execute
 until fresh session truth is available. A standard client may keep its local UI
 state during a transient outage, but it must not convert that into permission to
 perform privileged work.
+
+## Local privileged API enforcement
+
+`/api/users`, `/api/groups`, `/mcp/tools/users`, and `/mcp` share the `LiveAdmin`
+bearer policy. Each request rechecks the stored token/authorization status, account lifecycle, lockout, current Admin
+membership, and the token's exact server session (including expiry, inactivity,
+and subject binding). Missing session claims never fall back to a different live
+session or to the machine-token profile. Revoked authority returns 403; truth-store
+failures return 503 with `Retry-After: 5`. Responses are not cacheable. Normal OAuth
+authentication still rejects invalid or expired tokens before privileged execution.
+
+These checks enforce the high-risk profile locally. Other consuming resources
+must enforce their own fresh truth checks; this does not implement push logout
+notifications or establish deployed cross-resource acceptance.
