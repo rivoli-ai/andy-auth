@@ -21,6 +21,15 @@ const string McpAdminPolicy = "McpAdmin";
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Validate protection before configuring OpenIddict, even if options are resolved lazily.
+var productionKeys = builder.Environment.IsProduction()
+    ? ProductionKeyMaterial.Load(builder.Configuration) : null;
+if (productionKeys is not null)
+{
+    builder.Services.AddSingleton(productionKeys);
+    productionKeys.ConfigureDataProtection(builder.Services);
+}
+
 // Configure Railway PORT environment variable
 // In Development, use HTTPS on port 5001. In production (Railway), use HTTP with the PORT env variable.
 if (builder.Environment.IsDevelopment())
@@ -250,7 +259,7 @@ builder.Services.AddOpenIddict()
             throw new InvalidOperationException(
                 $"Unrecognized configuration under `OpenIddict:Server` ({string.Join(", ", strayServerKeys)}). " +
                 "These settings are not read by anything. Signing/encryption key material is configured via " +
-                "`OpenIddict:SigningKeys:Path` (persisted RSA keypair) or `OpenIddict:UseEphemeralKeys`. " +
+                "`OpenIddict:Certificates` in Production or `OpenIddict:SigningKeys:Path` in Embedded mode. " +
                 "See docs/DEPLOYMENT.md.");
         }
 
@@ -363,24 +372,8 @@ builder.Services.AddOpenIddict()
             serverOptions.CodeChallengeMethods.Remove(
                 OpenIddict.Abstractions.OpenIddictConstants.CodeChallengeMethods.Plain));
 
-        // Register encryption and signing keys
-        //
-        // Three deployment shapes, three strategies:
-        //
-        // 1. Embedded (Conductor desktop app) — persisted RSA keys on disk.
-        //    Keys live at `OpenIddict:SigningKeys:Path` (Conductor sets this
-        //    to `~/.conductor/keys`). The JWKS `kid` must be stable across
-        //    process restarts because the desktop app relaunches frequently
-        //    and holds long-lived tokens in the Keychain. Ephemeral keys
-        //    would invalidate every cached token on every relaunch.
-        //
-        // 2. Development / Staging / UAT — ephemeral keys are fine:
-        //    developers re-auth via browser on reload, CI tests mint fresh
-        //    tokens per run, neither cares about cross-restart JWKS.
-        //
-        // 3. Production — X.509 certificates from key vault; ephemeral keys
-        //    can be opted into via `OpenIddict:UseEphemeralKeys` for
-        //    Railway/cloud pods where clients always re-auth.
+        // Embedded keys persist locally; development keys are ephemeral.
+        // Production uses externally provisioned protected rollover certificates.
         if (builder.Environment.IsEmbedded())
         {
             var keysPath = builder.Configuration["OpenIddict:SigningKeys:Path"];
@@ -411,37 +404,11 @@ builder.Services.AddOpenIddict()
         }
         else if (builder.Environment.IsProduction())
         {
-            // Production prefers persisted RSA keys on a mounted volume
-            // (e.g. Railway `/data/keys` per E3-S4) so JWKS `kid` survives
-            // redeploys and every previously-issued JWT keeps validating.
-            // Falls back to ephemeral keys for stateless cloud pods that
-            // explicitly opt in via `OpenIddict:UseEphemeralKeys=true`.
-            var keysPath = builder.Configuration["OpenIddict:SigningKeys:Path"];
-            var useEphemeralKeys = builder.Configuration.GetValue<bool>("OpenIddict:UseEphemeralKeys", false);
-
-            if (!string.IsNullOrWhiteSpace(keysPath))
-            {
-                options.AddPersistedDevelopmentKeys(keysPath)
-                       .DisableAccessTokenEncryption();
-            }
-            else if (useEphemeralKeys)
-            {
-                // Stateless deploy — keys rotate on every restart, every
-                // token in flight becomes invalid. Acceptable only when
-                // every consumer can re-auth on demand.
-                options.AddEphemeralEncryptionKey()
-                       .AddEphemeralSigningKey()
-                       .DisableAccessTokenEncryption();
-            }
-            else
-            {
-                throw new InvalidOperationException(
-                    "Production requires either `OpenIddict:SigningKeys:Path` (recommended — " +
-                    "RSA keypair persisted on a mounted volume so JWKS survives redeploy) " +
-                    "or `OpenIddict:UseEphemeralKeys=true` (rotates keys every restart and " +
-                    "invalidates every issued token; only safe for stateless pods where " +
-                    "every consumer can re-auth on demand).");
-            }
+            foreach (var certificate in productionKeys!.Signing)
+                options.AddSigningCertificate(certificate);
+            foreach (var certificate in productionKeys.Encryption)
+                options.AddEncryptionCertificate(certificate);
+            options.DisableAccessTokenEncryption();
         }
 
         // Register scopes. `andy_auth:oauth_broker` (issue #123) is the dedicated
@@ -702,6 +669,8 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+if (productionKeys is not null)
+    app.Lifetime.ApplicationStopped.Register(productionKeys.Dispose);
 
 // Use forwarded headers - must be first
 app.UseForwardedHeaders();

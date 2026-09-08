@@ -6,17 +6,7 @@ using Xunit;
 
 namespace Andy.Auth.Server.Tests;
 
-// Integration tests for ASPNETCORE_ENVIRONMENT=Production. The
-// invariants here mirror the Embedded suite — the persisted-keys
-// mechanism is shared — but cover the Production-only branching:
-//   1. With `OpenIddict:SigningKeys:Path` set, RSA keys persist on
-//      disk and JWKS `kid` survives a process restart. This is the
-//      Railway-volume deploy shape (#69 / E3-S4).
-//   2. With `OpenIddict:UseEphemeralKeys=true`, boot succeeds and
-//      JWKS is served — stateless cloud-pod fallback.
-//   3. With neither, boot hard-fails with a message that documents
-//      both options. The previous placeholder behaviour was the
-//      same throw but with a less specific message.
+// Production rejects local-only keys and publishes stable protected credentials.
 public class ProductionModeIntegrationTests : IDisposable
 {
     private readonly string _keysDir;
@@ -47,7 +37,7 @@ public class ProductionModeIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task ProductionBoot_WithKeysPath_PersistsKeysToDisk()
+    public async Task ProductionBoot_WithProtectedCertificates_ServesDiscovery()
     {
         using var factory = ProductionFactory(keysPath: _keysDir, useEphemeralKeys: false);
         using var client = HttpsClient(factory);
@@ -55,8 +45,8 @@ public class ProductionModeIntegrationTests : IDisposable
         var response = await client.GetAsync("/.well-known/openid-configuration");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        File.Exists(Path.Combine(_keysDir, "signing.key")).Should().BeTrue();
-        File.Exists(Path.Combine(_keysDir, "encryption.key")).Should().BeTrue();
+        File.Exists(Path.Combine(_keysDir, "signing.pfx")).Should().BeTrue();
+        File.Exists(Path.Combine(_keysDir, "signing.key")).Should().BeFalse();
     }
 
     [Fact]
@@ -81,43 +71,45 @@ public class ProductionModeIntegrationTests : IDisposable
 
         secondKid.Should().Be(
             firstKid,
-            "Production with OpenIddict:SigningKeys:Path must keep JWKS " +
+            "Production with protected certificates must keep JWKS " +
             "stable across redeploys; otherwise every issued JWT goes " +
             "invalid on container restart");
     }
 
     [Fact]
-    public async Task ProductionBoot_WithEphemeralKeys_ServesJwks()
+    public async Task JwksPublishesFutureSigningCertificateBeforeActivation()
     {
-        // Stateless-pod fallback: ephemeral keys are explicitly opted in.
-        // Boot must succeed; JWKS must be served. The keys WILL rotate on
-        // every restart (the documented trade-off) — not asserted here.
-        using var factory = ProductionFactory(keysPath: null, useEphemeralKeys: true);
+        var fixture = new Configuration.ProductionKeyFixture(_keysDir);
+        fixture.Add("OpenIddict:Certificates:Signing:1", "future", DateTimeOffset.UtcNow.AddDays(1), DateTimeOffset.UtcNow.AddDays(60));
+        using var factory = new EnvironmentWebApplicationFactory("Production", _dbPath,
+            "https://auth.example.test/", keysPath: _keysDir,
+            extraEnvironment: fixture.Values.Select(kv => new KeyValuePair<string, string?>(kv.Key.Replace(":", "__"), kv.Value)));
         using var client = HttpsClient(factory);
+        using var discovery = JsonDocument.Parse(await client.GetStringAsync("/.well-known/openid-configuration"));
+        var uri = new Uri(discovery.RootElement.GetProperty("jwks_uri").GetString()!);
+        using var jwks = JsonDocument.Parse(await client.GetStringAsync(uri.AbsolutePath));
+        jwks.RootElement.GetProperty("keys").GetArrayLength().Should().Be(2);
+    }
 
-        var response = await client.GetAsync("/.well-known/openid-configuration");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var json = await response.Content.ReadAsStringAsync();
-        using var doc = JsonDocument.Parse(json);
-        var jwksUri = doc.RootElement.GetProperty("jwks_uri").GetString();
-        jwksUri.Should().NotBeNullOrEmpty();
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ProductionBoot_WithLegacyKeys_Throws(bool ephemeral)
+    {
+        using var factory = new EnvironmentWebApplicationFactory("Production", _dbPath,
+            "https://auth.example.test/", keysPath: ephemeral ? null : _keysDir,
+            useEphemeralKeys: ephemeral, provisionProductionKeys: false);
+        var act = () => factory.CreateClient();
+        act.Should().Throw<InvalidOperationException>().WithMessage("*protected certificate bundles*");
     }
 
     [Fact]
-    public void ProductionBoot_WithoutKeysPathOrEphemeralFlag_ThrowsOnStartup()
+    public void ProductionBoot_WithoutCertificates_Throws()
     {
-        var factory = ProductionFactory(keysPath: null, useEphemeralKeys: false);
-
-        var act = () =>
-        {
-            using var _ = factory.CreateClient();
-        };
-
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*OpenIddict:SigningKeys:Path*UseEphemeralKeys*");
-
-        factory.Dispose();
+        using var factory = new EnvironmentWebApplicationFactory("Production", _dbPath,
+            "https://auth.example.test/", provisionProductionKeys: false);
+        var act = () => factory.CreateClient();
+        act.Should().Throw<InvalidOperationException>().WithMessage("*Certificates:Signing*");
     }
 
     // Production keeps OpenIddict's HTTPS-only requirement (the

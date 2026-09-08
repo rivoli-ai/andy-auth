@@ -47,6 +47,7 @@
     <PackageVersion Include="OpenTelemetry.Api" Version="1.17.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.0.0-beta.12" />
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.10" />
     <PackageVersion Include="QRCoder" Version="1.4.3" />
     <!-- main pinned 7.7.3 as a security patch; net10 needs >= 8.19.2 because
          Microsoft.AspNetCore.Authentication.JwtBearer 10.0.10 requires it

@@ -291,7 +291,7 @@ Layer 6: Application
 │  Environment Variables:                         │
 │  - ConnectionStrings__DefaultConnection         │
 │  - OpenIddict__Issuer                          │
-│  - OpenIddict__SigningKeys__Path               │
+│  - OpenIddict__Certificates               │
 │  - ASPNETCORE_ENVIRONMENT=Production           │
 └────────────────────────────────────────────────┘
 ```

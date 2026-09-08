@@ -25,8 +25,8 @@ namespace Andy.Auth.Server.Tests;
 //                     ships a `SET_VIA_ENVIRONMENT_VARIABLE` placeholder
 //                     that crashes `new Uri(…)` unless overridden here.
 //   keysPath          Nullable. Used by Embedded mode and by
-//                     Production with persisted keys.
-//   useEphemeralKeys  Only meaningful for Production. Ignored elsewhere.
+//                     Production certificate fixture directory.
+//   useEphemeralKeys  Tests the rejected legacy Production override.
 internal sealed class EnvironmentWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly Dictionary<string, string?> _priorEnvValues = new();
@@ -40,7 +40,8 @@ internal sealed class EnvironmentWebApplicationFactory : WebApplicationFactory<P
         string? keysPath = null,
         bool useEphemeralKeys = false,
         IEnumerable<KeyValuePair<string, string?>>? extraEnvironment = null,
-        Action<IServiceCollection>? configureTestServices = null)
+        Action<IServiceCollection>? configureTestServices = null,
+        bool provisionProductionKeys = true)
     {
         _environmentName = environmentName;
         _configureTestServices = configureTestServices;
@@ -51,6 +52,15 @@ internal sealed class EnvironmentWebApplicationFactory : WebApplicationFactory<P
         SetEnv("ConnectionStrings__DefaultConnection", $"Data Source={dbPath}");
         SetEnv("OpenIddict__SigningKeys__Path", keysPath);
         SetEnv("OpenIddict__UseEphemeralKeys", useEphemeralKeys ? "true" : "false");
+
+        if (environmentName == "Production" && provisionProductionKeys)
+        {
+            var fixture = new Configuration.ProductionKeyFixture(
+                keysPath ?? Path.Combine(Path.GetDirectoryName(dbPath)!, "production-certificates"));
+            SetEnv("OpenIddict__SigningKeys__Path", null);
+            foreach (var (key, value) in fixture.Values)
+                SetEnv(key.Replace(":", "__"), value);
+        }
 
         // Applied last so a test can override any default above (e.g. swap the
         // provider to PostgreSql with an unreachable host, enable the
