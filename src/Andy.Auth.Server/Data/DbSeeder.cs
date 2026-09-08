@@ -179,6 +179,9 @@ public class DbSeeder
             descriptor.ClientType = OpenIddictConstants.ClientTypes.Public;
         }
 
+        if (client.RequireDpop)
+            descriptor.Requirements.Add(Andy.Auth.Server.Services.Dpop.DpopBinding.Requirement);
+
         if (client.RequirePar)
             descriptor.Requirements.Add(OpenIddictConstants.Requirements.Features.PushedAuthorizationRequests);
 

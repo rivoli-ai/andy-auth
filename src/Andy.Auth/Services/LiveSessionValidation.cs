@@ -14,7 +14,8 @@ public static class LiveSessionValidation
     public const string HttpClientName = "Andy.Auth.SessionTruth";
     private static readonly object Unavailable = new();
 
-    public static JwtBearerEvents Create(JwtBearerEvents original, Uri endpoint)
+    public static JwtBearerEvents Create(JwtBearerEvents original, Uri endpoint,
+        Uri? introspectionEndpoint = null, string? clientId = null, string? clientSecret = null)
     {
         var events = new JwtBearerEvents
         {
@@ -53,8 +54,16 @@ public static class LiveSessionValidation
             {
                 var client = context.HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>()
                     .CreateClient(HttpClientName);
-                using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                var bound = context.Principal!.HasClaim(claim => claim.Type == "cnf");
+                if (bound && (introspectionEndpoint is null || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret)))
+                    throw new InvalidOperationException("Bound tokens require authenticated introspection.");
+                using var request = new HttpRequestMessage(bound ? HttpMethod.Post : HttpMethod.Get, bound ? introspectionEndpoint : endpoint);
+                if (bound)
+                    request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+                    {
+                        ["client_id"] = clientId!, ["client_secret"] = clientSecret!, ["token"] = token, ["token_type_hint"] = "access_token"
+                    });
+                else request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
                 request.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true, NoStore = true };
                 using var response = await client.SendAsync(request, context.HttpContext.RequestAborted);
                 if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Gone or HttpStatusCode.Forbidden)
@@ -66,8 +75,13 @@ public static class LiveSessionValidation
                     throw new HttpRequestException("Session authority is unavailable.");
                 using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(context.HttpContext.RequestAborted));
                 var truth = body.RootElement;
-                if (!truth.GetProperty("authenticated").GetBoolean() || truth.GetProperty("revoked").GetBoolean() ||
-                    truth.GetProperty("subject").GetString() != subject || truth.GetProperty("sessionId").GetString() != session)
+                if (bound && !truth.GetProperty("active").GetBoolean())
+                {
+                    context.Fail("The token is no longer active.");
+                    return;
+                }
+                if ((!bound && (!truth.GetProperty("authenticated").GetBoolean() || truth.GetProperty("revoked").GetBoolean())) ||
+                    truth.GetProperty(bound ? "sub" : "subject").GetString() != subject || truth.GetProperty(bound ? "session_id" : "sessionId").GetString() != session)
                     context.Fail("The session authority did not confirm this exact subject and session.");
                 var claimedRoles = context.Principal!.Claims
                     .Where(claim => claim.Type is ClaimTypes.Role or "role" or "roles").Select(claim => claim.Value).ToArray();

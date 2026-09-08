@@ -1,4 +1,5 @@
 using Andy.Auth.Extensions;
+using Andy.Auth.Dpop;
 using Andy.Auth.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -18,15 +19,19 @@ namespace Andy.Auth.Server.Tests;
 /// <summary>A separate protected resource using the public Andy.Auth consumer library.</summary>
 internal static class LiveConsumerFixture
 {
-    public static Task<IHost> StartAsync(CustomWebApplicationFactory authority, JsonWebToken token) =>
+    public static Task<IHost> StartAsync(CustomWebApplicationFactory authority, JsonWebToken token, bool dpop = false) =>
         new HostBuilder().ConfigureWebHost(web => web.UseTestServer().ConfigureServices(services =>
         {
             services.AddRouting();
+            if (dpop) services.AddRedisDpopReplayProtection(Environment.GetEnvironmentVariable("ANDY_TEST_REDIS")!);
             services.AddAndyAuth(options =>
             {
                 options.Authority = token.Issuer;
                 options.Audience = token.Audiences.First();
                 options.RequireLiveSession = true;
+                options.EnableDpop = dpop;
+                options.IntrospectionClientId = "andy-docs-api";
+                options.IntrospectionClientSecret = CustomWebApplicationFactory.AndyDocsApiClientSecret;
             });
             services.AddHttpClient(LiveSessionValidation.HttpClientName)
                 .ConfigurePrimaryHttpMessageHandler(() => authority.Server.CreateHandler());

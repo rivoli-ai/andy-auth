@@ -2,6 +2,7 @@ using Andy.Auth.Configuration;
 using Andy.Auth.Models;
 using Andy.Auth.Services;
 using Andy.Auth.Revocation;
+using Andy.Auth.Dpop;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,6 +57,15 @@ public class AndyAuthProvider : IAuthProvider
                 "serve substitute signing keys.");
         }
 
+        if (options.EnableDpop)
+        {
+            if (options.DpopProofLifetime < TimeSpan.FromSeconds(1) || options.DpopProofLifetime > TimeSpan.FromMinutes(5))
+                throw new ArgumentException("DPoP proof lifetime must be between one second and five minutes.");
+            builder.Services.AddHostedService<RequireDpopStoreStartup>();
+        }
+        if (options.RequireLiveSession && options.EnableDpop &&
+            (string.IsNullOrWhiteSpace(options.IntrospectionClientId) || string.IsNullOrWhiteSpace(options.IntrospectionClientSecret)))
+            throw new ArgumentException("Live DPoP validation requires the resource's introspection client id and secret.");
         if (options.RequireLiveSession)
         {
             if (!Uri.TryCreate(options.Authority, UriKind.Absolute, out var liveAuthority) ||
@@ -114,9 +124,11 @@ public class AndyAuthProvider : IAuthProvider
             }
             if (options.CheckRevocationNotifications)
                 jwtOptions.Events = RevocationBearerEvents.Create(jwtOptions.Events);
+            jwtOptions.Events = DpopBearerEvents.Create(jwtOptions.Events, options.EnableDpop, options.DpopProofLifetime);
             if (options.RequireLiveSession)
                 jwtOptions.Events = LiveSessionValidation.Create(jwtOptions.Events,
-                    new Uri(options.Authority.TrimEnd('/') + "/auth/session"));
+                    new Uri(options.Authority.TrimEnd('/') + "/auth/session"),
+                    new Uri(options.Authority.TrimEnd('/') + "/connect/introspect"), options.IntrospectionClientId, options.IntrospectionClientSecret);
         });
     }
 

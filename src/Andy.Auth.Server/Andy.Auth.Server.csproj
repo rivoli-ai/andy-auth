@@ -41,4 +41,7 @@
     <Content Include="../../config/registrations/external/*.json" Link="config/registrations/external/%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Andy.Auth/Andy.Auth.csproj" />
+  </ItemGroup>
 </Project>
