@@ -1,0 +1,45 @@
+{
+  "service": {
+    "name": "external-andy-docs-web",
+    "displayName": "Andy Docs (web)",
+    "description": "Bundled external OAuth consumer registration.",
+    "embeddedProxyPrefix": ""
+  },
+  "auth": {
+    "audience": "urn:andy-docs-api",
+    "registerAudience": false,
+    "webClient": {
+      "clientId": "andy-docs-web",
+      "clientType": "public",
+      "displayName": "Andy Docs (web)",
+      "grantTypes": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "scopes": [
+        "email",
+        "profile",
+        "roles",
+        "offline_access",
+        "urn:andy-docs-api"
+      ],
+      "redirectUris": [
+        "http://localhost:4200/auth/callback",
+        "http://localhost:4202/auth/callback",
+        "http://localhost:6202/auth/callback",
+        "http://localhost:9100/docs/auth/callback",
+        "https://docs.uat.wagram.ai/auth/callback",
+        "https://docs.wagram.ai/auth/callback"
+      ],
+      "postLogoutRedirectUris": [
+        "http://localhost:4200/",
+        "http://localhost:4202/",
+        "http://localhost:6202/",
+        "http://localhost:9100/docs/",
+        "https://docs.uat.wagram.ai/",
+        "https://docs.wagram.ai/"
+      ],
+      "requirePkce": true
+    }
+  }
+}

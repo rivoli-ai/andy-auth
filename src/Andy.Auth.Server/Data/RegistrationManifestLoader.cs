@@ -88,6 +88,12 @@ public sealed class RegistrationManifestLoader
             }
         }
 
+        // Published content travels with the server, including tests and containers.
+        // Explicit manifests above win over these external-consumer defaults.
+        var bundled = Path.Combine(AppContext.BaseDirectory, "config", "registrations", "external");
+        if (!Directory.Exists(bundled))
+            throw new InvalidOperationException("Bundled external registration manifests are missing from the server output.");
+        paths.Add(bundled);
         return paths;
     }
 

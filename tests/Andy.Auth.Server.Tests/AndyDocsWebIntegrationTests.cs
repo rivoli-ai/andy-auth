@@ -31,9 +31,9 @@ public sealed class AndyDocsWebIntegrationTests
             var originalId = await manager.GetIdAsync(client);
             await manager.CreateAsync(new OpenIddictApplicationDescriptor
                 { ClientId = "wagram-web", ClientType = "public" });
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<DbSeeder>>();
-            await AndyDocsWebRegistration.SeedAsync(manager, logger);
-            await AndyDocsWebRegistration.SeedAsync(manager, logger);
+            var seeder = ActivatorUtilities.CreateInstance<DbSeeder>(scope.ServiceProvider);
+            await seeder.SeedAsync();
+            await seeder.SeedAsync();
             Assert.Null(await manager.FindByClientIdAsync("wagram-web"));
             Assert.Equal(originalId, await manager.GetIdAsync((await manager.FindByClientIdAsync("andy-docs-web"))!));
         }

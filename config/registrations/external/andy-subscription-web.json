@@ -1,0 +1,44 @@
+{
+  "service": {
+    "name": "external-andy-subscription-web",
+    "displayName": "Andy Subscription",
+    "description": "Bundled external OAuth consumer registration.",
+    "embeddedProxyPrefix": ""
+  },
+  "auth": {
+    "audience": "urn:andy-subscription-api",
+    "registerAudience": true,
+    "webClient": {
+      "clientId": "andy-subscription-web",
+      "clientType": "public",
+      "displayName": "Andy Subscription Web",
+      "grantTypes": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "scopes": [
+        "email",
+        "profile",
+        "roles",
+        "offline_access",
+        "urn:andy-subscription-api"
+      ],
+      "redirectUris": [
+        "https://localhost:4202/callback",
+        "http://localhost:4202/callback",
+        "https://localhost:5320/callback",
+        "http://localhost:5320/callback"
+      ],
+      "postLogoutRedirectUris": [
+        "https://localhost:4202/",
+        "https://localhost:4202/login",
+        "http://localhost:4202/",
+        "http://localhost:4202/login",
+        "https://localhost:5320/",
+        "https://localhost:5320/login",
+        "http://localhost:5320/",
+        "http://localhost:5320/login"
+      ]
+    }
+  }
+}

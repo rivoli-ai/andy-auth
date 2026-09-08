@@ -42,7 +42,8 @@ public sealed record RegistrationAuthInfo(
     [property: JsonPropertyName("apiClient")]      RegistrationOAuthClient? ApiClient,
     [property: JsonPropertyName("webClient")]      RegistrationOAuthClient? WebClient,
     [property: JsonPropertyName("cliClient")]      RegistrationOAuthClient? CliClient,
-    [property: JsonPropertyName("productionUris")] RegistrationProductionUris? ProductionUris
+    [property: JsonPropertyName("productionUris")] RegistrationProductionUris? ProductionUris,
+    [property: JsonPropertyName("registerAudience")] bool RegisterAudience = true
 );
 
 public sealed record RegistrationOAuthClient(
@@ -54,7 +55,9 @@ public sealed record RegistrationOAuthClient(
     [property: JsonPropertyName("grantTypes")]             string[]? GrantTypes,
     [property: JsonPropertyName("scopes")]                 string[]? Scopes,
     [property: JsonPropertyName("redirectUris")]           string[]? RedirectUris,
-    [property: JsonPropertyName("postLogoutRedirectUris")] string[]? PostLogoutRedirectUris
+    [property: JsonPropertyName("postLogoutRedirectUris")] string[]? PostLogoutRedirectUris,
+    [property: JsonPropertyName("requirePkce")] bool RequirePkce = false,
+    [property: JsonPropertyName("useConfiguredMcpResources")] bool UseConfiguredMcpResources = false
 );
 
 public sealed record RegistrationProductionUris(

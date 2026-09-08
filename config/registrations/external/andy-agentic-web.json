@@ -1,0 +1,37 @@
+{
+  "service": {
+    "name": "external-andy-agentic-web",
+    "displayName": "Andy Agentic Web",
+    "description": "Bundled external OAuth consumer registration.",
+    "embeddedProxyPrefix": ""
+  },
+  "auth": {
+    "audience": "urn:andy-docs-api",
+    "registerAudience": false,
+    "webClient": {
+      "clientId": "andy-agentic-web",
+      "clientType": "public",
+      "displayName": "Andy Agentic Web",
+      "grantTypes": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "scopes": [
+        "email",
+        "profile",
+        "roles",
+        "offline_access"
+      ],
+      "redirectUris": [
+        "http://localhost:4200",
+        "http://localhost:4200/callback",
+        "https://localhost:4200",
+        "https://localhost:4200/callback"
+      ],
+      "postLogoutRedirectUris": [
+        "http://localhost:4200",
+        "https://localhost:4200"
+      ]
+    }
+  }
+}
