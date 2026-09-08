@@ -36,14 +36,17 @@ public sealed class AdminAccessController(UserManager<ApplicationUser> users, Si
             return View(model);
         }
         var passwordOk = !model.RequirePassword || (!string.IsNullOrEmpty(model.Password) &&
-            (await signIn.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: true)).Succeeded);
+            await users.CheckPasswordAsync(user, model.Password));
         var canSignIn = await signIn.CanSignInAsync(user) && !await users.IsLockedOutAsync(user);
         var code = (model.Code ?? "").Replace(" ", "").Replace("-", "");
         var codeOk = code.Length == 6 && await users.VerifyTwoFactorTokenAsync(user,
             users.Options.Tokens.AuthenticatorTokenProvider, code);
         if (!passwordOk || !codeOk || !canSignIn)
         {
-            if (passwordOk && canSignIn && !codeOk) await users.AccessFailedAsync(user);
+            // Count the entire proof as one attempt. Checking the password through
+            // SignInManager can reset failures for remembered-MFA clients before
+            // the authenticator has been checked, defeating step-up lockout.
+            if (canSignIn) await users.AccessFailedAsync(user);
             ModelState.AddModelError("", "We could not verify your password and authenticator code.");
             return View(model);
         }

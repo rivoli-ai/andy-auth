@@ -125,6 +125,15 @@ public sealed class AdminAccessIntegrationTests : IDisposable
         var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var user = (await users.FindByEmailAsync(CustomWebApplicationFactory.AdminEmail))!;
         Assert.Equal(1, await users.GetAccessFailedCountAsync(user));
+        for (var attempt = 1; attempt < users.Options.Lockout.MaxFailedAccessAttempts; attempt++)
+        {
+            using var again = await browser.PostAsync("/AdminAccess", new FormUrlEncodedContent(fields));
+            Assert.Equal(HttpStatusCode.OK, again.StatusCode);
+        }
+        using var lockedScope = factory.Services.CreateScope();
+        var lockedUsers = lockedScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var lockedUser = (await lockedUsers.FindByEmailAsync(CustomWebApplicationFactory.AdminEmail))!;
+        Assert.True(await lockedUsers.IsLockedOutAsync(lockedUser));
         using var denied = await browser.GetAsync("/Admin");
         Assert.Contains("/AdminAccess", denied.Headers.Location!.OriginalString);
     }
