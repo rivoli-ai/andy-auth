@@ -196,6 +196,23 @@ public class TokenClaimsPrincipalFactoryTests
         principal.FindFirst(Claims.Name).Should().NotBeNull();
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("USER@TEST.LOCAL")]
+    public async Task CreateAsync_ProfileScope_EmailUsernameCannotLeakThroughName(string? fullName)
+    {
+        var user = new ApplicationUser
+        {
+            Id = "profile-user", Email = "user@test.local", UserName = "user@test.local",
+            FullName = fullName, IsActive = true
+        };
+        var principal = await _factory.CreateAsync(user, new[] { "openid", "profile" }, "andy-cli");
+        principal.FindFirst(Claims.Name)!.Value.Should().Be(user.Id);
+        principal.FindFirst(Claims.PreferredUsername).Should().BeNull();
+        principal.FindFirst(Claims.Email).Should().BeNull();
+    }
+
     [Fact]
     public async Task CreateAsync_EmailScope_DoesNotReleaseProfileClaims()
     {

@@ -109,16 +109,15 @@ public class TokenClaimsPrincipalFactory
         {
             identity.AddClaim(new Claim(
                     Claims.Name,
-                    user.FullName ?? user.UserName ?? user.Id)
+                    UserProfileClaims.DisplayName(user, principal.HasScope(Scopes.Email)))
                 .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
 
             // Local usernames are email addresses. Do not smuggle the address
             // into a profile-only token as preferred_username (#173).
-            if (!string.IsNullOrWhiteSpace(user.UserName) &&
-                (!string.Equals(user.UserName, user.Email, StringComparison.OrdinalIgnoreCase) ||
-                 principal.HasScope(Scopes.Email)))
+            var username = UserProfileClaims.PreferredUsername(user, principal.HasScope(Scopes.Email));
+            if (username is not null)
             {
-                identity.AddClaim(new Claim(Claims.PreferredUsername, user.UserName)
+                identity.AddClaim(new Claim(Claims.PreferredUsername, username)
                     .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
             }
         }

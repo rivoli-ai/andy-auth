@@ -795,8 +795,10 @@ public class AuthorizationController : ControllerBase
 
         if (User.HasScope(Scopes.Profile))
         {
-            claims[Claims.Name] = user.FullName ?? string.Empty;
-            claims[Claims.PreferredUsername] = await _userManager.GetUserNameAsync(user) ?? string.Empty;
+            claims[Claims.Name] = UserProfileClaims.DisplayName(user, User.HasScope(Scopes.Email));
+            var username = UserProfileClaims.PreferredUsername(user, User.HasScope(Scopes.Email));
+            if (username is not null)
+                claims[Claims.PreferredUsername] = username;
             claims["profile_picture_url"] = user.ProfilePictureUrl ?? string.Empty;
         }
 
