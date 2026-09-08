@@ -726,9 +726,10 @@ public class AuthorizationController : ControllerBase
         // Never let delegation extend authority in time. An exchanged token
         // receives the smaller of the configured exchange lifetime and the
         // subject token's remaining lifetime.
+        var issuedAt = DateTimeOffset.UtcNow;
         var exchangedLifetime = TokenExchangeAttenuation.CapLifetime(
             validation.ExpiresAt,
-            DateTimeOffset.UtcNow,
+            issuedAt,
             _tokenExchangePolicy.ExchangedTokenLifetime);
         if (exchangedLifetime is null)
         {
@@ -736,6 +737,9 @@ public class AuthorizationController : ControllerBase
                 "subject_token has no usable remaining lifetime.");
         }
         principal.SetAccessTokenLifetime(exchangedLifetime.Value);
+        // OpenIddict starts the lifetime later in its issuance pipeline. Carry
+        // the absolute ceiling so processing time cannot extend delegation.
+        principal.SetExpirationDate(issuedAt + exchangedLifetime.Value);
 
         _logger.LogInformation(
             "Token-exchange issued. Subject: {Subject}, Actor: {ActorClientId}, Audience: {Audience}, Scopes: {Scopes}",

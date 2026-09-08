@@ -360,6 +360,10 @@ builder.Services.AddOpenIddict()
             // Drives Epic IDP (rivoli-ai/conductor#1246).
             .AllowCustomFlow(TokenExchangeConstants.GrantType);
 
+        options.AddEventHandler<OpenIddict.Server.OpenIddictServerEvents.ProcessSignInContext>(handler =>
+            handler.SetOrder(OpenIddict.Server.OpenIddictServerHandlers.PrepareIssuedTokenPrincipal.Descriptor.Order + 500)
+                .UseInlineHandler(TokenExchangeExpiration.ApplyAsync));
+
         // Advertise and accept S256 as the ONLY PKCE code-challenge method
         // (issue #122). #46 made PKCE mandatory server-wide, but OpenIddict
         // still lists `plain` alongside `S256` in the discovery document and
