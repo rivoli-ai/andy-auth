@@ -244,3 +244,11 @@ Apache 2.0
 **Status:** Alpha (UAT deployed for testing)
 **Version:** 0.1.0-alpha
 **Last Updated:** 2026-01-13
+
+
+The Andy Docs browser client is registered as `andy-docs-web` with PKCE and
+local callbacks at `http://localhost:4200/auth/callback` and
+`http://localhost:4202/auth/callback`. Existing Docker, embedded and deployed
+callback URLs remain supported. Re-seeding updates the client in place so
+active grants keep their application ID; the retired `wagram-web` row is
+removed when present.

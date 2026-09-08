@@ -439,76 +439,7 @@ public class DbSeeder
             _logger.LogInformation("Deleted legacy OAuth client: lexipro-api");
         }
 
-        // Andy Docs Web Client (renamed from wagram-web per E0-S6, closes andy-auth#25)
-        // Delete and recreate to ensure latest configuration.
-
-        // Legacy cleanup: drop the wagram-web client if present (one-time per DB).
-        var legacyWagramClient = await manager.FindByClientIdAsync("wagram-web");
-        if (legacyWagramClient != null)
-        {
-            await manager.DeleteAsync(legacyWagramClient);
-            _logger.LogInformation("Deleted legacy OAuth client: wagram-web");
-        }
-
-        // Idempotent re-seed of andy-docs-web.
-        var existingAndyDocsWeb = await manager.FindByClientIdAsync("andy-docs-web");
-        if (existingAndyDocsWeb != null)
-        {
-            await manager.DeleteAsync(existingAndyDocsWeb);
-            _logger.LogInformation("Deleted existing OAuth client: andy-docs-web");
-        }
-
-        await manager.CreateAsync(new OpenIddictApplicationDescriptor
-        {
-            ClientId = "andy-docs-web",
-            DisplayName = "Andy Docs (web)",
-            ClientType = OpenIddictConstants.ClientTypes.Public, // Public client - no secret; PKCE required
-            ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-            Permissions =
-            {
-                OpenIddictConstants.Permissions.Endpoints.Authorization,
-                OpenIddictConstants.Permissions.Endpoints.Token,
-
-                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-
-                OpenIddictConstants.Permissions.Scopes.Email,
-                OpenIddictConstants.Permissions.Scopes.Profile,
-                OpenIddictConstants.Permissions.Scopes.Roles,
-                OpenIddictConstants.Permissions.Prefixes.Scope + "offline_access",
-                "scp:urn:andy-docs-api",  // Permission to request andy-docs-api resource
-
-                OpenIddictConstants.Permissions.ResponseTypes.Code
-            },
-            Requirements =
-            {
-                // Public-client PKCE enforcement (closes part of andy-auth#46 for this client).
-                OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange
-            },
-            RedirectUris =
-            {
-                // Local dotnet (canonical port 4202 per andy-service-template/docs/ports.md)
-                new Uri("http://localhost:4202/auth/callback"),
-                // Docker-compose mode (offset +2000 → port 6202)
-                new Uri("http://localhost:6202/auth/callback"),
-                // Conductor embedded (unified proxy on 9100, /docs prefix)
-                new Uri("http://localhost:9100/docs/auth/callback"),
-                // UAT (Vercel-hosted SPA at docs.uat.wagram.ai)
-                new Uri("https://docs.uat.wagram.ai/auth/callback"),
-                // Production (Vercel-hosted SPA at docs.wagram.ai)
-                new Uri("https://docs.wagram.ai/auth/callback")
-            },
-            PostLogoutRedirectUris =
-            {
-                new Uri("http://localhost:4202/"),
-                new Uri("http://localhost:6202/"),
-                new Uri("http://localhost:9100/docs/"),
-                new Uri("https://docs.uat.wagram.ai/"),
-                new Uri("https://docs.wagram.ai/")
-            }
-        });
-
-        _logger.LogInformation("Created OAuth client: andy-docs-web (closes andy-auth#25)");
+        await AndyDocsWebRegistration.SeedAsync(manager, _logger);
 
         // Claude Desktop Client (for MCP)
         // Delete existing client if it exists (to ensure clean slate)

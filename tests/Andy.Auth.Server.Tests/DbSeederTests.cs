@@ -151,7 +151,9 @@ public class DbSeederTests : IDisposable
         // always-recreated clients were re-created.
         _mockAppManager.Verify(m => m.DeleteAsync(existingClient, default), Times.AtLeastOnce);
         Assert.Contains("claude-desktop", createdIds);
-        Assert.Contains("andy-docs-web", createdIds);
+        Assert.DoesNotContain("andy-docs-web", createdIds);
+        _mockAppManager.Verify(m => m.UpdateAsync(existingClient,
+            It.Is<OpenIddictApplicationDescriptor>(d => d.ClientId == "andy-docs-web"), default), Times.Once);
     }
 
     [Fact]
@@ -258,6 +260,8 @@ public class DbSeederTests : IDisposable
         Assert.Equal(OpenIddictConstants.ClientTypes.Public, andyDocsWebDescriptor.ClientType);
         Assert.Null(andyDocsWebDescriptor.ClientSecret); // Public client - no secret
 
+        Assert.Contains(new Uri("http://localhost:4200/auth/callback"), andyDocsWebDescriptor.RedirectUris);
+        Assert.Contains(new Uri("http://localhost:4200/"), andyDocsWebDescriptor.PostLogoutRedirectUris);
         // Canonical port 4202 per andy-service-template/docs/ports.md (replaces legacy wagram-web's :4200)
         Assert.Contains(new Uri("http://localhost:4202/auth/callback"), andyDocsWebDescriptor.RedirectUris);
         // Docker mode (offset +2000)
