@@ -59,9 +59,11 @@ RUN set -eu; \
 # clean context after that dependency landed.
 COPY Directory.Build.props Directory.Packages.props nuget.config ./
 COPY local-packages/ local-packages/
+COPY src/Andy.Auth/Andy.Auth.csproj src/Andy.Auth/
 COPY src/Andy.Auth.Server/Andy.Auth.Server.csproj src/Andy.Auth.Server/
 RUN dotnet restore src/Andy.Auth.Server/Andy.Auth.Server.csproj
 
+COPY src/Andy.Auth/ src/Andy.Auth/
 COPY src/Andy.Auth.Server/ src/Andy.Auth.Server/
 COPY config/registrations/external/ config/registrations/external/
 RUN dotnet publish src/Andy.Auth.Server/Andy.Auth.Server.csproj \
