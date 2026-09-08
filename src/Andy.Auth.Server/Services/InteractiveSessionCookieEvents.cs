@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
 
 namespace Andy.Auth.Server.Services;
 
@@ -60,6 +61,25 @@ public sealed class InteractiveSessionCookieEvents : CookieAuthenticationEvents
 
         context.Response.Redirect(context.RedirectUri);
         return Task.CompletedTask;
+    }
+
+    public override async Task ValidatePrincipal(CookieValidatePrincipalContext context)
+    {
+        // EventsType replaces Identity's configured event instance, so invoke
+        // its security-stamp validator explicitly. During authentication the
+        // request User is not yet populated; preserve the ticket's session id
+        // when the validator rebuilds the principal.
+        var sessionId = context.Principal?.FindFirstValue(AndyAuthSignInManager.SessionIdClaimType);
+        var userId = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+        await SecurityStampValidator.ValidatePrincipalAsync(context);
+        if (context.Principal?.Identity is ClaimsIdentity identity &&
+            string.Equals(context.Principal.FindFirstValue(ClaimTypes.NameIdentifier), userId, StringComparison.Ordinal))
+        {
+            foreach (var claim in identity.FindAll(AndyAuthSignInManager.SessionIdClaimType).ToArray())
+                identity.RemoveClaim(claim);
+            if (!string.IsNullOrWhiteSpace(sessionId))
+                identity.AddClaim(new Claim(AndyAuthSignInManager.SessionIdClaimType, sessionId));
+        }
     }
 
     public override async Task SigningIn(CookieSigningInContext context)

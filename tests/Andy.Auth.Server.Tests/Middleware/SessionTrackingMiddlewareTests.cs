@@ -4,6 +4,7 @@ using Andy.Auth.Server.Services;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
@@ -87,9 +88,20 @@ public class SessionTrackingMiddlewareTests : IDisposable
         // Setup service provider with required services
         var services = new ServiceCollection();
         services.AddSingleton(_memoryCache);
+        services.AddSingleton(CreateAuthentication(httpContext).Object);
         httpContext.RequestServices = services.BuildServiceProvider();
 
         return httpContext;
+    }
+
+    private static Mock<IAuthenticationService> CreateAuthentication(HttpContext context, bool cookie = true)
+    {
+        var mock = new Mock<IAuthenticationService>();
+        mock.Setup(a => a.AuthenticateAsync(context, IdentityConstants.ApplicationScheme))
+            .ReturnsAsync(cookie && context.User.Identity?.IsAuthenticated == true
+                ? AuthenticateResult.Success(new AuthenticationTicket(context.User, IdentityConstants.ApplicationScheme))
+                : AuthenticateResult.NoResult());
+        return mock;
     }
 
     // ==================== Skip Path Tests ====================
@@ -129,6 +141,7 @@ public class SessionTrackingMiddlewareTests : IDisposable
     [InlineData("/connect/logout")]
     public async Task InvokeAsync_InteractiveConnectPath_TracksCookieSession(string path)
     {
+        await _sessionService.CreateSessionAsync("user-1", "interactive-session", "127.0.0.1", "Browser");
         var middleware = CreateMiddleware();
         var httpContext = CreateHttpContext(
             authenticated: true,
@@ -157,7 +170,7 @@ public class SessionTrackingMiddlewareTests : IDisposable
             userId: "user-1",
             path: "/connect/authorize");
 
-        var authentication = new Mock<IAuthenticationService>();
+        var authentication = CreateAuthentication(httpContext);
         var services = new ServiceCollection();
         services.AddSingleton(_memoryCache);
         services.AddSingleton(authentication.Object);
@@ -174,6 +187,7 @@ public class SessionTrackingMiddlewareTests : IDisposable
     [Fact]
     public async Task InvokeAsync_NormalPath_ProcessesTracking()
     {
+        await _sessionService.CreateSessionAsync("user-1", "test-session", "127.0.0.1", "Browser");
         // Arrange
         var middleware = CreateMiddleware();
         var httpContext = CreateHttpContext(authenticated: true, sessionId: "test-session", userId: "user-1", path: "/dashboard");
@@ -206,7 +220,7 @@ public class SessionTrackingMiddlewareTests : IDisposable
     // ==================== Session Creation Tests ====================
 
     [Fact]
-    public async Task InvokeAsync_AuthenticatedUserWithNoSession_CreatesSession()
+    public async Task InvokeAsync_AuthenticatedUserWithNoSession_RejectsWithoutRecreating()
     {
         // Arrange
         var middleware = CreateMiddleware();
@@ -220,16 +234,15 @@ public class SessionTrackingMiddlewareTests : IDisposable
         await middleware.InvokeAsync(httpContext, _sessionService, _context);
 
         // Assert
-        _nextCalled.Should().BeTrue();
-        var session = await _context.UserSessions
-            .FirstOrDefaultAsync(s => s.SessionId == "new-session-id");
-        session.Should().NotBeNull();
-        session!.UserId.Should().Be("user-1");
+        _nextCalled.Should().BeFalse();
+        httpContext.Response.StatusCode.Should().Be(302);
+        (await _context.UserSessions.CountAsync()).Should().Be(0);
     }
 
     [Fact]
-    public async Task InvokeAsync_SessionCreation_IncludesIpAndUserAgent()
+    public async Task InvokeAsync_CrossUserSession_RejectsCookie()
     {
+        await _sessionService.CreateSessionAsync("different-user", "session-with-metadata", null, null);
         // Arrange
         var middleware = CreateMiddleware();
         var httpContext = CreateHttpContext(
@@ -245,8 +258,9 @@ public class SessionTrackingMiddlewareTests : IDisposable
         var session = await _context.UserSessions
             .FirstOrDefaultAsync(s => s.SessionId == "session-with-metadata");
         session.Should().NotBeNull();
-        session!.IpAddress.Should().Be("127.0.0.1");
-        session.UserAgent.Should().Be("TestBrowser/1.0");
+        session!.UserId.Should().Be("different-user");
+        _nextCalled.Should().BeFalse();
+        httpContext.Response.StatusCode.Should().Be(302);
     }
 
     // ==================== Session Validation Tests ====================
@@ -298,7 +312,7 @@ public class SessionTrackingMiddlewareTests : IDisposable
             path: "/dashboard");
 
         // Mock authentication to verify sign-out behavior
-        var authServiceMock = new Mock<IAuthenticationService>();
+        var authServiceMock = CreateAuthentication(httpContext);
         var services = new ServiceCollection();
         services.AddSingleton(_memoryCache);
         services.AddSingleton(authServiceMock.Object);
@@ -329,7 +343,7 @@ public class SessionTrackingMiddlewareTests : IDisposable
 
         httpContext.Request.Headers.Accept = "application/json";
 
-        var authServiceMock = new Mock<IAuthenticationService>();
+        var authServiceMock = CreateAuthentication(httpContext);
         var services = new ServiceCollection();
         services.AddSingleton(_memoryCache);
         services.AddSingleton(authServiceMock.Object);
@@ -377,7 +391,7 @@ public class SessionTrackingMiddlewareTests : IDisposable
     // ==================== Missing Session ID Tests ====================
 
     [Fact]
-    public async Task InvokeAsync_AuthenticatedButNoSessionId_PassesThrough()
+    public async Task InvokeAsync_AuthenticatedButNoSessionId_RejectsCookie()
     {
         // Arrange
         var middleware = CreateMiddleware();
@@ -399,20 +413,22 @@ public class SessionTrackingMiddlewareTests : IDisposable
 
         var services = new ServiceCollection();
         services.AddSingleton(_memoryCache);
+        services.AddSingleton(CreateAuthentication(httpContext).Object);
         httpContext.RequestServices = services.BuildServiceProvider();
 
         // Act
         await middleware.InvokeAsync(httpContext, _sessionService, _context);
 
         // Assert
-        _nextCalled.Should().BeTrue();
+        _nextCalled.Should().BeFalse();
+        httpContext.Response.StatusCode.Should().Be(302);
         // No session should be created without session ID
         var sessions = await _context.UserSessions.ToListAsync();
         sessions.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task InvokeAsync_AuthenticatedButNoUserId_PassesThrough()
+    public async Task InvokeAsync_AuthenticatedButNoUserId_RejectsCookie()
     {
         // Arrange
         var middleware = CreateMiddleware();
@@ -434,15 +450,30 @@ public class SessionTrackingMiddlewareTests : IDisposable
 
         var services = new ServiceCollection();
         services.AddSingleton(_memoryCache);
+        services.AddSingleton(CreateAuthentication(httpContext).Object);
         httpContext.RequestServices = services.BuildServiceProvider();
 
         // Act
         await middleware.InvokeAsync(httpContext, _sessionService, _context);
 
         // Assert
-        _nextCalled.Should().BeTrue();
+        _nextCalled.Should().BeFalse();
+        httpContext.Response.StatusCode.Should().Be(302);
         var sessions = await _context.UserSessions.ToListAsync();
         sessions.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task InvokeAsync_BearerWithoutApplicationCookie_PassesThrough()
+    {
+        var middleware = CreateMiddleware();
+        var context = CreateHttpContext(authenticated: true, path: "/api/users");
+        context.RequestServices = new ServiceCollection()
+            .AddSingleton(CreateAuthentication(context, cookie: false).Object)
+            .BuildServiceProvider();
+        await middleware.InvokeAsync(context, _sessionService, _context);
+        _nextCalled.Should().BeTrue();
+        (await _context.UserSessions.CountAsync()).Should().Be(0);
     }
 
     // ==================== API Path Detection Tests ====================
@@ -476,7 +507,7 @@ public class SessionTrackingMiddlewareTests : IDisposable
             httpContext.Request.Headers.Accept = "application/json";
         }
 
-        var authServiceMock = new Mock<IAuthenticationService>();
+        var authServiceMock = CreateAuthentication(httpContext);
         var services = new ServiceCollection();
         services.AddSingleton(_memoryCache);
         services.AddSingleton(authServiceMock.Object);
