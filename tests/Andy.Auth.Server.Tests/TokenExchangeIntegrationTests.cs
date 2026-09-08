@@ -6,6 +6,7 @@ using System.Text.Json;
 using Andy.Auth.Server.Data;
 using Andy.Auth.Server.Services;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -25,12 +26,12 @@ namespace Andy.Auth.Server.Tests;
 ///
 /// Drives Epic IDP (rivoli-ai/conductor#1246).
 /// </summary>
-public class TokenExchangeIntegrationTests : IClassFixture<CustomWebApplicationFactory>
+public class TokenExchangeIntegrationTests : IClassFixture<DelayedTokenExchangeFactory>
 {
     private readonly HttpClient _client;
     private readonly CustomWebApplicationFactory _factory;
 
-    public TokenExchangeIntegrationTests(CustomWebApplicationFactory factory)
+    public TokenExchangeIntegrationTests(DelayedTokenExchangeFactory factory)
     {
         _factory = factory;
         // Follow redirects so HTTPS-redirect middleware doesn't trap
@@ -275,11 +276,29 @@ public class TokenExchangeIntegrationTests : IClassFixture<CustomWebApplicationF
 
         var jwt = new JsonWebToken(accessToken);
         Assert.Contains("urn:andy-models-api", jwt.Audiences);
-        Assert.True(jwt.ValidTo <= subjectExpiresAt.AddSeconds(1));
+        Assert.True(jwt.ValidTo <= new JsonWebToken(subjectToken).ValidTo);
         Assert.True(jwt.ValidTo > DateTime.UtcNow.AddMinutes(2));
         var wireScopes = jwt.GetPayloadValue<string>("scope")
             .Split(' ', StringSplitOptions.RemoveEmptyEntries);
         Assert.Equal(new[] { "read", "write" }, wireScopes);
         Assert.NotNull(jwt.GetPayloadValue<string>(AndyAuthSignInManager.SessionIdClaimType));
+    }
+}
+
+// Simulate work between the controller's lifetime calculation and OpenIddict's
+// token preparation. A relative lifetime alone incorrectly extends exp here.
+public sealed class DelayedTokenExchangeFactory : CustomWebApplicationFactory
+{
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        base.ConfigureWebHost(builder);
+        builder.ConfigureServices(services => services.AddOpenIddict().AddServer(options =>
+            options.AddEventHandler<OpenIddictServerEvents.ProcessSignInContext>(handler =>
+                handler.SetOrder(OpenIddictServerHandlers.PrepareAccessTokenPrincipal.Descriptor.Order - 500)
+                    .UseInlineHandler(async context =>
+                    {
+                        if (context.Request.GrantType == TokenExchangeConstants.GrantType)
+                            await Task.Delay(TimeSpan.FromSeconds(2), context.CancellationToken);
+                    }))));
     }
 }

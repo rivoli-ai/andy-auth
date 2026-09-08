@@ -97,6 +97,14 @@ public sealed class OboIssuanceRegressionTests
         var sessionId = subject.GetPayloadValue<string>(AndyAuthSignInManager.SessionIdClaimType);
         Assert.False(string.IsNullOrEmpty(sessionId));
 
+        // A real OpenID Connect ID token is not an access-token subject, even
+        // when submitted with subject_token_type=access_token.
+        var idToken = codePayload.RootElement.GetProperty("id_token").GetString()!;
+        using var idExchange = await browser.PostAsync("/connect/token", Exchange(idToken));
+        Assert.False(idExchange.IsSuccessStatusCode);
+        using var idError = JsonDocument.Parse(await idExchange.Content.ReadAsStringAsync());
+        Assert.Equal("invalid_grant", idError.RootElement.GetProperty("error").GetString());
+
         using var exchange = await browser.PostAsync("/connect/token", Exchange(subjectToken));
         Assert.True(exchange.IsSuccessStatusCode, await exchange.Content.ReadAsStringAsync());
         using var result = JsonDocument.Parse(await exchange.Content.ReadAsStringAsync());
