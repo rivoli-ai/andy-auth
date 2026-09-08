@@ -4,10 +4,14 @@
 }
 
 <div class="admin-dashboard">
-    <h1>Admin Dashboard</h1>
+    <span class="brand-eyebrow">IDENTITY / OVERVIEW</span><h1>Account administration</h1>
     <p class="subtitle">Welcome back, <strong>@User.Identity?.Name</strong></p>
 
-    <div class="stats-grid">
+    <nav class="console-workflows" aria-label="Identity workflows">
+      <a asp-controller="Admin" asp-action="Users"><strong>Manage users ↗</strong><span>Review accounts and their access to the workspace.</span></a>
+      <a asp-controller="Admin" asp-action="Clients"><strong>Configure clients ↗</strong><span>Manage the applications using this identity service.</span></a>
+      <a asp-controller="Admin" asp-action="AuditLogs"><strong>Review audit activity ↗</strong><span>Follow authentication and account changes.</span></a>
+    </nav><div class="stats-grid">
         <div class="stat-card">
             <div class="stat-icon">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">

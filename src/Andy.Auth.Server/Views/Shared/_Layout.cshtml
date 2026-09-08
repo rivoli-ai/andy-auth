@@ -597,6 +597,7 @@
         }
     </style>
     <link href="~/css/rivoli-theme.css" rel="stylesheet" asp-append-version="true" />
+<link href="~/css/rivoli-console.css" rel="stylesheet" asp-append-version="true" />
 </head>
 <body>
     @if (User.Identity?.IsAuthenticated == true)
@@ -606,15 +607,16 @@
             <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
             <!-- Sidebar -->
-            <aside class="sidebar" id="sidebar">
+            <aside class="sidebar" id="sidebar" aria-label="Identity navigation">
                 <div class="sidebar-header">
                     <a href="/" class="sidebar-brand">
                         <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <rect x="4" y="4" width="24" height="24" rx="6" stroke="currentColor" stroke-width="2"/>
                             <path d="M12 16L14 18L20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        <h1>Andy Auth</h1>
+                        <div><span class="brand-eyebrow">RIVOLI AI</span><h1>Identity</h1></div>
                     </a>
+                    <button class="native-drawer-close" type="button" aria-label="Close navigation" onclick="toggleSidebar()">×</button>
                     <button class="sidebar-toggle" onclick="toggleCollapse()" title="Toggle sidebar">
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M4 6H16M4 10H16M4 14H16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -622,7 +624,7 @@
                     </button>
                 </div>
 
-                <nav class="sidebar-nav">
+                <nav class="sidebar-nav" aria-label="Identity pages">
                     <div class="nav-section">
                         <div class="nav-section-title">Overview</div>
                         <a asp-controller="Admin" asp-action="Index" class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Admin" ? "active" : "")">
@@ -730,12 +732,12 @@
             <!-- Main content -->
             <div class="main-wrapper">
                 <header class="main-header">
-                    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+                    <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M3 6H21M3 12H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                         </svg>
                     </button>
-                    <div></div>
+                    <div class="console-location"><span>Identity</span><span aria-hidden="true">/</span><strong>@ViewData["Title"]</strong></div>
                 </header>
                 <main class="main-content">
                     @RenderBody()
@@ -833,5 +835,6 @@
             @RenderBody()
         </div>
     }
+<script src="~/js/rivoli-navigation.js" asp-append-version="true"></script>
 </body>
 </html>
