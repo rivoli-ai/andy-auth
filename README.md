@@ -252,3 +252,9 @@ local callbacks at `http://localhost:4200/auth/callback` and
 callback URLs remain supported. Re-seeding updates the client in place so
 active grants keep their application ID; the retired `wagram-web` row is
 removed when present.
+
+### Account deletion
+
+Signed-in users can open **Delete account** to permanently remove their local Andy Auth account. The operation requires a server-recorded sign-in within five minutes, the current password when one exists, and an explicit confirmation. External-only accounts use the recent sign-in check. System accounts cannot be deleted.
+
+Deletion removes Identity credentials, sessions, consent, memberships, OAuth tokens and authorizations, broker records, related audit rows, and personal registration credentials/attribution in one database transaction. Shared OAuth clients remain registered. Connected applications, operational logs, and backups have separate retention/deletion lifecycles; this endpoint does not erase those stores. Previously issued offline access tokens remain subject to the residual lifetime described in `docs/REVOCATION-PROFILE.md`.
